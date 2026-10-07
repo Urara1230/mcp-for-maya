@@ -426,3 +426,9 @@ R8 覆盖边界的披露类残余盲（D-227④）——fails_the_gate 钉落在
 
 **双层时间戳判据 (two-layer timestamp criterion)**:
 异步外部评分的验收读数定义（D-220）——聚合徽章 Scored>T 且该工具评估块时间戳>T 两层各自卡住（两者分时刷新已实测）；B 档处置先验评语是否引新文案鉴别读数新鲜度，旧文案驱动=评分器缓存缺陷改报 staleness 而非给工具挂任务。_Avoid_: 拿混合时点读数下结论、追全 A 对不透明评分器方差过拟合（Goodhart）、无 T+72h staleness 兜底使观察窗无限挂
+
+**收录面义务行 (distribution-surface obligation line)**:
+「义务的机器消费者」缺口的补位形态（D-229——PolicyTrak exception register「无登记例外会繁殖」+tqsystems go/no-go 80/20 自动化配比先例）——release-preflight 第 10 行人工对照 distribution-surfaces 可行动表逐行核销，结局二值=执行(附证据)/延缓(附理由+复审日)；配套 server.json 落仓根+三元清单相等断言堵「无断言物」面，契约↔runbook 双向链接堵「两真值面间掉落」面。_Avoid_: 义务只写契约文档不挂清单行（v0.6.0 重 publish 漏执即此形态）、push-CI 断收录完成态（D-164β 空转）、延缓无复审日（变相永久豁免）
+
+**观察期判据 (observation-window criterion)**:
+::warning::→blocking 观察期的启用判据（D-230——Tyler Hawkins「warn 唯一例外=存量违例一次清不完」/Notion eslint-seatbelt/CodeQL baseline/Prettier 四源收敛）——新闸存量违例=0 可直接 blocking，但须在落地 PR/registry 条目显式声明偏离理由防静默破例；存量>0 才配观察期（分期消化真对象）。_Avoid_: 无存量违例空跑观察期（无对象空转）、跳观察期不声明（静默破例腐蚀默认值权威）

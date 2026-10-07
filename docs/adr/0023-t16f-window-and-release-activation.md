@@ -126,6 +126,12 @@ Maya 开机激活整条阻塞链，本轮同裁：T-16f 执行面 + 通过后的
     - **pitch-6 core 共享多适配器**——动机=多 DCC 摊销；不-bet=单 DCC 仓抽 core=抽象税零收益；事件锚=第二 DCC 立项（fail-loud 事件，立项即呈报非持续观测）。
     - 遥测 observe 项（D-209③，非 pitch 不入上列）：本地审计聚合首选形态注记+触发=0.6.0 后≥1 季度真实使用窗口+「改进依据不足」具体痛点；采集面落地前须过 threat-model 披露面扩展裁决（D-030 zero-telemetry 宣称修订前提）；不引入任何当前行为变更。
 
+**R48 增补（D-229，2026-10-08）——收录面义务行（release-preflight 第 10 行）**：
+
+- **release-preflight 第 10 行（D-229③）——收录面义务行**：每次 release-preflight 窗内人工对照 docs/distribution-surfaces.md 可行动表逐行核销——Registry 重 publish（server.json version 须与 PyPI 精确一致）/已提交渠道合并态/Glama 页面新鲜度/触发条件类渠道信号核查；结局二值=**执行**（附证据指针）或**延缓**（附理由+复审日——PolicyTrak exception register 形态，无登记例外会静默繁殖）；落账本事件行。人工执行项不进 push CI（循第 6/7/8/9 行先例——publish 须 OAuth 人工门+PyPI 可验证时序，恒属人工；tqsystems 80/20 自动化配比先例）。
+- **server.json 落仓根（D-229①）**：`mcp-publisher publish --file` 默认读 `./server.json`——循 D-150②「工具默认路径」先例（与 mypy-baseline.txt 根目录不迁移裁定同构）；版本字段随 bump commit 同步改写。此前草稿躺 gitignored .scratch/ 无版控=v0.6.0 掉义务的直接诱因（义务无断言物）。
+- **版本一致性断言扩三元（D-229②）**：check_version_consistency.py 断言面扩为 pyproject==__init__==server.json 清单相等——断言对象是仓内清单（push-CI 合法），非收录完成态（D-164β 空转禁令不破）。
+- **D-146 核销窗重锚**：重 publish 完成落账日=新 30 天核销窗起算点；核销动作并入同窗顺带执行（D-153 同窗零额外成本）。
 ## D-069：#2/#7 发帖机制
 
 本窗口即发（备稿就绪+"≥0.1.0 已含"耐久真话不依赖 0.1.2）；执行=**agent 贴终稿→用户过目→gh 以用户账号发出**。过目为授权前置条件，发出前用户有最终否决点；其余四条（#1/#3/#4/#5）仍等 0.1.2 发布后同流程；一 issue 一评不追评纪律不变；措辞改动须回草稿重过目。

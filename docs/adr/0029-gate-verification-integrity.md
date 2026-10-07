@@ -52,6 +52,7 @@
 - .github/gate-registry.yaml **人编**：gate_id/bound_class/pin_node_ids/expected_source/exemption{reason,expires|issue}；bound 对象全集从机器源枚举（check_*.py glob+仪器清单）一致性闸只做差集；
 - **五判红**：①bound 对象无登记 ②登记 pin node 不存在 ③stale 登记（对象已删）④新闸未登记 ⑤豁免过期；
 - **过渡姿态**：::warning:: 一观察周期后转硬红——翻转条件=L1 合入后首个正常 PR 周期走完（diagnostic-first 先例+D-183 落地路径），禁 warning 永久化；
+- **观察期判据（D-230）**：::warning:: 观察期唯一正当理由=新闸**存量违例>0** 需分期消化；存量违例=0 的新闸可直接 blocking，但落地 PR/registry 条目须显式声明偏离理由（「存量违例=0 故跳过观察期」）防静默破例——Tyler Hawkins（warn 唯一例外=存量违例清不完）/Notion eslint-seatbelt/CodeQL baseline/Prettier 四源收敛；首例=check_changelog_fixed。
 - **频率下限**：钉轨每 PR；敏感度实验轨周跑+豁免抽样；
 - **残余盲如实披露**：登记表机检的是**登记纪律**非钉的有效性（空壳钉可骗过登记）——有效性靠 pytest strict 语义+实验轨+code review 三层缓解，不假装机检全能；
 - 覆盖率分两轨统计：判定闸钉轨/仪器敏感度轨。
