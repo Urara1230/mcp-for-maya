@@ -77,7 +77,7 @@ def _entry_blocks(text: str) -> list[tuple[str, str]]:
         m = re.search(r"(?m)^### Fixed\s*$", body)
         if not m:
             return
-        fixed_body = body[m.end():]
+        fixed_body = body[m.end() :]
         nxt = re.search(r"(?m)^### |^## ", fixed_body)
         if nxt:
             fixed_body = fixed_body[: nxt.start()]
@@ -117,7 +117,7 @@ def _field_value(block: str, field: str) -> str | None:
     for line in block.splitlines():
         idx = line.find(field)
         if idx >= 0:
-            rest = line[idx + len(field):]
+            rest = line[idx + len(field) :]
             return rest.split(";", 1)[0].strip()
     return None
 
@@ -144,8 +144,7 @@ def check(path: Path) -> int:
             value = _field_value(block, field)
             if value is None:
                 errors.append(
-                    f"::error file={path.name}::[{label}] Fixed entry lacks "
-                    f"{field!r} (D-230)"
+                    f"::error file={path.name}::[{label}] Fixed entry lacks {field!r} (D-230)"
                 )
             elif not value:
                 errors.append(

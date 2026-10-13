@@ -505,8 +505,7 @@ class TestChangelogFixedFields:
         mod = _load("check_changelog_fixed")
         bad = tmp_path / "CHANGELOG.md"
         bad.write_text(
-            "## [Unreleased]\n\n### Fixed\n\n"
-            "- **New fix** — text with neither field.\n",
+            "## [Unreleased]\n\n### Fixed\n\n- **New fix** — text with neither field.\n",
             encoding="utf-8",
         )
         monkeypatch.setattr(mod, "CHANGELOG", bad)
