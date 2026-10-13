@@ -148,7 +148,7 @@ _Avoid_: 包名（歧义）
 _Avoid_: 自动发布
 
 **事件门授权 (event-gate authorization)**:
-无人值守执行窗（真机验证窗/发版窗）内 agent 的授权形态（D-152）——不逐段确认也不 blanket approval，授权钉在预定义事件门上：①任一验收卡未达预期=红灯即停呈报三选一（处置权在用户），依赖下游冻结；②脏场景守卫等安全红线=不可授权越过，口头「继续」也须重新确认场景处置；③侵入用户会话段（如 GUI 道）开始前先打招呼；④其余段全自主、失败即记录后继依赖序允许的下一项。两层分权=停手权在 agent、处置权在用户（Andon 同构）。同窗并行人工道=其排程对偶——人工门动作（OAuth/备稿过目）排进 agent 结构性空闲段，红灯裁决暂停优先于半途的人工门（OAuth 中途打断=上下文作废）。
+无人值守执行窗内 agent 的授权形态——不逐段确认也不 blanket approval，授权钉在预定义事件门上（验收卡红灯即停/安全红线不可授权越过/其余全自主）；停手权在 agent、处置权在用户。机制细则见 ADR-0023。
 _Avoid_: 逐段一停（往返成本+无新增判断点可守）、blanket 授权越过红线、人工门动作插在裁决悬停段
 
 **冻结预算 (frozen budget)**:
@@ -283,11 +283,11 @@ _Avoid_: 叙事帖在证据未固化时抢发、聚合器逐个手工直投、�
 
 
 **收录面三态判置 (listing three-state disposition)**:
-逐渠道收录处置一次立法固化于 docs/distribution-surfaces.md（D-144/D-145α）——三态=可行动/被动观察带触发条件/结构性否决永续（否决判据=结构匹配性一票否决：本地 stdio+Maya GUI 宿主可否承载其提交面/健康检查面，与 Smithery 同构判据）；未列出渠道默认=被动观察（catch-all），升级单向=被动观察→触发条件→可行动，防顺手提交滑梯（ADR-0027 同构）；兜底只豁免收录轨——叙事型投放位仍走双轨证据门（D-143γ）。
+逐渠道收录处置的三态分类——可行动 / 被动观察带触发条件 / 结构性否决永续，升级单向=被动→触发→可行动。登记载体=docs/distribution-surfaces.md（D-144/D-145α）。
 -_Avoid_: 逐渠道周期性重开议事、未过结构匹配性判据即顺手提交、把被动观察误读为可行动、把结构性否决改写成临时推迟
 
 **发布门三态判定 (release-gate three-state disposition)**:
-v1.0.0 发布门对验收项的处置词表（D-163，工业映射=Autonoma/beefed go-no-go 框架+K8s EXCEPTIONS 例外制+Chromium release-blocker 矩阵）——三态=**Pass**（实测绿）/ **Waived**（显式豁免行：reason+owner+expiry 三要素缺一即不成立，到期未消解 fail-closed 自动转 Blocked）/ **Blocked**（一票否决）。机检清单工件=docs/evidence/gate-waiver-list-1.0.0.json，每次 release-preflight 重读；与「收录面三态判置」正交（彼管渠道处置、此管发布门项处置）。修订关系：D-040「十框字面全绿」标 revised（判定形态改三态，立法目的「真机层须实证」保留）；blocker 判据锚=Chromium severity×prevalence（「must not ship」才够格，有 workaround+站特异降格）。
+v1.0.0 发布门对验收项的三态处置——Pass / Waived（reason+owner+expiry 三要素缺一不立，到期未消解自动转 Blocked）/ Blocked；机检清单=docs/evidence/gate-waiver-list-1.0.0.json。机制细则见 ADR-0023（D-163）。
 _Avoid_: waived 行当 pass 读、无 expiry 豁免（退化永久豁免）、把站特异红直接拔为 feature-blocker、叙事面把 waived 项描绿
 
 **安装面标注 (install-surface badge)**:
@@ -295,19 +295,19 @@ _Avoid_: waived 行当 pass 读、无 expiry 豁免（退化永久豁免）、�
 _Avoid_: 把 emoji 当审计声明逐字代入 D-149② 裁切、在列表一行内塞验证态限定词（生态惯例=一句话只讲功能+安装面）、宣称文本反而用 emoji 语义当借口放宽
 
 **门检 (gate-check)**:
-v1.0.0 门的幂等测量动作（D-168/D-169/D-170）——release-preflight 窗内或债消解信号到场时对 gate-waiver-list-1.0.0.json 重读+逐行三态重算；产出=账本事件行（时间戳+逐行结果+到期处分+证据指针）+清单就地更新；可多次、每次留痕、不预判只落当时真实读数（消解→pass 挂证物/恶化→Blocked/未消解→显式续期）；触发=执行窗开场+信号对号（限 expiry 文本写明该事件锚的行，同窗幂等去重）+preflight 强制兜底。与门审的分野=测量与判定机制分离（NASA FRR→LRR 分级链、K8s readiness probe 当下读数同构）。
+v1.0.0 门的幂等测量动作——preflight 窗内对 waiver 清单重读+逐行三态重算，可多次、每次留痕、不预判只落当时读数。机制细则见 ADR-0023（D-168..D-170）。
 _Avoid_: 把门检当终审事件、等条件齐了才跑（probe 不等容器健康才跑）、日历周期排程、登记信号不重测致快照陈旧
 
 **门审 (gate review / γ-B 终审)**:
-v1.0.0 门的 go/no-go 一次性判定事件（D-168/D-170/D-171；D-163 γ-B 锚经修订指向本事件）——触发=烧债完成度（agent 检出「Blocked 空+Waived 全有效」快照后以快照工件为召集凭据呈报），召集与裁决归 user；verdict 反映判定当刻世界状态非滚动累积批准；判负后豁免车道关闭、出路=判负三轨（当期不发布案卷落账/re-review 凭新健康快照重召集/descope 走 revise+披露）。
+v1.0.0 门的 go/no-go 一次性判定事件——召集与裁决归 user，判负后豁免车道关闭。机制细则见 ADR-0023（D-168/170/171）。
 _Avoid_: 检测者自召集自裁决（违 D-152γ 分权）、拿陈旧快照判案、判负后走后门补豁免、把缩门混进豁免车道
 
 **豁免续期 (waiver renewal)**:
-waiver 行到期未消解的显式处置车道（D-168④；工业映射=DHS/508/UT 到期独立处置+GRCOPILOT 三阶段升级+decryptiondigest 审计重验）——五要件：①owner 之外门权者重签具名（自查自批无效）②新 expiry 仍须事件锚（下次门检/门审/env 可得三选一，禁日历悬挂禁删 expiry）③每行上限 2 次（第 2 次须用户显式拍板落账，第 3 次不存在=强制消解或转 Blocked）④每次续期 reason 须重验（根因变没变/替代出路还通不通，不重验无效）⑤门审后豁免车道关闭。机检=清单行 renewals 字段（0/1/2）。披露：上限 2=GRCOPILOT 惯例级非 ISO 规范级。
+waiver 行到期未消解的显式续签车道——门权者重签具名+新 expiry 事件锚+每行上限 2 次+reason 重验；门审后车道关闭。机制细则见 ADR-0023（D-168④）。
 _Avoid_: 静默续期、日历悬空 expiry、无限续期、续期不重验根因、γ-B 后补豁免
 
 **缩门 (descope / gate-definition revision)**:
-把验收帧从门定义中移除的处置车道（D-171③）——本质=门本体修订非豁免：须走 revise 呈报（D-040 先例形态：原记录保留+指针）+披露义务；与豁免车道永久隔离（豁免=暂缓验证记理由，缩门=修改门定义本身）；判负压力下尤其禁止——「静默缩门」正是本门立法的防御对象（PMBOK：缩范围与加范围同级审批；K8s 摘 milestone=显式权力+理由+记录在案）。
+把验收帧从门定义中移除的处置车道——本质=门定义修订须走 revise 呈报+披露，与豁免车道永久隔离。机制细则见 ADR-0023（D-171③）。
 _Avoid_: 压力下顺手删行、把 descope 伪装成 waiver 续期、跳过披露义务
 
 **TDQS (Tool Definition Quality Score)**:
@@ -331,27 +331,24 @@ waiver 续期重签的裁决位（D-176）——=human user 或其具名授权�
 _Avoid_: 欠账人自签、无名授权链、「authorized by human」当无凭据口头语、门审后仍走代理补豁免（车道已关）
 
 **极性感知断言 (polarity-aware assertion)**:
-mutation 类披露的存在性断言必须区分肯定/否定极性的立法原则（D-180——S-03 病灶实证：autofix_mutation 断言被否定句「without auto_fix mutations」反向满足=CI 假绿，且现行要素词表已含 5 个否定式 token，朴素守卫落地即自伤）——断言对象=肯定性披露，否定句式不充数；机制形态经 D-190 立法=子句级窗+positive_exemptions 豁免表+方向限定条款（承接注记——切分符/豁免短语清单细则仍归执行窗产物）；与「要素存在性棘爪」分工=棘爪管结构化要素存在，极性感知管 mutation 类断言不得被否定句满足。
+mutation 类披露的存在性断言必须区分肯定/否定极性的立法原则（D-180——S-03 病灶实证：autofix_mutation 断言被否定句「without auto_fix mutations」反向满足=CI 假绿，且现行要素词表已含 5 个否定式 token，朴素守卫落地即自伤）——断言对象=肯定性披露，否定句式不充数；机制形态经 D-190 立法=子句级窗+positive_exemptions 豁免表+方向限定条款（切分符/豁免短语清单细则仍归执行窗产物）；与「要素存在性棘爪」分工=棘爪管结构化要素存在，极性感知管 mutation 类断言不得被否定句满足。
 _Avoid_: 裸关键词断言管 mutation 面、否定 token 一刀切误杀自带否定的正确披露（"cannot be undone"/"does not modify"）、把未实测正则形态钉进立法、个案修复不留原则致下一件 mutation 断言复刻盲视
 
 **锚点形态白名单 (anchor-form whitelist)**:
 证据指针可接受形态的优先级序（D-183——P-03b 行号漂移一般化：裸 path:line 每次编辑即失效属结构性缺陷）——pytest node ID＞path::symbol（AST 符号存在性抗漂移）＞sha:path:line（commit 钉死断面）＞裸 path:line；裸 path:line 在版本化文档=warn 提示升级的合法临时态，.scratch 过程报告中合法形态；白名单为单源机读件，机检脚本与文档模板双消费防双真源；「可执行证据指针」词条的形态细则由本单源细化（D-082⑦ scoped revised 随机件批落地）。
 _Avoid_: 裸行号当永久锚、模板与脚本各执一套形态表（双真源）、无 expiry 锚长期挂 warn（warnings 被无视反模式）、对 .scratch 面装机检（CI checkout 不可达 gitignored 文件）
 
-**承接注记 (carry-over annotation)**:
-对既有决策保留原文、append 修正/继承注记的「改指针不改语义」惯例（D-108② 先例定型，D-179/D-181 承用）——适用面=理由锚修正、范围注记级扩界、勘误链指向；与 scoped revised 分工：注记管理由层/范围注记层（结论不变仅论据或边界细化），revised 管条款语义层反转（须保留原记录+新 D-xxx 呈报）。
-_Avoid_: 静默改写原条目、把实质条款反转包装成注记（那须走 revised 呈报车道）、注记藏在修订文本里不复指原行
 
 **验收门/stretch 双轨 (committed gate vs aspirational stretch)**:
 验收判据的双轨表述纪律（D-182）——验收门锚官方成文语义（Glama 字母档 A=≥3.5 spec 正文+min 逐件≥3.0 tier-B passing bar+零 contradiction 旗标），stretch=本仓自设推断目标（3.8=乐观推演值）如实标注自设非官方；判据修订走重基线惯例（原判据保留在 ADR 被否选项/修订注记不删=多基线供审计，GM-22-001 同构）；stretch 值禁入对外宣称文本（D-149 校准宣称）。
 _Avoid_: 推断值立为验收门（已知不可达的门逼出未来口径游戏）、门与 stretch 混写不分轨、对外宣称引 stretch 值充门、为达标缩门静默改写（须走 revise 呈报+披露义务）
 
 **判负决策树 (fail-branch decision tree)**:
-验收门判负处置的预注册分流表（D-188——SRE「SLO without policy is just another KPI」同构：判据三要件+判负树合起来才是有牙的门）——按可观测信号分四支（字母升但 min<3.0=执行质量件返修或走 D-181③ schema 窗 / min 全过但整体 B=coherence 结构性拖只记观察 / Scored 时间戳不动=扫源假说核验开新缺口 / annotation 旗标=逐旗检修），临场即兴归因是缩门与乱开 P3 的温床故树须先于判负时刻立法（D-171③ 防御延伸）。
+验收门判负处置的预注册分流表——按可观测信号分四支定向处置，立法须先于判负时刻。机制细则见 ADR-0028（D-188）。
 _Avoid_: 判负当刻现编归因、把结构性判负包装成执行质量返修、绕过决策树直接触发 P3 解冻（判定权归门审）、拿决策树当缩门工具
 
 **前置议题登记 (pre-agenda registration)**:
-gate review 等终审事件的前置议题在立法面注册的骨架形态（D-192——ADR-0023 R41 登记块为首例）——含议题槽+判据引用+触发债条件摘录+证据指针占位符+「材料于召集窗按当刻快照重算」标注；骨架本身零结论、禁预制判决倾向，登记面须与门同寿（瞬态任务书会逐轮重写漂移）。
+终审事件前置议题在立法面注册的骨架形态——议题槽+判据引用+触发条件+证据占位，零结论禁预判决。机制细则见 ADR-0023（D-192）。
 _Avoid_: 骨架内预写结论或判决倾向、拿占位符当证据本身、议题放瞬态载体随批遗失、召集窗不重算材料直接拿登记时快照判案
 
 **发版车 (release train)**:
@@ -413,22 +410,29 @@ ADR 内常设的 known-gap 注册表宿主章节（D-200——ADR-0028 缺口披
 反事实钉的阳性配对（ADR-0030——ESLint RuleTester valid 轨禁带 errors 属性同构）——在真仓库上跑闸断言当前绿；保留描述名（建议 *_is_green|_passes|_holds|_consistent 收敛面）且**禁 fails_the_gate 后缀**（套错后缀=形式撒谎，R46 审计 M1 实证）；可入 pin_node_ids 但不满足「≥1 反事实钉」义务。_Avoid_: 把对照钉注册成反事实钉（假覆盖）、给对照钉补 counterfactual docstring（文档撒谎）
 
 **性质断言 (property assertion)**:
-规格陈述型回归测试的迁出类（ADR-0030）——验证的是脚本行为的文档化性质（幂等性/打印格式/边界容差），非「注入故障→闸红」也非「真仓库→绿」；迁出 pin_node_ids 使登记语义纯化为「pin=能判红者」，测试本身保留为普通测试。_Avoid_: 性质断言占 pin_node_ids 充钉数（登记表看起来有钉实则无可判红者）、因迁出而删测试（迁出≠退役）
+规格陈述型回归测试的类别——验证脚本文档化性质（幂等/格式/容差），非反事实钉也非 live 对照；不占 pin_node_ids。机制细则见 ADR-0030。
+_Avoid_: 性质断言占 pin_node_ids 充钉数（登记表看起来有钉实则无可判红者）、因迁出而删测试（迁出≠退役）
 
 **交接载体 (handoff carrier)**:
-交接文档的法定落点条款（D-226①——AWS OPS07-BP03 runbook 版本控制+mattpocock/skills #596+#272 同形事故先例）——一切交接文档（grill/audit/exec/handoff）必须落 .scratch/{slug}/handoffs/，%TEMP% 及仓外路径禁作交接载体；skill 默认对本仓显式无效（工具默认与仓内惯例冲突时仓内惯例优先）；跨轮决策内容按 fold-then-delete 折叠进 ADR/ledger 后交接文件允许不版本化（.scratch 不版本化=跨机器存活换 commit 降噪的明示取舍）。_Avoid_: 交接落 %TEMP%（跨会话失效已致一次真实丢失）、为交接文件开 .scratch 版本化（commit 噪音）、把交接当第二真源不复读（承载内容须折叠进 ADR/ledger）
+交接文档的法定落点条款——一切交接文档必须落 .scratch/{slug}/handoffs/，%TEMP% 及仓外路径禁用；跨轮决策内容折叠进 ADR/CONTEXT.md 后交接文件允许不版本化。机制细则见 ADR-0030 §6（D-226①）。
+_Avoid_: 交接落 %TEMP%（跨会话失效已致一次真实丢失）、为交接文件开 .scratch 版本化（commit 噪音）、把交接当第二真源不复读（承载内容须折叠进 ADR/CONTEXT.md）
 
 **孤儿钉 (orphan counterfactual pin)**:
-R8 覆盖边界的披露类残余盲（D-227④）——fails_the_gate 钉落在无 bound 对象对应的测试文件内即机器不可见（R8 只扫 bound 对象测试文件，不扫全 tests/ 为刻意克制防误伤普通业务测试）；补闸扫描=过度机检，如实披露不假装覆盖。_Avoid_: 把孤儿钉当机检能抓的缺陷报告（边界外）、为堵此洞放开 R8 全扫（误伤面大于捕获面）
+fails_the_gate 钉落在无 bound 对象对应测试文件内的披露类残余盲——R8 只扫 bound 对象测试文件属刻意克制，如实披露不假装机检全能。机制细则见 ADR-0030（D-227④）。
+_Avoid_: 把孤儿钉当机检能抓的缺陷报告（边界外）、为堵此洞放开 R8 全扫（误伤面大于捕获面）
 
 **否决权判据 (veto-power criterion)**:
-通则义务级的分级标尺（D-212）——一个对象是否受全额约束取决于它是否握有红/绿否决权：有否决权的守卫必须证明自己会红；无否决权的探针/仪器降级为敏感度实验（注入已知故障→产出非零 verdict），其 verdict 若被下游当硬门消费=裁决权漂移→升格全责或显式标 non-gating。_Avoid_: 给无否决权对象立红/绿义务（形态错配）、探针 verdict 隐性变门禁（漂移不立界）
+通则义务级的分级标尺——握红/绿否决权的守卫必须证明自己会红；无否决权的探针降级为敏感度实验。机制细则见 ADR-0029（D-212）。
+_Avoid_: 给无否决权对象立红/绿义务（形态错配）、探针 verdict 隐性变门禁（漂移不立界）
 
 **双层时间戳判据 (two-layer timestamp criterion)**:
-异步外部评分的验收读数定义（D-220）——聚合徽章 Scored>T 且该工具评估块时间戳>T 两层各自卡住（两者分时刷新已实测）；B 档处置先验评语是否引新文案鉴别读数新鲜度，旧文案驱动=评分器缓存缺陷改报 staleness 而非给工具挂任务。_Avoid_: 拿混合时点读数下结论、追全 A 对不透明评分器方差过拟合（Goodhart）、无 T+72h staleness 兜底使观察窗无限挂
+异步外部评分的验收读数定义——聚合徽章 Scored>T 且该工具评估块时间戳>T 两层各自卡住。机制细则见 ADR-0028 §5（D-220）。
+_Avoid_: 拿混合时点读数下结论、追全 A 对不透明评分器方差过拟合（Goodhart）、无 T+72h staleness 兜底使观察窗无限挂
 
 **收录面义务行 (distribution-surface obligation line)**:
-「义务的机器消费者」缺口的补位形态（D-229——PolicyTrak exception register「无登记例外会繁殖」+tqsystems go/no-go 80/20 自动化配比先例）——release-preflight 第 10 行人工对照 distribution-surfaces 可行动表逐行核销，结局二值=执行(附证据)/延缓(附理由+复审日)；配套 server.json 落仓根+三元清单相等断言堵「无断言物」面，契约↔runbook 双向链接堵「两真值面间掉落」面。_Avoid_: 义务只写契约文档不挂清单行（v0.6.0 重 publish 漏执即此形态）、push-CI 断收录完成态（D-164β 空转）、延缓无复审日（变相永久豁免）
+release-preflight 第 10 行人工对照 distribution-surfaces 可行动表逐行核销的义务行——结局二值=执行(附证据)/延缓(附理由+复审日)。机制细则见 ADR-0023（D-229）。
+_Avoid_: 义务只写契约文档不挂清单行（v0.6.0 重 publish 漏执即此形态）、push-CI 断收录完成态（D-164β 空转）、延缓无复审日（变相永久豁免）
 
 **观察期判据 (observation-window criterion)**:
-::warning::→blocking 观察期的启用判据（D-230——Tyler Hawkins「warn 唯一例外=存量违例一次清不完」/Notion eslint-seatbelt/CodeQL baseline/Prettier 四源收敛）——新闸存量违例=0 可直接 blocking，但须在落地 PR/registry 条目显式声明偏离理由防静默破例；存量>0 才配观察期（分期消化真对象）。_Avoid_: 无存量违例空跑观察期（无对象空转）、跳观察期不声明（静默破例腐蚀默认值权威）
+新闸 ::warning::→blocking 观察期的启用判据——存量违例=0 可直接 blocking 但须显式声明偏离理由。机制细则见 ADR-0029 §5（D-230）。
+_Avoid_: 无存量违例空跑观察期（无对象空转）、跳观察期不声明（静默破例腐蚀默认值权威）

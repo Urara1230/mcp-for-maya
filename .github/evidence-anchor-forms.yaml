@@ -42,7 +42,6 @@
   ],
   "scan_targets": {
     "CHANGELOG.md": "most recent release section only (topmost ## [x.y.z] block)",
-    "docs/decision-ledger.md": "whole file",
     "docs/adr/**": "all .md files",
     "docs/evidence/**": "all .md files — provenance JSON payloads (probe dumps, waiver lists) are exempt from form judgement"
   },

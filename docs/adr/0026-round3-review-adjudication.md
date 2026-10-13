@@ -3,7 +3,7 @@
 状态：accepted（grill 定稿）
 日期：2026-09-24
 决策来源：D-082（第三轮锐评逐条裁决+修复范围圈定）
-审计对象：Xxx91n/mcp-for-maya @ b2640f1（审计原文存档 .scratch/t21/audit-r3.txt；真机探针证据 docs/evidence/probes/probe-displacement.json（由 .scratch/t21 迁入 per D-109）
+审计对象：Xxx91n/mcp-for-maya @ b2640f1（审计原文存档 docs/reference/audit-r3.txt；真机探针证据 docs/evidence/probes/probe-displacement.json（由 .scratch/t21 迁入 per D-109）
 
 ## 背景
 

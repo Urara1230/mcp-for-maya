@@ -6,7 +6,7 @@ disposition in this fork ([Xxx91n/mcp-for-maya](https://pypi.org/project/mcp-for
 dist name `mcp-for-maya`). It exists so that issue comments can point at a
 stable, honest anchor instead of re-stating per-release details inline.
 
-Source of truth: `docs/decision-ledger.md` (D-057..D-065) and `CHANGELOG.md`
+Source of truth: `CHANGELOG.md`（原账本 D-057..D-065 行已随账本退役删除，见 git 历史）
 — this table is regenerated from the same facts, never ahead of them.
 
 Version pointers are **durable claims**: `>= X.Y.Z` names the first release
@@ -40,4 +40,4 @@ were posted after user authorization once 0.1.2 was public:
 
 Release state at posting time: `v0.1.2` tagged (merge `960c58b`), published
 to PyPI via OIDC release workflow; 0.1.0 and 0.1.1 yanked on PyPI
-(per-version reasons recorded in `.scratch/t18/release-prep.md`).
+(per-version reasons recorded in `docs/reference/release-prep.md`).

@@ -50,7 +50,7 @@ R7/R8 随 checker 单翻（typescript-eslint v6 整体翻转+Sentinel policy-set
 
 ### 6. 交接载体（D-226①）
 
-一切交接文档（grill/audit/exec/handoff）必须落 .scratch/{slug}/handoffs/，%TEMP% 及仓外路径禁作交接载体；skill 默认（%TEMP%/opencode）对本仓显式无效——工具默认与仓内惯例冲突时本仓惯例优先（AWS OPS07-BP03 runbook 版本控制+mattpocock/skills #596 同形事故先例）；跨轮决策内容按 fold-then-delete 惯例折叠进 ADR/ledger 后交接文件允许不版本化（.scratch 不版本化=跨机器存活换 commit 降噪的明示取舍）。
+一切交接文档（grill/audit/exec/handoff）必须落 .scratch/{slug}/handoffs/，%TEMP% 及仓外路径禁作交接载体；skill 默认（%TEMP%/opencode）对本仓显式无效——工具默认与仓内惯例冲突时本仓惯例优先（AWS OPS07-BP03 runbook 版本控制+mattpocock/skills #596 同形事故先例）；跨轮决策内容按 fold-then-delete 惯例折叠进 ADR/CONTEXT.md 后交接文件允许不版本化（.scratch 不版本化=跨机器存活换 commit 降噪的明示取舍）。
 
 ### 7. 残余盲披露（D-225⑥/D-227④）
 

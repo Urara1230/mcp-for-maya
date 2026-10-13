@@ -4,143 +4,87 @@
 
 This is an MCP (Model Context Protocol) server for Autodesk Maya. It enables LLM agents to interact with Maya sessions through structured tools for spatial awareness, camera planning, aesthetic analysis, and scene auditing.
 
-## Repository Structure
+## Tech stack
+
+Python 3.10+ (host) / Maya ≥ 2023 embedded Python (injected side) · FastMCP · uv (deps + build) · pytest (stub tier on CI; mayapy/gui/human_verify manual tiers) · ruff + mypy ratchet baselines · GitButler (`but`) for VCS · GitHub issues via `gh` CLI.
+
+## Repository structure
 
 ```
 src/maya_mcp_server/
 ├── server.py              # FastMCP server entry point, tool registration
-├── client.py              # Maya connection client (native + Qt)
+├── client.py              # Maya connection client (native + Qt framed channel)
 ├── session_manager.py     # Multi-session management
 ├── maya_mcp_helper.py     # Maya-side helper (executed inside Maya)
 ├── maya_bootstrap.py      # Maya bootstrap code (create_module)
 ├── scene_tools.py         # 13 MCP scene tool definitions
-├── visual_tools.py        # 2 GUI-only visual tools (D-023..D-026)
+├── visual_tools.py        # 2 GUI-only visual tools
 ├── scene_cache.py         # TTL + dirty-detection cache
 ├── cos_formatter.py       # Chain-of-Symbol notation formatter
-├── maya_scene_module.py   # Maya-side module (injected via write_module)
+├── maya_scene_module.py   # Maya-side _mcp_scene (injected via write_module)
 ├── visual_module.py       # Maya-side _mcp_visual (lazy inject, GUI only)
-├── asset_tools.py         # asset_search/asset_import MCP tools (D-074/D-075)
-├── asset_module.py        # Maya-side _mcp_asset importer (lazy inject)
-├── export_tools.py        # scene_export MCP tool (D-091/D-092)
-├── export_module.py       # Maya-side _mcp_export exporter (lazy inject)
-├── introspect_tools.py    # scene_describe/scene_nodes MCP tools (D-094)
-├── introspect_module.py   # Maya-side fragment -> _mcp_scene unit (D-095)
-├── polyhaven.py           # Poly Haven host client: whitelist/md5/cache (D-075)
+├── asset_tools.py / asset_module.py    # asset_search/asset_import + _mcp_asset importer
+├── export_tools.py / export_module.py  # scene_export + _mcp_export exporter
+├── introspect_tools.py / introspect_module.py  # scene_describe/scene_nodes, _mcp_scene fragment
+├── polyhaven.py           # Poly Haven host client: whitelist/md5/cache
 ├── spatial_types.py       # Data type definitions
-├── connection_guide.py    # Connection bootstrap; userSetup.py managed marker-block (D-017)
-├── security.py            # Validation, token-bucket rate limits, pattern scan, JSONL audit
-├── pipeline.py            # FastMCP middleware: all 25 tools -> validate/rate-limit/scan/audit
-├── types.py               # Core types (ResultType, ClientType, SessionInfo)
-├── bootstrap.py           # Server bootstrap
-├── utils.py               # Utility functions (cross-platform process detection)
-└── __main__.py            # Entry point
+├── connection_guide.py    # Connection bootstrap; userSetup.py managed marker-block
+├── security.py            # Validation, rate limits, pattern scan, JSONL audit
+├── pipeline.py            # FastMCP middleware: all tools -> validate/rate-limit/scan/audit
+└── types.py / bootstrap.py / utils.py / __main__.py
 
 tests/
-├── maya_stub/             # stub maya.cmds + OpenMaya + Scene graph (D-004/D-005)
+├── maya_stub/             # stub maya.cmds + OpenMaya + scene graph (+ presence-baseline.json)
 ├── conftest.py            # maya_env fixture installs stub, binds maya_scene_module
-├── test_checkpoint_rollback.py  # T-03 checkpoint/rollback regression (ADR-0004/D-015)
-├── test_pipeline.py             # T-04 unified pipeline + audit JSONL + annotations (D-018/D-019)
-├── test_client.py             # typed errors, write_module, bootstrap fallback
-├── test_qt_channel.py         # T-05 framed codec/dispatch/ClientChannel/Qt roundtrip (D-013)
-├── test_connection_guide.py
-├── test_cos_formatter.py
-├── test_maya_scene_module.py    # module-level regressions on the stub
-├── test_maya_stub.py            # stub self-verification (math must stay honest)
-├── test_mayapy_smoke.py         # real-Maya tier, manual local only (-m mayapy)
-├── test_gui_session.py          # live-GUI tier, real asserts (-m gui; MAYA_MCP_GUI_ADDR probe) (D-049a)
-├── test_human_verify.py         # versioned manual checklist (-m human_verify; prints steps, always skips)
-├── test_prepare_code.py
-├── test_scene_cache.py
-├── test_scene_tools.py
-├── test_scene_tools_json.py     # tool-layer JSON arg passing + error passthrough
-├── test_visual_tools.py         # T-08 visual loop contract tests (D-023..D-027)
-├── test_security.py
-├── test_session_manager.py
-├── test_module_teardown.py   # T-16a overwrite teardown protocol + Qt signal semantics (D-058, upstream #4)
-├── test_version_unification.py # T-16e serverInfo=product version (D-060③)
-├── test_polyhaven.py        # T-19a host client: whitelist/md5/cache/domain errors (D-075)
-├── test_asset_module.py     # T-19a _mcp_asset importer on the stub scene
-├── test_asset_tools.py      # T-19a tool layer: dedup/domain errors/audit detail
-├── test_export_module.py    # T-23b _mcp_export contract on the stub (D-092)
-├── test_export_tools.py     # T-23b tool layer: validation/passthrough/dual-channel inject
-├── test_introspect_module.py # T-24b _mcp_scene fragment contract on stub (D-094)
-├── test_introspect_tools.py  # T-24b tool layer: assembly inject/validation/dual-channel
-├── test_check_ruff_budget.py    # ruff-budget comparator guard (per-rule ratchet, D-044/T-10b)
-├── test_check_tool_count_claims.py # tool-count claim gate (D-121)
-├── test_notify_drift_canary.py  # drift-canary issue lifecycle (D-123)
-├── test_check_monolith_budget.py # monolith line-budget ratchet (D-125)
-├── test_check_release_appendix.py # release-body appendix weak assertions (D-142β)
-├── test_check_pypi_index.py   # PyPI simple+JSON dual-source probe lanes (D-142γ)
-├── test_check_tdqs_disclosure.py # TDQS structured disclosure ratchet test suite (D-175)
-├── test_check_d207_gates.py     # D-207 gate family: error-codes doc / llms.txt / version consistency
-├── test_polarity_corpus_probe.py # D-203 sample-floor caliber (TN+F only) + per-element TN floor + D-214 spec + D-221② S3/S4
-├── test_check_gate_registry.py   # pin-registry consistency: unregistered/stale/unresolvable/zero-pin/expired-exemption (D-215)
-├── test_check_count_claims.py    # bare count claims vs AST-derived families + denylist (D-216)
-├── test_check_readme_skeleton.py # README/zh-CN skeleton parity, red+green pairs (D-072, backfilled D-212)
-├── test_liveness_probe_sensitivity.py # D-212 tier-2 sensitivity track: fault injection must produce a non-zero verdict
-└── test_presence_baseline.py    # presence-baseline auto-diff vs real Maya (D-049b/D-056①)
+└── test_*.py              # one file per surface: tools, pipeline, security, modules,
+                           # gate checkers (check_*.py), manual tiers (mayapy/gui/human_verify)
 
 docs/
-├── adr/                   # ADR-0001..0030 architecture decision records (incl. 0028-elements.yaml)
-├── decision-ledger.md     # grill decision ledger — canonical path since T-11a (D-041)
-├── handoffs/              # round handoffs — canonical (next-round.md standing task book)
-├── testing.md             # real-Maya manual tier checklist
-└── threat-model.md        # threat model + security boundaries
+├── adr/                   # ADR-0001..0029 architecture decision records (+ 0028-elements.yaml)
+├── reference/             # real-maya-runbook, gui_verify.py harness, audit originals
+├── evidence/              # decision-grade evidence (probes/, waiver list, window reports)
+├── guide/                 # error-codes.md (derived+gated), session-lifecycle.md (prose)
+└── distribution-surfaces.md / upstream-issue-status.md / testing.md / threat-model.md
+    / visual-callform-matrix.md
 
 .github/
-├── workflows/ci.yml       # lint (ruff budget + monolith line + tool-count claims + count claims + assets append-only + README skeleton gates, plus the gate-registry consistency gate in its ::warning:: observation period) + test matrix ubuntu/windows x 3.10/3.x + weekly drift canary (+ PyPI index probe lane, D-142γ) -> issue notify (D-112/D-123)
-├── workflows/release.yml  # tag v* -> test -> build -> publish (trusted publisher; env: pypi)
-├── dependabot.yml         # weekly github-actions bumps, minor+patch grouped
-├── ruff-baseline.json     # frozen lint budget {"src":{"RULE":N},"tests":{...}} — per-rule ratchet down only (T-10b/D-044)
-├── monolith-budget.json   # frozen line budget {path: N} — monolith ratchet down only (D-125)
-├── scripts/check_ruff_budget.py  # budget comparator used by the lint job
-├── scripts/check_readme_skeleton.py  # README/zh-CN title-skeleton parity check (D-072)
-├── scripts/check_assets_append_only.py # .github/assets append-only guard (D-113)
-├── scripts/check_tool_count_claims.py # live-doc tool-count claims == TOOL_ANNOTATIONS (D-121)
-├── scripts/notify_drift_canary.py  # drift canary -> dedup issue artifact (D-123)
-├── scripts/check_monolith_budget.py # maya_scene_module.py line-count ratchet (D-125)
-├── scripts/check_release_appendix.py # release-body disclosure-appendix weak assertions — release-preflight item 6, manual not push CI (D-142β)
-├── scripts/check_pypi_index.py   # PyPI simple-index (PEP 691+HTML)/project-JSON probe lane in the weekly drift job (D-142γ)
-├── scripts/check_tdqs_disclosure.py # TDQS disclosure elements static ratchet script (D-175)
-├── scripts/check_error_codes.py  # docs/guide/error-codes.md code set == security.py code set (D-207 4)
-├── scripts/check_llms_txt.py     # llms.txt derived from TOOL_ANNOTATIONS + 100-line cap (D-207 2)
-├── scripts/check_version_consistency.py # pyproject == __init__ == CHANGELOG head == llms.txt (D-207 9)
-├── scripts/liveness_probe.py # spawns the real server over stdio: liveness + tools/list + policy end-to-end (manual, preflight)
-├── scripts/check_count_claims.py # bare enumeration/count claims in live docs vs AST-derived families + denylist (D-216)
-├── scripts/check_gate_registry.py # pin-registry consistency, ships ::warning:: for one observation period (D-215)
-├── gate-registry.yaml   # HUMAN-AUTHORED pin registry — bound_class / expected_sources / pin_node_ids / exemption (D-215; never script-generated)
-├── polarity-corpus-spec.yaml # MIN_ADJUDICABLE + MIN_TN_PER_ELEMENT and their D-203 basis (D-214)
-├── llms-txt-spec.yaml  # llms.txt LINE_CAP (D-214)
-├── assets-append-only-spec.yaml # append-only GUARDED prefixes (D-214)
-├── release-appendix-spec.yaml # gate-tracker ISSUE default (D-214)
-├── liveness-probe-spec.yaml # MCP PROTOCOL revision (D-214)
-├── assets-src/            # reproducible capture scripts for README imagery (t20/ scene generators; T-19c scene_build.py + capture.py kept for reference)
-└── assets/                # published README imagery (populated only after sign-off)
+├── workflows/ci.yml       # lint + test matrix + weekly drift canary -> issue notify
+├── workflows/release.yml  # tag v* -> test -> build -> publish (trusted publisher)
+├── scripts/check_*.py     # budget/ratchet/doc-truth/release gates run in the lint job
+├── gate-registry.yaml     # pin registry: every blocking gate registers pins (ADR-0029/0030)
+├── *-spec.yaml            # per-domain governance constants (externally-derived, D-214)
+├── ruff-baseline.json / monolith-budget.json + root mypy-baseline.txt  # ratchet archives
+└── assets-src/ + assets/  # README imagery (append-only published dir)
 ```
 
-## Key Architecture Decisions
+## How to run
+
+```bash
+python -m maya_mcp_server -vv        # run with debug logging
+python -m pytest tests/ -q           # stub-tier suite (CI green bar)
+ruff check .                         # lint vs frozen per-rule budget
+python -m mypy src/ | mypy-baseline filter   # typecheck vs frozen baseline
+uv run pre-commit run --all-files    # hook surface the lint job runs verbatim
+```
+
+## Key architecture decisions
 
 1. **No Maya client modification** — everything works through existing `execute_code` + `write_module` channels
-2. **Maya-side module injection** — `_mcp_scene` is injected once via `write_module` on first scene tool call
-3. **Large module handling** — GUI/Qt sessions inject modules of any size directly via the framed channel (16 MiB cap, D-013); temp-file injection is retained only for headless/native commandPort sessions
-4. **Response alignment** — `execute_code` handles both `str` and `dict` results to prevent `json.loads` errors
-5. **CoS notation** — Chain-of-Symbol format compacts scene tokens (the CoS paper reports ~65% savings vs JSON on its demo scenes, arXiv 2305.10276 — a paper figure, not a local benchmark)
+2. **Maya-side module injection** — `_mcp_scene` injected once via `write_module` on first scene tool call
+3. **Large module handling** — GUI/Qt sessions inject any size via the framed channel (16 MiB cap); temp-file injection retained only for headless/native sessions
+4. **Response alignment** — `execute_code` handles both `str` and `dict` results
+5. **CoS notation** — compact scene format (~65% token savings per the CoS paper, arXiv 2305.10276 — a paper figure, not a local benchmark)
 
-**Gate verification integrity**: all blocking CI gates must derive expected values externally, carry a counterfactual pin (three-class taxonomy — `test_*_fails_the_gate` canon applies to counterfactual pins only; live controls keep descriptive names and MUST NOT use the suffix — see ADR-0030), and be registered in .github/gate-registry.yaml; bare enumeration claims in docs default to machine-checked carriers — see ADR-0029 (D-212..D-216, D-225)
+Blocking CI gates must derive expected values externally, carry a counterfactual pin, and register in `.github/gate-registry.yaml` — see ADR-0029/0030. Handoffs (grill/audit/exec) land in `.scratch/{slug}/handoffs/` — see ADR-0030 §6.
 
-**Handoff carrier**: all handoff documents (grill/audit/exec/handoff) must land in `.scratch/{slug}/handoffs/` — `%TEMP%` and any off-repo path are banned as handoff carriers; a skill's `%TEMP%` default is explicitly void for this repo. Cross-round decision content folds into ADR/ledger (fold-then-delete), so handoff files themselves may stay unversioned — see ADR-0030 §6 (D-226①)
+## ICEV workflow (mandatory for scene edits)
 
-## ICEV Workflow
-
-Every scene modification must follow:
 1. **INSPECT**: `scene_snapshot()` — understand current state
-2. **COMPUTE**: Use spatial data to calculate changes
+2. **COMPUTE**: use spatial data to calculate changes
 3. **EXECUTE**: `execute_code()` — apply changes
 4. **VERIFY**: `scene_assert()` + `scene_review()` — confirm results
 
-## scene_review Dimensions (Universal)
-
-The audit tool is generic — works for ANY Maya project:
+## scene_review dimensions
 
 | Dimension | Score | What it checks |
 |-----------|-------|----------------|
@@ -156,286 +100,45 @@ The audit tool is generic — works for ANY Maya project:
 | organization | 10 | Hierarchy health |
 | constraints | 5 | Max objects, custom rules |
 
-## Maya Connection Setup Guide
+## Maya connection setup
 
-When `list_sessions` returns empty, use `maya_setup_guide()` to diagnose and fix.
+When `list_sessions` returns empty, use `maya_setup_guide()`:
 
-### Workflow
+1. `action="diagnose"` — checks Maya process, port, userSetup.py
+2. `action="install"` — auto-generates userSetup.py (marker-block managed)
+3. `action="guide"` — step-by-step fallback instructions
+4. `action="uninstall"` — removes installed userSetup.py
 
-1. **Diagnose**: `maya_setup_guide(action="diagnose")` — checks Maya process, port, userSetup.py
-2. **Install**: `maya_setup_guide(action="install")` — auto-generates userSetup.py in Maya scripts dirs
-3. **Guide**: `maya_setup_guide(action="guide")` — full step-by-step fallback instructions for user
-4. **Uninstall**: `maya_setup_guide(action="uninstall")` — removes installed userSetup.py
+userSetup.py paths: Windows `%MAYA_APP_DIR%\<version>\scripts\userSetup.py`; Linux `~/maya/<version>/scripts/`; macOS `~/Library/Preferences/Autodesk/maya/<version>/scripts/`.
 
-### Auto-Setup (userSetup.py)
+Manual fallback: Script Editor → Python mode → `import maya.cmds as cmds; cmds.commandPort(name=":7001", sourceType="python")`.
 
-The generated `userSetup.py` opens Maya command port on startup using `evalDeferred` for safety.
+## Maya naming convention
 
-**Platform-specific paths:**
-- **Windows**: `%MAYA_APP_DIR%\<version>\scripts\userSetup.py`
-- **Linux**: `~/maya/<version>/scripts/userSetup.py`
-- **macOS**: `~/Library/Preferences/Autodesk/maya/<version>/scripts/userSetup.py`
+- `GRP_` groups, `GEO_` geometry, `MAT_` materials, `CAM_` cameras, `LGT_` lights (key/fill/rim/accent roles), `LOC_` locators
+- Never default Maya names (pCube1, group1); max nesting depth 4; every mesh under a `GRP_` parent
 
-### Fallback (Manual Setup)
+## Known quirks
 
-If userSetup.py does not work, guide the user to:
-1. Open Maya Script Editor (Windows > General Editors > Script Editor)
-2. Switch to **Python** mode (not MEL)
-3. Execute: `import maya.cmds as cmds; cmds.commandPort(name=":7001", sourceType="python")`
+- Maya command port goes stale on large module writes (>10K chars); Qt sessions use the framed channel, temp-file fallback is headless-only.
+- `execute_code` with `result_type="JSON"` may return `dict` directly — client handles both.
+- `import X; X.func()` can fail under `prepare_code_for_result_capture`; pre-import with `execute_code("import X", NONE)` then use expression-only calls.
+- Git Bash on Windows: never `2> nul` — `nul` is a device name bash treats as a filename, and a stray `nul` file crashes `but status`. Use `2>/dev/null`.
 
-### Cross-Platform Notes
+## Cross-module dependency rules (联动规范)
 
-- Process detection (`utils.py`) handles Windows/Linux/macOS Maya process names
-- `connection_guide.py` auto-detects platform and Maya installation paths
-- Linux: Maya may appear as `maya`, `MayaBin`, or `maya-bin`
-- All file paths use `pathlib.Path` for cross-platform compatibility
+When modifying a module, its dependent files MUST be updated together — the full dependency map lives in CONTRIBUTING.md. Headline rules:
 
-## Maya Naming Convention
+- `maya_scene_module.py` → `scene_tools.py` + `server.py` + READMEs + matching tests; growth past `monolith-budget.json` fails lint — new Maya-side capability routes to a same-unit separate file (ADR-0027), never appended to the monolith
+- Any new tool surface → `pipeline.py` (TOOL_ANNOTATIONS) + `server.py` instructions + threat-model + READMEs + AGENTS
+- `llms.txt`, `docs/guide/error-codes.md`, and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived/gated — never hand-edit
+- New `check_*.py` gates → register in `gate-registry.yaml` (human-authored, never generated) with counterfactual + live pins
+- Baseline files (ruff/monolith/mypy) are regenerated archives — CI never writes them; lowering a budget needs the reason in the same PR
 
-- `GRP_` for groups, `GEO_` for geometry, `MAT_` for materials
-- `CAM_` for cameras, `LGT_` for lights, `LOC_` for locators
-- NEVER use default Maya names (pCube1, group1, etc.)
+## Pointers
 
-## Development Commands
-
-```bash
-# Run tests
-python -m pytest tests/ -q
-
-# Lint vs frozen per-rule budget (.github/ruff-baseline.json — ratchet down only)
-ruff check .
-
-# Typecheck vs frozen baseline (mypy-baseline.txt — fails only on NEW errors)
-python -m mypy src/ | mypy-baseline filter
-
-# Pre-commit hook surface BEFORE pushing — the lint job runs this verbatim
-# (trailing-whitespace / end-of-file / ruff-format); a skipped local run
-# means deterministic CI red (T-27 audit F-01 class).
-uv run pre-commit run --all-files
-
-# Run with debug logging (-v=INFO, -vv=DEBUG)
-python -m maya_mcp_server -vv
-
-# Security audit
-semgrep scan --config auto src/
-```
-
-## Known Quirks
-
-- Maya command port produces stale responses when large modules (>10K chars) are written. Qt sessions use the framed channel directly; the temp-file fallback is retained only for headless/native sessions (D-013).
-- `execute_code` with `result_type="JSON"` may receive `dict` directly (not `str`). The client handles both.
-- Stream capture auto-installs on first `get_client()` call.
-- `import X; X.func()` pattern can fail with `prepare_code_for_result_capture`. Pre-import with `execute_code("import X", NONE)` then use expression-only calls.
-- Git Bash on Windows: never discard stderr via `2> nul` — `nul` is a reserved device name that bash treats as a plain filename, creating a real `nul` file (same trap for `con`/`aux`/`prn`); a stray `nul` inside the repo crashes `but status` outright (os error 1). Use `2>/dev/null` instead.
-
-
-## Cross-Module Dependency Rules (联动规范)
-
-When modifying any module, the following files MUST be updated together.
-Failure to update dependent files will cause integration failures.
-
-### Module Dependency Map
-
-| Module Modified | Must Also Update | Reason |
-|----------------|------------------|--------|
-| `maya_scene_module.py` (scene_plan) | `scene_tools.py`, `server.py`, `README.md`, `README.zh-CN.md` | Scene planning tool needs MCP tool + docs |
-| `maya_scene_module.py` (aesthetic functions) | `scene_tools.py`, `tests/test_maya_scene_module.py` | Inline `_score_*` functions are the sole implementation (ADR-0003 status notes; host module retired in 0.4.0 per D-124); tool descriptions + stub-tier coverage must match |
-| `maya_scene_module.py` (lighting functions) | `scene_tools.py`, `tests/test_maya_scene_module.py` | Lighting data fields must match tool expectations |
-| `maya_scene_module.py` (scene_review) | `scene_tools.py` (scene_review docstring), `server.py` (instructions) | Review check names must match tool args; instructions must list all checks |
-| `maya_scene_module.py` (new function) | `scene_tools.py` (new tool), `server.py` (instructions), `README.md`, `README.zh-CN.md`, `tests/` | Every new Maya function needs a corresponding MCP tool, docs, and tests |
-| `visual_module.py` (capture paths) | `visual_tools.py`, `server.py` (instructions), `docs/adr/0013-visual-loop-architecture.md`, `tests/test_visual_tools.py` | Capture contract, annotations, and ADR must stay in sync |
-| `visual_tools.py` (tool surface) | `pipeline.py` (TOOL_ANNOTATIONS), `server.py` (instructions), `docs/threat-model.md` (§5 matrix), `README.md`, `README.zh-CN.md` | Tool surface changes require annotation + docs sync |
-| `asset_tools.py` / `polyhaven.py` / `asset_module.py` (asset surface) | `pipeline.py` (TOOL_ANNOTATIONS), `server.py` (instructions + shared audit), `docs/threat-model.md` (§4/§5), `tests/test_polyhaven.py`, `tests/test_asset_module.py`, `tests/test_asset_tools.py`, `tests/maya_stub/` (new cmds surface), `README.md`, `README.zh-CN.md`, `AGENTS.md` | Asset tools split host (download/cache) vs Maya-side (import/wire); every piece must stay in sync |
-| `export_tools.py` / `export_module.py` (export surface) | `pipeline.py` (TOOL_ANNOTATIONS), `server.py` (instructions), `docs/threat-model.md` (§5 matrix), `tests/test_export_module.py`, `tests/test_export_tools.py`, `tests/maya_stub/` (cmds.file export surface), `README.md`, `README.zh-CN.md`, `AGENTS.md` | Export tool splits host (validation/registration) vs Maya-side `export_scene` (path/format/selection/plugin contract); every piece must stay in sync |
-| `introspect_tools.py` / `introspect_module.py` (introspection surface) | `pipeline.py` (TOOL_ANNOTATIONS), `server.py` (instructions), `docs/threat-model.md` (§5 matrix), `docs/visual-callform-matrix.md` (call-site table), `tests/test_introspect_module.py`, `tests/test_introspect_tools.py`, `tests/maya_stub/` (attr_meta / plug_connections / listAttr / attributeQuery surface), `README.md`, `README.zh-CN.md`, `AGENTS.md` | Introspection is a `_mcp_scene`-unit fragment (D-095 criterion 4): the Maya side is concatenated into the scene payload by `scene_tools`/`client.ensure_module_injected(extra_source_paths=...)` — not a standalone module; every piece must stay in sync; the D-110 response budget (`limit` param, `_DESCRIBE_SOFT_CAP`/`_DESCRIBE_HARD_CAP` constants, `*_truncated`/`total_count`/`total_connections` disclosure fields) is part of the contract surface |
-| `scene_tools.py` (new tool) | `server.py` (instructions), `README.md`, `README.zh-CN.md`, `AGENTS.md` | Tool surface changes require documentation sync |
-| `scene_cache.py` | `scene_tools.py` (cache invalidation), `session_manager.py` (mark_dirty) | Cache behavior must be consistent |
-| `security.py` | `pipeline.py` (enforcement point), `tests/test_security.py`, `tests/test_pipeline.py` | Security rules enforced by the middleware pipeline, not per-tool |
-| `pipeline.py` | `server.py` (middleware registration + annotations), `scene_tools.py` (annotations), `docs/threat-model.md` | Pipeline/threat-model must stay in sync |
-| `connection_guide.py` | `server.py` (maya_setup_guide params), `tests/test_connection_guide.py` | Marker-block semantics + confirm/dry_run/remove_empty_file flags |
-| `cos_formatter.py` | `scene_tools.py` (COS format output) | Formatter changes affect all tool COS outputs |
-| `maya_scene_module.py` (scene_review check names/semantics) | `skills/scene-review-playbook/SKILL.md` | Card documents the 11 checks + findings→actions; check renames/semantics changes must sync it |
-| `maya_scene_module.py` (line-count growth) | `.github/monolith-budget.json`, `.github/scripts/check_monolith_budget.py`, `tests/test_check_monolith_budget.py` | D-125 ratchet: growth past the frozen cap fails the lint job; legitimate additions need a human-approved budget edit in the same PR with the reason stated; new Maya-side capability routes to a same-unit separate file (ADR-0027 criterion 4), never appended to the monolith |
-| `pipeline.py` strict policy flags (`MAYA_MCP_DISABLE_*`, D-207 1/7) | `docs/threat-model.md` §2/§3, `docs/guide/error-codes.md` (`policy_disabled` row), `llms.txt` escape-hatch section, `tests/test_pipeline.py::TestStrictPolicyMode` | One choke point: `on_call_tool` denies and `on_list_tools` hides. Adding a destructive tool without adding it to `MAYA_MCP_DISABLE_ARBITRARY` fails `test_the_three_dangerous_tools_are_exactly_the_covered_set`; adding an exception class without a doc row fails `check_error_codes.py` |
-| `llms.txt` / `docs/guide/**` (派生页) | `.github/scripts/check_llms_txt.py`, `.github/scripts/check_version_consistency.py`, `.github/scripts/check_error_codes.py`, `tests/test_check_d207_gates.py`, `.github/workflows/ci.yml` | Two of the three are DERIVED and gated, never hand-maintained: `llms.txt` from `TOOL_ANNOTATIONS`, `error-codes.md` from `security.py`, plus the version list across pyproject/`__init__`/server.json/CHANGELOG/llms.txt (the mcp-publisher manifest's top-level `version` must equal pyproject exactly since D-229 2) — hand-editing any of those fails its own gate in CI (D-183 third-source rule). `docs/guide/session-lifecycle.md` is the exception and is **prose with AST-verified `path::symbol` anchors, not a derived page and not gated**; gating it would be a new ruling (D-207 3 legislated a page, not a checker). Do not describe it as derived |
-| `docs/adr/0028-elements.yaml` / tool descriptions | `.github/scripts/check_tdqs_disclosure.py`, `tests/test_check_tdqs_disclosure.py`, `docs/adr/0028-tdqs-description-quality.md`, `src/maya_mcp_server/pipeline.py` | D-175 disclosure ratchet: tool description elements and boundary targets must strictly satisfy 0028-elements.yaml; changes require PR explicit review |
-| `.github/gate-registry.yaml` / `check_gate_registry.py` / `check_count_claims.py` / `.github/*-spec.yaml` (治理载体面) | `.github/scripts/check_gate_registry.py`, `tests/test_check_gate_registry.py`, `tests/test_check_count_claims.py`, `.github/workflows/ci.yml`, `AGENTS.md`, `CHANGELOG.md` | ADR-0029 通则的落地面。改闸 → 必须同步登记条目（bound_class/expected_sources/pin_node_ids/exemption），登记**禁脚本生成**（D-215）；豁免条目必带 expires\|issue（D-215）。改治理常量 → 迁到对应 per-domain spec 文件，禁留在代码里（D-214）；spec 禁镜像对象实况（那是第二真源）。**baseline 语义条款（D-214⑤，落地）**：baseline 文件=「上一帧真源的存档」，每次**重新生成**，禁手写维护数字——适用 `.github/ruff-baseline.json`、`.github/monolith-budget.json`、`mypy-baseline.txt`、TDQS derivable-minimum-set。降低棘轮须在同 PR 说明理由；CI 永不写 baseline。与 spec 文件正交：spec 是人手编的治理常量，baseline 是生成物。**位置注记（D-150② 兑现，弱注记）：上述 baseline 文件的仓根/`.github` 落位=工具默认路径（`mypy-baseline` 读 CWD 的 `mypy-baseline.txt`），不迁移、不重命名**——同 server.json 落仓根先例。新增 check_*.py → 登记表缺条目即红（D-215①），`.github/workflows/ci.yml` 未接线而自称 bound_class=gate 即否决权漂移红（D-212②）。`check_gate_registry` 处于 D-215④ 观察期（::warning:: 不阻塞），翻转条件=登记表落盘后首个正常 PR 周期走完 + 覆盖自查同 commit |
-| `CHANGELOG.md` / `docs/decision-ledger.md` / `docs/adr/**` / `docs/evidence/**` (证据指针) | `.github/evidence-anchor-forms.yaml`, `.github/scripts/check_evidence_anchors.py`, `tests/test_check_evidence_anchors.py`, `.github/workflows/ci.yml` | D-183 锚点形态白名单单源——脚本与模板双消费防双真源；裸 path:line=warn 升级提示，sha 钉死除漂移 |
-
-### Injected-module admission criteria (注入模块准入判据, ADR-0027 + D-095)
-
-New Maya-side capability defaults to a NEW per-domain injected module —
-never into the `maya_scene_module.py` monolith. A new module is allowed
-only when ALL THREE domain criteria hold (the bar exists to stop
-precedent slide):
-
-1. **Independent injection timing** — semantic reading (D-095): the
-   capability is needed in session shapes of its own, not merely a
-   mechanically separate lazy-inject trigger.
-2. **Independent Maya-side API surface** — its cmds/omui call surface is
-   orthogonal to the existing modules'.
-3. **Independent failure domain** — its error/degradation semantics are
-   not shared with another module.
-4. **Target-module health (D-095)** — when criteria FAIL and the
-   destination module is a registered monolith (mypy-debt / T-07), land
-   the code as a separate host-side source file assembled into the same
-   injection unit (same module name / trigger / failure domain), not as a
-   direct append to the monolith body. First case: scene-graph
-   introspection → `_mcp_scene` unit via separate file.
-
-A capability that fails any criterion goes into an existing module (say
-which, and why — criterion 4 then governs HOW it lands). Cross-injected-module calls must be declared
-explicitly — injected modules are self-contained by architecture (the
-`visual_module` look-alike code in `asset_module` is the accepted cost
-of that rule). Injection size is a budgeted resource (native channel
-15000-char threshold, D-013) — keep modules lean.
-
-### Module-call construction convention (D-098)
-
-Host-side calls into injected units go through two module-level
-primitives in `client.py`: `module_call(module, fn, *args, **kw)`
-(JSON-payload call builder — the P0-2 injection-safety surface: user
-input never becomes executable source text) and
-`exec_module_code(client, code)` (execute + raise_for_error + JSON
-decode). Per-domain `_ensure_X_injected` binders stay (they pin
-module_name/source_path/session-set = domain config, not duplication).
-Rule: the client.py module_call family only accepts domain-agnostic
-call-construction primitives — no domain semantics. Drifted domain
-variants inline back per the D-090 playbook.
-
-### Changelog Evidence Rule (D-082⑦, D-183)
-
-Every `Added`/`Fixed`/`Changed` bullet in CHANGELOG.md MUST carry an
-executable evidence pointer — so a wording drift like the 0.2.0
-"manifest-based cache" line (which claimed a mechanism the code never
-had) is lint-checkable by inspection.
-Anchor forms are whitelisted by the single source
-`.github/evidence-anchor-forms.yaml` (D-183): pytest node ID >
-`path::symbol` (AST-verified) > `sha:path:line` > bare `path:line` —
-the bare form is a warn-level upgrade hint in versioned docs and stays a
-legitimate transient form in `.scratch/`. Two structured requirements:
-every evidence command records the environment + exit code + artifact
-path triple; every `Fixed` entry records the broken version → fixed
-version field.
-`.github/scripts/check_evidence_anchors.py` runs in the lint job —
-`::warning::` + exit 0 during the observation period — checking pointer
-reachability + structural existence only; content truth, fix direction,
-and reproducibility remain human-review responsibilities. The `[0.2.1]`
-section is the first compliant section.
-
-### Assertion & Evidence Discipline (D-205)
-
-1. Enumeration/count assertions MUST declare their domain, or write the rule instead.
-   Report a number only with its basis; recompute before restating someone else's count.
-2. In versioned docs, enumeration/count/retirement assertions default to a
-   machine-checked carrier (checker assertion, docstring pinning test, elements.yaml).
-   Calibration claims stay prose under D-149 and do NOT become checker assertions.
-3. Anything not reproducible is recorded as "unverified" — never guess a cause.
-   An invalid experiment is not evidence (D-109). Mechanism pointer: pre-commit
-   `mixed-line-ending` is the landing layer for line endings; before reporting "N files
-   are bad", prove whether the blob or the working tree is at fault.
-### Asset Directory Discipline (D-082⑥⑤)
-
-`.github/assets/` is **append-only**: README imagery is referenced by
-absolute `main`-branch URLs and every already-published PyPI page
-renders `main` forever — deleting or renaming a published asset
-permanently breaks every historical release page. New captures get NEW
-filenames; retirement happens in README prose, never by file deletion.
-
-### Aesthetic Module Change Checklist
-
-When modifying ANY aesthetic-related code, update ALL of these:
-
-1. **`maya_scene_module.py`** — Maya-side `analyze_aesthetics()` + `_score_*()` functions (sole implementation since D-124)
-2. **`scene_tools.py`** — `scene_aesthetics` tool docstring + COS format output
-3. **`maya_scene_module.py`** — `scene_review()` aesthetics section (must read new format)
-4. **`server.py`** — MCP instructions (aesthetic dimension descriptions)
-5. **`tests/test_maya_scene_module.py`** — Unit tests for all dimensions
-6. **`README.md`** + **`README.zh-CN.md`** — Feature descriptions
-7. **`AGENTS.md`** — This checklist (if new dimensions added)
-
-### Lighting Module Change Checklist
-
-When modifying lighting analysis:
-
-1. **`maya_scene_module.py`** — Light data collection in `analyze_aesthetics()` + `_score_lighting_quality()` (sole implementation since D-124)
-2. **`scene_tools.py`** — `scene_aesthetics` and `scene_review` tool docs
-3. **`maya_scene_module.py`** — `scene_review()` lighting section
-4. **`tests/test_maya_scene_module.py`** — Lighting tests
-
-### Scene Review Change Checklist
-
-When modifying `scene_review()`:
-
-1. **`maya_scene_module.py`** — `scene_review()` function
-2. **`scene_tools.py`** — `scene_review` tool docstring (check names must match)
-3. **`server.py`** — Instructions (list all review checks)
-4. **`README.md`** + **`README.zh-CN.md`** — Review capabilities description
-5. **`tests/`** — Review tests
-
-### Naming Convention Rules
-
-- Groups: `GRP_` prefix (e.g., `GRP_store_shell`, `GRP_display_main`)
-- Geometry: `GEO_` prefix (e.g., `GEO_wall_north`)
-- Materials: `MAT_` prefix (e.g., `MAT_dark_wood`)
-- Cameras: `CAM_` prefix (e.g., `CAM_entrance_wide`)
-- Lights: `LGT_` prefix with role (e.g., `LGT_key_main`, `LGT_fill_ambient`, `LGT_accent_spot`)
-- Locators: `LOC_` prefix
-- Root groups must use `GRP_` prefix
-- No default Maya names (`pCube`, `pSphere`, `group1`, etc.)
-- Max nesting depth: 4 levels
-- All meshes must be under a `GRP_` parent
-
-### Group-Based Layout Rules
-
-Every object in the scene MUST belong to a GRP_ group. The scene_plan tool provides:
-
-1. **Intelligent Auto-Fix**: Automatically categorizes orphan objects into 9 zone groups:
-   - GRP_shell: walls, floors, ceilings, structure
-   - GRP_entrance: doors, gates, lobby
-   - GRP_display: shelves, counters, kiosks
-   - GRP_ip_core: characters, figures, mascots
-   - GRP_furniture: tables, chairs, benches
-   - GRP_lighting: lights, spots, LEDs
-   - GRP_path: aisles, corridors, walkways
-   - GRP_decor: signs, banners, decorations
-   - GRP_service: checkout, storage, staff areas
-
-2. **Group-Level Layout**: Analyzes group positions for overlaps, spacing, and zone compliance
-3. **Natural Language Planning**: Parses user objectives into structured execution plans
-4. **Zone Compliance**: Maps groups to functional zones (entrance → display → circulation → service)
-
-### ICEV Workflow (Mandatory)
-
-Every scene modification MUST follow:
-
-1. **INSPECT** — `scene_snapshot()` to get current state
-2. **COMPUTE** — Calculate changes based on spatial data
-3. **EXECUTE** — `execute_code()` to apply changes
-4. **VERIFY** — `scene_assert()` or `scene_review()` to confirm
-
-### Error Detection Rules
-
-The `scene_review()` function now detects:
-
-- **Orphan objects**: Root-level meshes not under `GRP_` groups
-- **Empty groups**: `GRP_` groups with no children
-- **Inconsistent naming**: Too many single-use naming prefixes
-- **Excessive depth**: Hierarchy deeper than 4 levels
-- **Spatial conflicts**: Objects penetrating non-parent objects
-- **Aesthetic weaknesses**: Dimensions scoring below 40/100
-- **Lighting issues**: Missing three-point setup, poor fill ratio, non-physical decay
-
-## Agent skills
-
-### Issue tracker
-
-Issues and specs live as GitHub issues on this repo; all operations use the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default canonical vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context layout: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
+- **Issue tracker**: GitHub issues via `gh` CLI — conventions in `docs/agents/issue-tracker.md`
+- **Domain vocabulary**: `CONTEXT.md`; **decisions**: `docs/adr/` (read the ADRs touching an area before working in it)
+- **VCS discipline**: GitButler (`but`) — never force-push or rewrite history. `D-xxx` references cite the retired decision ledger (deleted 2026-10-14) — resolve via `git log -- docs/decision-ledger.md`
+- **Reference material**: `docs/reference/` — real-Maya verification runbook, `gui_verify.py` harness, archived external reviews
+- **Session work**: `.scratch/` is local-only (gitignored); handoffs go to `.scratch/{slug}/handoffs/`

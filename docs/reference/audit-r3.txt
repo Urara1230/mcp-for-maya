@@ -1,0 +1,72 @@
+第三轮锐评:账本文化开始反噬修辞层——两处新埋的雷与一次我方的公开撤稿
+
+审计对象:Xxx91n/mcp-for-maya @ b2640f1。自第二轮基线 aed9298 起 148 个提交(38 fix / 22 test / 55 docs),发布 v0.1.0→v0.2.0 四版,其中 0.1.1 已 yank(PyPI API 实测:whl+tar.gz 双 yanked: True)。本机实测:685 passed / 24 skipped(21.9s);ruff 预算 src 79 / tests 28 全绿且已细化到 per-rule;mypy 222 错但已用 mypy-baseline.txt(237 行)接入 CI 专属闸(ci.yml:39-57);README 镜像骨架校验本地跑通("26 headings match 1:1")。
+一、第二轮账目:十条修复全兑现,一条我方引用错误正式撤回
+第二轮指控	现状(实据)
+lookThru 实机炸弹	换掉了:visual_module.py:176/184 改 modelPanel -e -camera 命名参数 API,单参哑弹删除;stub 改类型感知 warn/strict 双档(tests/maya_stub/cmds.py:590-602)
+AE"已修"虚账 + 引擎内活 KeyError	三件套全落:CHANGELOG 删账;ADR-0003 追加"未兑现"status 注记(accepted 内澄清而非回改,理由引 Fowler 语义);aesthetic_engine.py:943 "other"→"unclassified" 崩溃修复;AGENTS.md:201 机器可见 DORMANT 标注。0.1.1 条目原文:"module stays dormant — zero production references — pending the T-06 consolidation decision"——每个字都对
+pip install 装 404	发了:pypi.org/pypi/mcp-for-maya 200,latest 0.2.0;还顺手做了"先修后发、tag 前用完修正窗口"的正确时序(ADR-0016 否决"先发后修"的论证写得漂亮:PyPI 元数据永久留存)
+native 发送无 \n	client.py:500 + b"\n",并去查了 commandPort 2016 源码 splitlines 实锤 off-by-one,还把它列进 #7 实证项
+死重试常量+假注释	DEFAULT_MAX_RETRIES 删净;client.py:377-379 注释改为诚实的 "There is no retry…";真正需要的重试则新加了(QT_CONNECT_ATTEMPTS=3 :61、:754-775 有界 connect+ping 循环,注释直书 T-18a 真机抖动成因)
+helper 括号笔误	maya_mcp_helper.py:276 已闭合
+.scratch 过程垃圾入仓	git ls-files .scratch = 0,.gitignore:19 整目录 ignore,账本迁 docs/decision-ledger.md
+is_pc 裸子串误判	maya_scene_module.py:3014/3113 改 DAG 路径前缀;0.1.1 条目连回归方向都写反过来了:GEO_wall/GEO_wall2 兄弟名不再被错误豁免(子串匹配的真实危害是漏报而非误报,这点比我上轮的猜测更准)
+权重 105 分母怪异	11 段合计改为 95,代码/README(:277-287)/AGENTS(:104-114)三方逐值一致,README:273 明写 "normalized to 0-100"
+ADR-0011 权重表称"总分仍 100"	我方引用错误,正式撤回:grep docs/adr/0011* 权重/分值/总分/105/100 全零命中——那份 ADR 里没有权重表。这是我从上轮记忆笔记里脑补的指控,他们没有说错:"引用张冠李戴"
+真机验证是唯一系统性盲区	他们照做了并且当场撞出血:issue #7 真机首探发现已发布 0.1.1 的全部 scene_* 工具面死亡("JSON" 裸字符串撞 ResultType 枚举,双通道同炸,570 条 stub 测试全绿漏检——这个 bug 就埋在我两轮都逐行读过的调用链上,我没抓到,他们的真机层抓到了),修复→发 0.1.2→yank 0.1.1,并把真机项固化为 manual-tier(本机 24 skips = gui 7 + human_verify 8 + mayapy 9),签名对照沉淀 presence-baseline.json
+
+一句总评:被审者对审计做了逐条实证反审计(8 实锤/1 夸大/1 驳回),且驳回的那条驳对了。 这个闭环质量在任何 code review 文化里都是稀有物种。
+二、新问题:防弹衣上焊的新炮塔,炮管有两根装反了
+P1-A:模块注入走"共享 /tmp 固定文件名"——一个他们仓库自己已经会拆的炸弹
+
+新 asset 通道把注入模式复制了一遍:asset_tools.py:57-60:
+
+text
+
+_tmp = _os.path.join(_tf.gettempdir(), "_mcp_asset_src.py")
+with open(_tmp, "w", encoding="utf-8") as f: f.write(source)
+
+同款已在 scene_tools.py:80(_mcp_scene_src.py)。三个问题:①路径可预测、无 O_EXCL、无 0600,open("w") 跟随 symlink;②文件永不删除,模块源码长期躺 world-readable;③同机多用户/多实例互踩。而同一个仓库 300 行之外就是正确姿势:playblast 临时文件用 mkstemp(visual_module.py:311)和 uuid4 后缀(:391)。威胁模型自己划的线是"Multi-user or remote access → the model breaks; don't do it"(docs/threat-model.md:149)——单次写放共享 /tmp 意味着模型还没被远程访问破坏,先被同机任何本地用户破坏了(最廉价的攻击:预占目录 /tmp/_mcp_scene_src.py 即永久瘫痪全部 scene_* 注入)。修法五行:mkstemp 进 platformdirs 缓存目录、0600、try/finally unlink。
+P1-B:位移贴图接线在真 Maya 上永远失败,而三层测试体系看不见它
+
+asset_module.py:293-303(0.2.0 门面功能,"texture auto-wiring … /disp/"):
+
+text
+
+disp = cmds.shadingNode("displacementShader", asUtility=True, ...)
+cmds.connectAttr(disp + ".displacement", sg + ".displacementShader", force=True)  # :300
+
+sg.displacementShader 是 material 型槽位,接一个 float 输出(displacementShader.displacement)真 Maya 直接拒绝;合法姿势是 message 连接或 setAttr -type "string"——讽刺的是正确范式就在同一文件 :186(connectAttr mat.outColor sg.surfaceShader,FBX 导入器同款)旁边。现在这行永远进 except → 返回 False → 只在 unwiring 列表里留一行"unwired"。**为什么全绿过关?**①stub 的 connectAttr(tests/maya_stub/cmds.py:712-724)只建模"标量→三元组"拒绝,不建模槽位类型规则;②grep displacement tests/test_asset_module.py = 0 命中,这条路径一条测试都没有;③presence/signature 审计对它无效——签名全对,错在连接图语义。这正是他们 D-005"stub 语义保真"命题的下一个 frontier:bug 类别从"调用形态"进化到"连接类型表"。附带半行:失败路径上 :298 创建的 file 节点无人回收(仅组拆除时才扫)。
+P2-C:CHANGELOG 的"机制命名"第二次跑在代码前面
+
+0.2.0 条目 CHANGELOG.md:49:"manifest-based cache reuse with fresh-metadata revalidation"。实测:manifest.json 是只写不读的审计产物(polyhaven.py:494 写;全 src 无读取方,仅 tests/test_polyhaven.py:353 验证它存在);真正的复用 = 先拉新鲜 /files 元数据、逐文件 size+md5 复验(:467 → :405-412)。行为其实比 manifest-based 更好(不存在 manifest 撒谎窗口),但描述失实——和 CHANGELOG:33(已删)同属"决策→文案"管线先于"代码→对账"的惯性产物。一行改措辞的事,但对一个以账本为品牌的项目,这类小误差的复现值得点名。
+P2-D:VP2 翻转常量=单机证据钉死全机群
+
+visual_module.py:244 _VP2_READBACK_BOTTOM_UP = False——T-18a 在他们那台 GPU 上实测顶向下,遂钉 False;注释也自曝其意:"the arbiter for GPUs/drivers that may still differ"。而 D-056⑤ 明文记录过"同版本不同 GPU 有方向性差异前科"。方向不同的机器上,所有 viewport 快照上下翻转,而视觉闭环的全部价值就是喂真像素给 LLM——空间判断直接镜像。检测手段存在(gui-tier 非对称纯色断言,:298-301 注释所指)但那是 skipped-by-default 的人工层。建议:bootstrap 时自动跑一次纯色探针设 per-session 标志,或至少在 README 环境要求节给一个显式覆盖开关——"常量仲裁"对作者机器成立,对分发对象不成立。
+P2-E:自动新建材质用 blinn,rough/metal 接线成死路
+
+_new_material(asset_module.py:180-183)给无匹配部件建 blinn;而 _wire_map 的 roughness 角色只找 specularRoughness|roughness(blinn 皆无)→ 永远 False;metalness 兜底打到 reflectivity——那是高光强度标量不是金属度,接上去属于自信的错误。FBX 导入的标准面材质没问题,踩坑的恰是"单部件资产/材质没随 FBX 进场景"的主打自动接线场景。改一行:standardSurface。
+P3 挂账(各一句)
+
+    polyhaven.py:172/175/443 对 API 回传的 Content-Length/size 裸 int(),脏头值抛 ValueError 逃出 AssetError 域错契约——别处全是结构化错误,这三处漏水;
+    search_assets 每次全量重下多 MB 索引、零 TTL 缓存,配合读桶 100/min 对 CC0 站点的 API 是失礼的;
+    asset_tools.py:122 审计行 duration_ms=0.0——填假数不如不填;
+    自家工具与自家审计打架:create_orbit_camera/create_camera_shot 默认产 orbit_cam/shot_cam(M:1530/1631),scene_review 命名检查要求 CAM_ 前缀(:3316/3567)——agent 按 ICEV 流程用他们的相机工具,自己的审核扣分自己造的物体;
+    README 图片"absolute URL pinned to main"——main 是活分支,"钉"字与事实相抵;他们账本(D-080⑤/D-081)其实已自证 0.2.0 PyPI 页 14 图全裂并决策"随下版修、旧页随 main 漂移属特性"——决策有据,但旧资产一旦 retire 全部历史 PyPI 页永久裂,建议发布资产目录从此只加不删;
+    maya_scene_module.py 4050→4583 行:体积随每轮功能默认增长,T-07 拆分与 T-06 AE 归并在账本上仍是"顺延债"——mypy 222 错里 182 个住在这一个文件里,基线闸锁住了增量,但锁不住"巨石继续长"这个方向本身。
+
+三、对账之外的横向判决
+
+    对比 blender-mcp 的位置移动:分发追平(都有 PyPI,且我方有它没有的 yank 纪律、SHA-pin CI、矩阵门);资产生态从"被碾压"变"单点破冰"(Poly Haven CC0 切片:比对方四生态缝合保守——宿主下载+Maya 零网络面+哈希验收,工程质量高,但功能面 1 对 4,且这根炮管还卡着 P1-B);README 门面(实拍纪律、生成脚本入仓、prompt→result 表)第一次有了注意力经济意义上的"发行版脸面"。star 差距依旧是宇宙级,但叙事可信度已经反超——对面 README 可没有 yank 声明。
+    流程评价:25 ADR + 81 决策 + per-rule 预算棘轮 + mypy 基线闸 + README 骨架 parity + 真机 manual-tier——这套治理密度已经不像开源项目,像一支把"可审计性"当产品卖的小团队。它暴露的问题也因此同构:决策(账本)产生文案,代码兑现决策,而对账靠事后 review。三轮下来虚账从 1 条大谎(CHANGELOG:33)收敛到 2 条小歪(manifest-based、disp 承诺),趋势健康,但值得一个机制:Added/Fixed 每条 bullet 必须挂测试 ID 或 file:line,lint 可查(0.1.1 的条目已经每条带 D-xxx,补上"指向可执行物证"就是完全体)。
+
+四、优先级与评分
+
+    P1-A 注入改 mkstemp+0600+finally-unlink(两处,约 10 行);
+    P1-B :300 换 .message 连接、失败路径回收 file 节点、stub 补"槽位类型表"、test_asset_module 补 displacement 正/负例;
+    P2 CHANGELOG:49 措辞归真;VP2 方向改运行时探针(或文档级逃生开关);blinn→standardSurface;
+    P3 六连小修;然后 T-06/T-07 该在下一个 minor 里兑现一次"减行"里程碑——巨石项目配再好的棘轮也只是给冰山装栏杆。
+
+评分:工程 9.5/10(预算棘轮+基线闸+真机层是我在这个体量见过最完整的);诚实 9/10(上轮 2 处虚账清零、我方 1 处撤稿,新存 2 处小歪);可交付性 8/10(装得上、发得出、yank 得掉,但 P1-A/P1-B/P2-D 三处任何一个都可能在用户的机器上先于 README 图片加载)。
+
+第一轮说它是"实习生代码穿 CI 马甲",第二轮说"防弹衣内兜揣假收据"。第三轮的准确描述是:收据全部补开了,防弹衣也过了实弹(真机),但新焊的两根天线上,一根朝邻居家的门,一根接错了极性。

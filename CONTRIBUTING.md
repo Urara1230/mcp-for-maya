@@ -23,6 +23,69 @@ House rules:
   The `check_changelog_fixed.py` gate only checks field existence/non-emptiness —
   it does not police this rewrite (D-230 fold-time rule; human step).
 
+## Cross-module dependency rules (联动规范)
+
+When modifying a module, the dependent files below MUST be updated together —
+stale companions cause integration failures and gate reds.
+
+| Module modified | Must also update | Reason |
+|-----------------|------------------|--------|
+| `maya_scene_module.py` (scene_plan) | `scene_tools.py`, `server.py`, `README.md`, `README.zh-CN.md` | Scene planning tool needs MCP tool + docs |
+| `maya_scene_module.py` (aesthetic/lighting/scene_review functions) | `scene_tools.py`, `tests/test_maya_scene_module.py` | Inline `_score_*` functions are the sole implementation; tool descriptions + stub-tier coverage must match |
+| `maya_scene_module.py` (new function) | `scene_tools.py`, `server.py`, `README.md`, `README.zh-CN.md`, `tests/` | Every new Maya function needs an MCP tool, docs, and tests |
+| `maya_scene_module.py` (line-count growth) | `.github/monolith-budget.json` | Ratchet: growth past the cap fails lint; legitimate additions need a reasoned budget edit in the same PR; new capability routes to a same-unit separate file (ADR-0027), never appended to the monolith |
+| `visual_module.py` / `visual_tools.py` | `server.py` instructions, `pipeline.py` annotations, `docs/adr/0013`, `tests/test_visual_tools.py`, READMEs, `docs/threat-model.md` | Capture contract, annotations, and docs must stay in sync |
+| `asset_tools.py` / `polyhaven.py` / `asset_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, asset tests, `tests/maya_stub/` (new cmds surface), READMEs | Host-side download/cache vs Maya-side import — every piece in sync |
+| `export_tools.py` / `export_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, export tests, `tests/maya_stub/` (export surface), READMEs | Host validation/registration vs Maya-side export contract |
+| `introspect_tools.py` / `introspect_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, `docs/visual-callform-matrix.md`, introspect tests, `tests/maya_stub/`, READMEs | Fragment concatenated into the `_mcp_scene` payload (same-unit file); the D-110 response budget (`limit`, `*_truncated`, `total_*` fields) is part of the contract |
+| `scene_tools.py` (new tool) | `server.py` instructions, READMEs, `AGENTS.md` | Tool surface changes require documentation sync |
+| `scene_cache.py` | `scene_tools.py`, `session_manager.py` | Cache invalidation consistency |
+| `security.py` | `pipeline.py`, `tests/test_security.py`, `tests/test_pipeline.py` | Rules enforced by the middleware pipeline |
+| `pipeline.py` strict policy flags (`MAYA_MCP_DISABLE_*`) | `docs/threat-model.md` §2/§3, `docs/guide/error-codes.md`, `llms.txt`, `tests/test_pipeline.py::TestStrictPolicyMode` | One choke point; uncovered dangerous tools or undocumented error codes fail their gates |
+| `connection_guide.py` | `server.py` (maya_setup_guide params), `tests/test_connection_guide.py` | Marker-block semantics + flags |
+| `cos_formatter.py` | `scene_tools.py` | Formatter changes affect all tool COS outputs |
+| Derived surfaces | — | `llms.txt` (from TOOL_ANNOTATIONS), `docs/guide/error-codes.md` (from `security.py`), and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived and gated — never hand-edit; `docs/guide/session-lifecycle.md` is prose with AST-verified anchors, NOT derived |
+| `.github/gate-registry.yaml` / `check_gate_registry.py` / `check_count_claims.py` / `*-spec.yaml` | `tests/`, `ci.yml`, `AGENTS.md`, `CHANGELOG.md` | See ADR-0029/0030: gates register pins (human-authored, never generated); exemptions carry `expires\|issue`; governance constants live in per-domain spec files, not code; spec files must not mirror object state (second source of truth) |
+| Evidence pointers in CHANGELOG/ADRs/evidence | `.github/evidence-anchor-forms.yaml` | Whitelist single source: pytest node ID > `path::symbol` > `sha:path:line` > bare `path:line` (warn-level hint in versioned docs) |
+
+### Injected-module admission criteria (ADR-0027)
+
+New Maya-side capability defaults to a NEW per-domain injected module — never
+into the `maya_scene_module.py` monolith. A new module is allowed only when all
+criteria hold: (1) independent injection timing — the capability is needed in
+session shapes of its own; (2) independent Maya-side API surface; (3)
+independent failure domain; (4) target-module health — when criteria FAIL and
+the destination is the registered monolith, land the code as a separate
+host-side file assembled into the same injection unit (first case:
+introspection → `_mcp_scene` unit). Cross-module calls must be declared
+explicitly — injected modules are self-contained by architecture.
+
+Host-side calls into injected units go through `client.py` primitives:
+`module_call(module, fn, *args, **kw)` (JSON-payload builder — user input never
+becomes executable source) and `exec_module_code(client, code)`. Per-domain
+`_ensure_X_injected` binders pin module_name/source_path/session-set = domain
+config, not duplication.
+
+### Changelog evidence rule
+
+Every `Added`/`Fixed`/`Changed` bullet in CHANGELOG.md MUST carry an executable
+evidence pointer (whitelist: `.github/evidence-anchor-forms.yaml`). Every
+`Fixed` entry records `Broken version:` → `fixed version:` fields
+(`check_changelog_fixed.py`, enforced for ≥ 0.6.0 + `[Unreleased]`).
+
+### Assertion & evidence discipline
+
+- Enumeration/count assertions declare their domain or become machine-checked
+  claims (`check_count_claims.py`); recompute before restating a count.
+- Anything not reproducible is recorded "unverified" — never guess a cause.
+
+### Asset directory discipline
+
+`.github/assets/` is append-only: README imagery is referenced by absolute
+`main` URLs and published PyPI pages render `main` forever — deleting or
+renaming a published asset permanently breaks historical release pages. New
+captures get NEW filenames.
+
 ## Pull requests
 
 - One branch per change; keep diffs small and reviewable.

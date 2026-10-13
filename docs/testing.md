@@ -57,8 +57,7 @@ Verified blocked on at least one dev box (Maya 2024, Windows):
 whole tier is unrunnable there. On such a box, run the Tier-2
 substance (checkpoint/rollback roundtrip, reference-edit case,
 signature collection) through a live GUI session instead — see
-`.scratch/maya-mcp-grill/harness/gui_verify.py` (machine-local scratch
-harness — not tracked in git) for the reference
+`docs/reference/gui_verify.py` for the reference
 implementation. Launch mayapy from PowerShell/cmd, never Git Bash
 (MSYS environment makes mayapy SIGSEGV at startup).
 
