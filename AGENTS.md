@@ -40,7 +40,7 @@ tests/
                            # gate checkers (check_*.py), manual tiers (mayapy/gui/human_verify)
 
 docs/
-├── adr/                   # ADR-0001..0029 architecture decision records (+ 0028-elements.yaml)
+├── adr/                   # ADR-0001..0030 architecture decision records (+ 0028-elements.yaml)
 ├── reference/             # real-maya-runbook, gui_verify.py harness, audit originals
 ├── evidence/              # decision-grade evidence (probes/, waiver list, window reports)
 ├── guide/                 # error-codes.md (derived+gated), session-lifecycle.md (prose)

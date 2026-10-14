@@ -284,7 +284,7 @@ _Avoid_: 叙事帖在证据未固化时抢发、聚合器逐个手工直投、�
 
 **收录面三态判置 (listing three-state disposition)**:
 逐渠道收录处置的三态分类——可行动 / 被动观察带触发条件 / 结构性否决永续，升级单向=被动→触发→可行动。登记载体=docs/distribution-surfaces.md（D-144/D-145α）。
--_Avoid_: 逐渠道周期性重开议事、未过结构匹配性判据即顺手提交、把被动观察误读为可行动、把结构性否决改写成临时推迟
+_Avoid_: 逐渠道周期性重开议事、未过结构匹配性判据即顺手提交、把被动观察误读为可行动、把结构性否决改写成临时推迟
 
 **发布门三态判定 (release-gate three-state disposition)**:
 v1.0.0 发布门对验收项的三态处置——Pass / Waived（reason+owner+expiry 三要素缺一不立，到期未消解自动转 Blocked）/ Blocked；机检清单=docs/evidence/gate-waiver-list-1.0.0.json。机制细则见 ADR-0023（D-163）。

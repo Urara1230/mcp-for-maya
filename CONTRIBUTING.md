@@ -17,7 +17,7 @@ House rules:
 
 - Every fix ships with a regression test on the maya stub layer.
 - Real-Maya tests are a separate local manual tier (`pytest -m mayapy`, see docs/testing.md) — never mixed with the stub tier.
-- If your change makes a doc line stale, fix that line in the same commit (propagation matrix in AGENTS.md).
+- If your change makes a doc line stale, fix that line in the same commit (「文档传播矩阵」词条 in CONTEXT.md).
 - When folding `[Unreleased]` into a release section, rewrite each Fixed entry's
   `fixed version: [Unreleased]` literal to that release's version number by hand.
   The `check_changelog_fixed.py` gate only checks field existence/non-emptiness —

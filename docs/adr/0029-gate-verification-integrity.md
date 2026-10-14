@@ -68,7 +68,7 @@
 
 ### 7. 载体分工与不可变立场（D-217）
 
-- 本通则载体=本 ADR 专篇；AGENTS.md 收指针行；CONTEXT.md 收新术语；decision-ledger 收裁决记录——四载体各单一职责指针化防双真源；
+- 本通则载体=本 ADR 专篇；AGENTS.md 收指针行；CONTEXT.md 收新术语；decision-ledger 收裁决记录（注：账本已于 2026-10-14 治理庭退役删除，裁决记录改落 ADR/CONTEXT.md，原文见 git 历史）——四载体各单一职责指针化防双真源；
 - **不可变立场注记**：ADR GitHub org 自承「immutability 理想 vs mutability 实战更好」的社区分歧存在——本仓按不可变纪律运作：已接受 ADR 不原地改实质决策，方向变化新开 ADR 并标 revised 双向链接；增补仅限澄清/新信息/扩范围（amend），不得借 amend 嫁接异域决策。
 
 ## 负向清单（本通则汇总）
