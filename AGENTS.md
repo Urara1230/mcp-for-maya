@@ -5,7 +5,7 @@ MCP server for LLM agents to inspect, plan, and edit Autodesk Maya scenes throug
 ## Install / run / test
 uv sync --frozen
 python -m maya_mcp_server -vv
-python -m pytest tests/ -q          # stub tier; visual-tool tests are red: issue #82
+python -m pytest tests/ -q          # stub tier
 ruff check . && python -m mypy src/ | mypy-baseline filter
 
 ## Don't touch
@@ -16,7 +16,7 @@ ruff check . && python -m mypy src/ | mypy-baseline filter
 ## Known quirks
 - Large module writes (>10K chars) stale the Maya command port; Qt sessions use the framed channel, temp-file fallback is headless-only.
 - `execute_code` with `result_type="JSON"` may return `dict`; handle both. `import X; X.func()` can fail under result capture — pre-import, then call expressions only.
-- Git Bash on Windows: never `2> nul`; use `2>/dev/null`. `D-xxx` refs cite the retired decision ledger — resolve via `git log -- docs/decision-ledger.md`.
+- Git Bash on Windows: never `2> nul`; use `2>/dev/null`. `D-xxx` refs cite the retired decision ledger — read it with `git show '1c5befe^:docs/decision-ledger.md'`.
 
 ## Agent skills
 
