@@ -5,8 +5,8 @@ MCP server for LLM agents to inspect, plan, and edit Autodesk Maya scenes throug
 ## Install / run / test
 uv sync --frozen
 python -m maya_mcp_server -vv
-python -m pytest tests/ -q          # stub tier
-ruff check . && python -m mypy src/ | mypy-baseline filter
+uv run python -m pytest tests/ -q          # stub tier
+uvx ruff@0.16.8 check . && uv run python -m mypy src/ | uv run mypy-baseline filter
 
 ## Don't touch
 - `src/maya_mcp_server/maya_scene_module.py` is line-capped by `.github/monolith-budget.json`; new Maya-side capability goes in a separate file of the same injection unit.
