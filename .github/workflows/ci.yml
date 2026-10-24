@@ -35,7 +35,7 @@ jobs:
         with:
           python-version: "3.x"
       - name: ruff check (JSON report)
-        run: uvx ruff@0.16.8 check . --output-format=json --exit-zero > ruff-report.json
+        run: uvx ruff@0.17.1 check . --output-format=json --exit-zero > ruff-report.json
       - name: compare vs frozen budget
         run: python .github/scripts/check_ruff_budget.py ruff-report.json .github/ruff-baseline.json
       - name: assets append-only guard (D-113)
