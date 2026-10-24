@@ -51,11 +51,9 @@ jobs:
         run: python .github/scripts/check_llms_txt.py
       - name: version consistency gate (D-207 9)
         run: python .github/scripts/check_version_consistency.py
-      - name: gate-registry consistency (D-215; warning period, not yet blocking)
-        # Ships as ::warning:: for one observation period per D-215 4. It exits
-        # 0 while warning; flip to hard red once the registry has landed and the
-        # first normal PR cycle on top of it has completed, in a commit that
-        # also carries the coverage self-check. Do not leave it warning.
+      - name: gate-registry consistency (D-215)
+        # Hard gate: findings are red. The observation period ended with a
+        # clean registry; see check_gate_registry.py for the scope limit.
         run: python .github/scripts/check_gate_registry.py
       - name: pre-commit fallback (all files)
         run: |

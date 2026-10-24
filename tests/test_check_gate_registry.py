@@ -419,13 +419,12 @@ def test_unreadable_registry_is_the_admitted_termination_layer(tmp_path):
     assert any("unreadable" in f for f in findings), findings
 
 
-# --- transition posture (D-215 4) ----------------------------------------
+# --- blocking posture (D-215 4 flip) -------------------------------------
 
 
-def test_warning_mode_exits_zero_and_strict_exits_one(tmp_path):
-    """The registry ships as ::warning:: for one observation period. If this
-    ever goes red the flip to hard red has happened without the flip commit
-    the ruling requires -- which is exactly how a warning becomes permanent."""
+def test_findings_are_blocking_with_no_opt_out(tmp_path):
+    """The observation period is over: an unregistered bound object must be
+    red by default. A warning-only mode would make the gate permanent."""
     root = _tree(tmp_path, scripts=["check_demo", "check_orphan"], wired=["check_demo"])
     reg = _write_registry(root, [_good_entry()])
     proc = subprocess.run(
@@ -434,15 +433,9 @@ def test_warning_mode_exits_zero_and_strict_exits_one(tmp_path):
         text=True,
         cwd=REPO,
     )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert "::warning" in proc.stdout, proc.stdout
-    proc_strict = subprocess.run(
-        [sys.executable, str(SCRIPT), str(reg), "--strict"],
-        capture_output=True,
-        text=True,
-        cwd=REPO,
-    )
-    assert proc_strict.returncode == 1, proc_strict.stdout + proc_strict.stderr
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "::error" in proc.stdout, proc.stdout
+    assert "::warning" not in proc.stdout, proc.stdout
 
 
 # --- enumeration honesty (D-215 7) ---------------------------------------

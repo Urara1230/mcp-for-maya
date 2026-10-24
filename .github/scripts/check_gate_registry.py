@@ -34,25 +34,16 @@ manufacturing a duplicate rule to make the count read five. Stating the collapse
 is the honest delivery; a rule that re-reports the same fact under a second id
 would be ceremony that reads as coverage.
 
-Transition posture (D-215 4): this ships as ``::warning::`` and exits 0 for one
-observation period. The flip to hard red is stated in the ``gate-registry
-consistency`` step comment in ``.github/workflows/ci.yml`` -- L1 landed, first
-normal PR cycle completed on top of it, coverage self-check in the same flip
-commit. It is deliberately NOT mirrored
-into the registry data file: that file is a machine-read index, and a prose
-ruling kept in two places is a second source of truth. (An earlier draft of this
-docstring pointed at ``governance.warning_to_blocking_flip`` in the registry,
-which no such key ever existed under -- caught by the R46 audit. Same class of
-defect as the phantom WORKFLOW.md 4.2 citation this repo keeps having to
-correct.) Warnings must not become permanent.
+Posture: hard gate. Findings are reported as ``::error`` and the process exits
+1; the observation period ended with a clean registry, and warnings must not
+become permanent. There is deliberately no non-blocking mode.
 
 Scope honesty (D-215 6): what is checked here is REGISTRATION DISCIPLINE, not
 pin effectiveness. A hollow pin passes every rule below and is still not a pin.
 That residual is disclosed in the registry file and mitigated elsewhere.
 
 Usage:
-    python .github/scripts/check_gate_registry.py            # warn (transition)
-    python .github/scripts/check_gate_registry.py --strict   # exit 1 on findings
+    python .github/scripts/check_gate_registry.py
     python .github/scripts/check_gate_registry.py [path-to-registry.yaml]
 """
 
@@ -397,12 +388,6 @@ def check(
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("registry", nargs="?", default=str(DEFAULT_REGISTRY))
-    ap.add_argument(
-        "--strict",
-        action="store_true",
-        help="exit 1 on findings (post-transition; today the lint job runs "
-        "warning mode per D-215 4)",
-    )
     args = ap.parse_args()
 
     registry_path = Path(args.registry)
@@ -416,19 +401,18 @@ def main() -> int:
         return 2
 
     for finding in findings:
-        print(f"::warning file=.github/gate-registry.yaml::{finding}")
+        print(f"::error file=.github/gate-registry.yaml::{finding}")
     if findings:
         print(
-            f"gate-registry: {len(findings)} finding(s). This gate is in the "
-            "D-215 4 warning period -- it does NOT block yet. Fix by registering "
+            f"gate-registry: {len(findings)} finding(s). Fix by registering "
             "the object in .github/gate-registry.yaml (hand-edit; never "
             "script-generated), or by removing a stale entry."
         )
-        return 1 if args.strict else 0
+        return 1
     print(
         "gate-registry OK: every governance surface in .github/scripts is "
         "registered, every registered pointer resolves, no stale entries, no "
-        "expired exemptions (warning period, D-215 4)"
+        "expired exemptions"
     )
     return 0
 
