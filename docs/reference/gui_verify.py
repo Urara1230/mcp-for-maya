@@ -14,17 +14,17 @@ Covers:
 """
 
 import asyncio
-import base64
 import json
 import socket
 import sys
-import time
 from pathlib import Path
+
 
 sys.path.insert(0, r"D:\Aworker\maya\maya-mcp-server\src")
 
 from maya_mcp_server.client import MayaQtClient
 from maya_mcp_server.types import ResultType
+
 
 OUT = Path(r"D:\Aworker\maya\maya-mcp-server\.scratch\maya-mcp-grill\reports\evidence")
 REPO_SRC = Path(r"D:\Aworker\maya\maya-mcp-server\src")
@@ -62,7 +62,9 @@ async def check_checkpoint_rollback(client):
     assert r.error is None
 
     tmpdir = "D:/Aworker/maya/maya-mcp-server/.scratch/maya-mcp-grill/tmp_ckpt"
-    setup = await cmds_json(client, f"""
+    setup = await cmds_json(
+        client,
+        f"""
 import maya.cmds as cmds, json, os
 os.makedirs(r'{tmpdir}', exist_ok=True)
 cmds.file(new=True, force=True, prompt=False)
@@ -81,7 +83,8 @@ assert cmds.objExists(ref_node), 'ref node missing'
 cmds.move(5, 0, 0, ref_node)
 cmds.file(save=True, type='mayaAscii', force=True, prompt=False)
 json.dumps({{'ref_node': ref_node, 'main_file': main_file}})
-""")
+""",
+    )
     out = {"setup": setup}
 
     cp = await cmds_json(
@@ -115,7 +118,9 @@ json.dumps({{'ref_node': ref_node, 'main_file': main_file}})
     assert survivors, "referenced node content lost after rollback"
 
     # restore to a clean untitled scene so the live session is unchanged
-    await cmds_json(client, "import maya.cmds as cmds; cmds.file(new=True, force=True, prompt=False)")
+    await cmds_json(
+        client, "import maya.cmds as cmds; cmds.file(new=True, force=True, prompt=False)"
+    )
     out["cleanup"] = "file(new) -> untitled empty scene"
     out["verdict"] = "PASS"
     results["checkpoint_rollback_ref_edit"] = out
@@ -151,7 +156,7 @@ import maya.cmds as cmds
 import maya.api.OpenMaya as om
 import maya.api.OpenMayaUI as omui
 
-surface = %s
+surface = __SURFACE_JSON__
 
 def sig_of(fn):
     try:
@@ -189,7 +194,7 @@ for name in surface["OpenMayaUI"]:
     obj = getattr(omui, name, None)
     out["symbols"]["omui." + name] = probe_class(obj) if obj is not None else {"exists": False}
 json.dumps(out)
-""" % json.dumps(_stub_surface())
+""".replace("__SURFACE_JSON__", json.dumps(_stub_surface()))
 
     resp = await client.execute_code(code, ResultType.JSON)
     assert resp.error is None, resp.error
@@ -202,8 +207,8 @@ json.dumps(out)
             "collected_on": f"Maya {data['maya_version']} GUI session via framed channel",
             "collector": ".scratch/maya-mcp-grill/harness/gui_verify.py::collect_signatures",
             "note": "mayapy tier blocked on this box (import maya.standalone -> AV). "
-                    "cmds builtins carry no inspect.signature — presence + method "
-                    "lists are the auditable contract.",
+            "cmds builtins carry no inspect.signature — presence + method "
+            "lists are the auditable contract.",
         },
         "symbols": data["symbols"],
     }
@@ -212,17 +217,10 @@ json.dumps(out)
     )
 
     n_total = len(data["symbols"])
-    n_missing = sum(1 for v in data["symbols"].values() if not v.get("exists"))
-    n_signed = sum(
-        1
-        for v in data["symbols"].values()
-        if isinstance(v.get("signature"), str)
-    )
+    n_signed = sum(1 for v in data["symbols"].values() if isinstance(v.get("signature"), str))
     results["signature_collection"] = {
         "symbols": n_total,
-        "missing_in_real_maya": [
-            k for k, v in data["symbols"].items() if not v.get("exists")
-        ],
+        "missing_in_real_maya": [k for k, v in data["symbols"].items() if not v.get("exists")],
         "with_signature": n_signed,
         "baseline_file": str(OUT / "presence-baseline.maya2024.json"),
         "verdict": "COLLECTED",
@@ -251,7 +249,7 @@ def probe_commandport_newline():
             early = s.recv(4096)
             out["no_newline_recv"] = early.decode("utf-8", "replace")
             out["evals_without_newline"] = early.startswith(b"2")
-        except socket.timeout:
+        except TimeoutError:
             out["no_newline_recv"] = None
             out["evals_without_newline"] = False
 
@@ -261,14 +259,14 @@ def probe_commandport_newline():
             inc = s.recv(4096)
             out["incomplete_recv"] = inc.decode("utf-8", "replace")
             out["incomplete_evals_immediately"] = b"syntax" in inc.lower()
-        except socket.timeout:
+        except TimeoutError:
             out["incomplete_recv"] = None
             out["incomplete_evals_immediately"] = False
         # next chunk is a SEPARATE eval (no cross-chunk buffering)
         s.sendall(b"1")
         try:
             out["next_chunk_recv"] = s.recv(4096).decode("utf-8", "replace")
-        except socket.timeout:
+        except TimeoutError:
             out["next_chunk_recv"] = None
 
         out["semantics"] = "per-chunk eager eval (no newline trigger, no cross-chunk buffer)"

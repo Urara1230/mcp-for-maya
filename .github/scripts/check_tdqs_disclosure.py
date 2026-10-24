@@ -42,6 +42,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
 DEFAULT_ELEMENTS = REPO / ".github" / "tdqs-elements.yaml"
+ELEMENTS_FILE = ".github/tdqs-elements.yaml"
 
 # Execution-window-owned mechanism form (D-190, warn observation period):
 # a match is negated when a negation cue appears in the same CLAUSE before
@@ -461,21 +462,21 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
     for tool, entry in sorted(exempt.items()):
         if not isinstance(entry, dict) or not str(entry.get("reason", "")).strip():
             errors.append(
-                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' needs a non-empty "
+                f"::error file={ELEMENTS_FILE}::exemption for '{tool}' needs a non-empty "
                 f"'reason' — absence is a CI failure, not a silent skip (D-195 1)"
             )
             continue
         due_raw = str(entry.get("due", "")).strip()
         if not due_raw:
             errors.append(
-                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' needs a 'due' — an "
+                f"::error file={ELEMENTS_FILE}::exemption for '{tool}' needs a 'due' — an "
                 f"open-ended exemption is the new-code blind spot (D-195 4)"
             )
             continue
         due = _version_tuple(due_raw)
         if due is None:
             errors.append(
-                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' has due '{due_raw}', "
+                f"::error file={ELEMENTS_FILE}::exemption for '{tool}' has due '{due_raw}', "
                 f"which is not a dotted numeric version — the deadline cannot be compared"
             )
         elif current is None:
@@ -488,7 +489,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
             # D-204 tiering: at the deadline the exemption is merely ripe —
             # warn. Past it, the waiver has expired and the gate must bite.
             warnings.append(
-                f"::warning file=.github/tdqs-elements.yaml::exemption for '{tool}' is DUE {due_raw} "
+                f"::warning file={ELEMENTS_FILE}::exemption for '{tool}' is DUE {due_raw} "
                 f"(project version {'.'.join(str(v) for v in current)}) — cover the tool this "
                 f"release or file a D-168 waiver renewal; the next version bump turns this "
                 f"into an error"
@@ -498,7 +499,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
             # dead check — D-210 closed "overdue passes unnoticed" only for
             # the un-readable-version branch, not for a real overdue waiver.
             errors.append(
-                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' EXPIRED at {due_raw} "
+                f"::error file={ELEMENTS_FILE}::exemption for '{tool}' EXPIRED at {due_raw} "
                 f"(project version {'.'.join(str(v) for v in current)}) — cover the tool, or "
                 f"renew via a D-168§4 waiver renewal carrying all five of its "
                 f"elements: a gate_authority countersignature distinct from the "
@@ -534,7 +535,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
         stale = DERIVATION_BASELINE - violations
         if stale:
             errors.append(
-                "::error file=.github/tdqs-elements.yaml::derivable-minimum-set ratchet shrank but the "
+                f"::error file={ELEMENTS_FILE}::derivable-minimum-set ratchet shrank but the "
                 f"baseline still lists {len(stale)} violation(s) "
                 f"({', '.join(f'{t}/{e}' for t, e in sorted(stale))}) — drop them from "
                 f"DERIVATION_BASELINE in .github/scripts/check_tdqs_disclosure.py "
