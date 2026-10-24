@@ -4,15 +4,15 @@
 一、第二轮账目:十条修复全兑现,一条我方引用错误正式撤回
 第二轮指控	现状(实据)
 lookThru 实机炸弹	换掉了:visual_module.py:176/184 改 modelPanel -e -camera 命名参数 API,单参哑弹删除;stub 改类型感知 warn/strict 双档(tests/maya_stub/cmds.py:590-602)
-AE"已修"虚账 + 引擎内活 KeyError	三件套全落:CHANGELOG 删账;ADR-0003 追加"未兑现"status 注记(accepted 内澄清而非回改,理由引 Fowler 语义);aesthetic_engine.py:943 "other"→"unclassified" 崩溃修复;AGENTS.md:201 机器可见 DORMANT 标注。0.1.1 条目原文:"module stays dormant — zero production references — pending the T-06 consolidation decision"——每个字都对
-pip install 装 404	发了:pypi.org/pypi/mcp-for-maya 200,latest 0.2.0;还顺手做了"先修后发、tag 前用完修正窗口"的正确时序(ADR-0016 否决"先发后修"的论证写得漂亮:PyPI 元数据永久留存)
+AE"已修"虚账 + 引擎内活 KeyError	三件套全落:CHANGELOG 删账;原决策记录追加"未兑现"status 注记(accepted 内澄清而非回改,理由引 Fowler 语义);aesthetic_engine.py:943 "other"→"unclassified" 崩溃修复;AGENTS.md:201 机器可见 DORMANT 标注。0.1.1 条目原文:"module stays dormant — zero production references — pending the T-06 consolidation decision"——每个字都对
+pip install 装 404	发了:pypi.org/pypi/mcp-for-maya 200,latest 0.2.0;还顺手做了"先修后发、tag 前用完修正窗口"的正确时序(否决"先发后修"的论证写得漂亮:PyPI 元数据永久留存)
 native 发送无 \n	client.py:500 + b"\n",并去查了 commandPort 2016 源码 splitlines 实锤 off-by-one,还把它列进 #7 实证项
 死重试常量+假注释	DEFAULT_MAX_RETRIES 删净;client.py:377-379 注释改为诚实的 "There is no retry…";真正需要的重试则新加了(QT_CONNECT_ATTEMPTS=3 :61、:754-775 有界 connect+ping 循环,注释直书 T-18a 真机抖动成因)
 helper 括号笔误	maya_mcp_helper.py:276 已闭合
 .scratch 过程垃圾入仓	git ls-files .scratch = 0,.gitignore:19 整目录 ignore,账本迁 docs/decision-ledger.md
 is_pc 裸子串误判	maya_scene_module.py:3014/3113 改 DAG 路径前缀;0.1.1 条目连回归方向都写反过来了:GEO_wall/GEO_wall2 兄弟名不再被错误豁免(子串匹配的真实危害是漏报而非误报,这点比我上轮的猜测更准)
 权重 105 分母怪异	11 段合计改为 95,代码/README(:277-287)/AGENTS(:104-114)三方逐值一致,README:273 明写 "normalized to 0-100"
-ADR-0011 权重表称"总分仍 100"	我方引用错误,正式撤回:grep docs/adr/0011* 权重/分值/总分/105/100 全零命中——那份 ADR 里没有权重表。这是我从上轮记忆笔记里脑补的指控,他们没有说错:"引用张冠李戴"
+0011 权重表称"总分仍 100"	我方引用错误,正式撤回:grep 原决策记录 0011* 权重/分值/总分/105/100 全零命中——那份记录里没有权重表。这是我从上轮记忆笔记里脑补的指控,他们没有说错:"引用张冠李戴"
 真机验证是唯一系统性盲区	他们照做了并且当场撞出血:issue #7 真机首探发现已发布 0.1.1 的全部 scene_* 工具面死亡("JSON" 裸字符串撞 ResultType 枚举,双通道同炸,570 条 stub 测试全绿漏检——这个 bug 就埋在我两轮都逐行读过的调用链上,我没抓到,他们的真机层抓到了),修复→发 0.1.2→yank 0.1.1,并把真机项固化为 manual-tier(本机 24 skips = gui 7 + human_verify 8 + mayapy 9),签名对照沉淀 presence-baseline.json
 
 一句总评:被审者对审计做了逐条实证反审计(8 实锤/1 夸大/1 驳回),且驳回的那条驳对了。 这个闭环质量在任何 code review 文化里都是稀有物种。

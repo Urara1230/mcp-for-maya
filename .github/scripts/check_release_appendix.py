@@ -1,6 +1,6 @@
 """D-142beta release-body disclosure-appendix assertion.
 
-Release-window preflight item 6 (ADR-0023 R30 supplement block) — run
+Release-window preflight item 6 (release-body disclosure appendix) — run
 manually during the release window, after ``gh release create``. This
 script is deliberately NOT part of push CI.
 

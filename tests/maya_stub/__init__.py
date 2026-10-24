@@ -1,6 +1,6 @@
 """Maya stub package — fake maya.cmds + maya.api.OpenMaya.
 
-Purpose (D-004 / ADR-0002): run maya_scene_module.py logic in pytest
+Purpose (D-004 stub tier): run maya_scene_module.py logic in pytest
 WITHOUT a real Maya install. The stub implements a real DAG scene graph,
 row-major matrix math, and 8-corner world-bbox transforms — semantically
 correct, so tests catch real math bugs (e.g. min*M/max*M shortcuts).

@@ -1,6 +1,0 @@
-{
-  "schema": "changelog-fixed-spec/1",
-  "note": "JSON-syntax YAML (YAML 1.2 is a strict superset of JSON): stdlib-only consumption via json.loads, no PyYAML. SINGLE SOURCE for the check_changelog_fixed.py enforcement boundary, extracted out of the script by D-214 (governance constants live in per-domain spec files, never inline in code). Governance spec, not a baseline -- never regenerated; hand-edit in the PR that carries the ruling.",
-  "ENFORCED_FROM": [0, 6, 0],
-  "ENFORCED_FROM_basis": "D-230: the version-field requirement (Broken version: / fixed version:) landed at 0.6.0. Released sections strictly below this are grandfathered because they predate the rule and backfilling them would invent broken-version facts for fixes made before the rule existed, which D-205 forbids (never guess a cause). [Unreleased] is always enforced regardless of this value. This is a frozen boundary, not a per-entry waiver list, so it cannot silently grow; changing it is a ruling change audited in PR review."
-}

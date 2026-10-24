@@ -76,7 +76,7 @@ def _read_events(path: Path) -> list[dict]:
 
 
 class TestToolAnnotations:
-    """All 25 tools carry the four hints (D-018/ADR-0005 + D-075/D-092/D-094 matrix)."""
+    """All 25 tools carry the four hints (D-018 + D-075/D-092/D-094 matrix)."""
 
     EXPECTED = {
         "list_sessions",

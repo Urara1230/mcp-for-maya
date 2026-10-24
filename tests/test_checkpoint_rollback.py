@@ -1,6 +1,7 @@
 """T-03 regression tests: checkpoint = exportAll memory snapshot; rollback = S2 rebind.
 
-Pins ADR-0004 + D-015 semantics against the stub. The stub persists
+Pins the true-snapshot checkpoint/rollback semantics (D-015: exportAll +
+explicit adopt, never references) against the stub. The stub persists
 exportAll snapshots as real files (//Maya ASCII header + JSON payload)
 and restores scene state on open, so these tests exercise real disk IO.
 

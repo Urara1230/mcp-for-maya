@@ -147,7 +147,7 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
         "Obligation: at least one human review record (result + "
         "attribution in the decision ledger) is required before the "
         "v1.0.0 release checklist can pass — red or green counts "
-        "(ADR-0023 / D-127)."
+        "(D-127)."
     )
     return body + _failed_steps_md(env, runner)
 

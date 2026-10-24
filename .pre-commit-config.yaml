@@ -1,4 +1,4 @@
-# Thin pre-commit set (ADR-0017 / D-044 / D-045).
+# Thin pre-commit set (D-044 / D-045: frozen baselines, ratchet only downward).
 # Local:  uv sync --frozen && uv run pre-commit install && uv run pre-commit run --all-files
 # CI fallback: lint job in .github/workflows/ci.yml (guards --no-verify pushes).
 # Hook rev upkeep: dependabot pre-commit ecosystem (monthly) or manual

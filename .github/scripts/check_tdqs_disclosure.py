@@ -1,7 +1,7 @@
 """D-175 TDQS disclosure elements static ratchet.
 
-Asserts that required disclosure elements (legislated by ADR-0028 and
-cataloged in docs/adr/0028-elements.yaml) are present in the live
+Asserts that required disclosure elements (cataloged in
+.github/tdqs-elements.yaml) are present in the live
 tool docstrings across the codebase.
 
 Elements are defined with either:
@@ -41,7 +41,7 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parent.parent.parent
-DEFAULT_ELEMENTS = REPO / "docs" / "adr" / "0028-elements.yaml"
+DEFAULT_ELEMENTS = REPO / ".github" / "tdqs-elements.yaml"
 
 # Execution-window-owned mechanism form (D-190, warn observation period):
 # a match is negated when a negation cue appears in the same CLAUSE before
@@ -254,9 +254,9 @@ def main() -> int:
     if not ok:
         print(
             "\nTDQS disclosure check failed. Tool definitions must satisfy the required "
-            "disclosure elements legislated by ADR-0028."
+            "required disclosure elements."
         )
-        print("See docs/adr/0028-elements.yaml for required element specifications and reasons.")
+        print("See .github/tdqs-elements.yaml for required element specifications and reasons.")
         return 1
 
     suffix = f" ({len(warnings)} polarity warnings)" if warnings else ""
@@ -441,46 +441,46 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
     # -- coverage, forward ------------------------------------------------
     for tool in sorted(annotated - set(tools) - set(exempt)):
         errors.append(
-            f"::error file=0028-elements.yaml::tool '{tool}' is in TOOL_ANNOTATIONS but "
+            f"::error file=.github/tdqs-elements.yaml::tool '{tool}' is in TOOL_ANNOTATIONS but "
             f"neither 'tools' nor 'coverage_exemptions' — add disclosure elements or an "
             f"explicit exemption with a reason (D-195 1)"
         )
     # -- coverage, reverse (no rot) --------------------------------------
     for tool in sorted(set(tools) - annotated):
         errors.append(
-            f"::error file=0028-elements.yaml::tool '{tool}' has elements but is not in "
+            f"::error file=.github/tdqs-elements.yaml::tool '{tool}' has elements but is not in "
             f"TOOL_ANNOTATIONS — stale entry, the gate would never check it (D-195 1)"
         )
     # -- ambiguity: covered AND exempt ------------------------------------
     for tool in sorted(set(tools) & set(exempt)):
         errors.append(
-            f"::error file=0028-elements.yaml::tool '{tool}' is both covered and exempt — "
+            f"::error file=.github/tdqs-elements.yaml::tool '{tool}' is both covered and exempt — "
             f"pick one, or the exemption silently rots (D-195 1)"
         )
     # -- every exemption must justify itself ------------------------------
     for tool, entry in sorted(exempt.items()):
         if not isinstance(entry, dict) or not str(entry.get("reason", "")).strip():
             errors.append(
-                f"::error file=0028-elements.yaml::exemption for '{tool}' needs a non-empty "
+                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' needs a non-empty "
                 f"'reason' — absence is a CI failure, not a silent skip (D-195 1)"
             )
             continue
         due_raw = str(entry.get("due", "")).strip()
         if not due_raw:
             errors.append(
-                f"::error file=0028-elements.yaml::exemption for '{tool}' needs a 'due' — an "
+                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' needs a 'due' — an "
                 f"open-ended exemption is the new-code blind spot (D-195 4)"
             )
             continue
         due = _version_tuple(due_raw)
         if due is None:
             errors.append(
-                f"::error file=0028-elements.yaml::exemption for '{tool}' has due '{due_raw}', "
+                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' has due '{due_raw}', "
                 f"which is not a dotted numeric version — the deadline cannot be compared"
             )
         elif current is None:
             warnings.append(
-                f"::warning file=0028-elements.yaml::cannot read the project version from "
+                f"::warning file=.github/tdqs-elements.yaml::cannot read the project version from "
                 f"pyproject.toml, so the '{tool}' due ({due_raw}) was NOT checked — an "
                 f"overdue exemption would pass unnoticed on a tree without pyproject.toml"
             )
@@ -488,7 +488,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
             # D-204 tiering: at the deadline the exemption is merely ripe —
             # warn. Past it, the waiver has expired and the gate must bite.
             warnings.append(
-                f"::warning file=0028-elements.yaml::exemption for '{tool}' is DUE {due_raw} "
+                f"::warning file=.github/tdqs-elements.yaml::exemption for '{tool}' is DUE {due_raw} "
                 f"(project version {'.'.join(str(v) for v in current)}) — cover the tool this "
                 f"release or file a D-168 waiver renewal; the next version bump turns this "
                 f"into an error"
@@ -498,7 +498,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
             # dead check — D-210 closed "overdue passes unnoticed" only for
             # the un-readable-version branch, not for a real overdue waiver.
             errors.append(
-                f"::error file=0028-elements.yaml::exemption for '{tool}' EXPIRED at {due_raw} "
+                f"::error file=.github/tdqs-elements.yaml::exemption for '{tool}' EXPIRED at {due_raw} "
                 f"(project version {'.'.join(str(v) for v in current)}) — cover the tool, or "
                 f"renew via a D-168§4 waiver renewal carrying all five of its "
                 f"elements: a gate_authority countersignature distinct from the "
@@ -516,7 +516,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
         sig = sigs.get(tool)
         if sig is None:
             errors.append(
-                f"::error file=0028-elements.yaml::tool '{tool}' has elements but no "
+                f"::error file=.github/tdqs-elements.yaml::tool '{tool}' has elements but no "
                 f"@mcp.tool function was found — the signature cannot be derived"
             )
             continue
@@ -527,14 +527,14 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
     new = violations - DERIVATION_BASELINE
     for tool, eid in sorted(new):
         errors.append(
-            f"::error file=0028-elements.yaml::tool '{tool}' is missing '{eid}', which is "
+            f"::error file=.github/tdqs-elements.yaml::tool '{tool}' is missing '{eid}', which is "
             f"derivable from its own signature — the floor tightens, add it (D-195 2)"
         )
     if violations != DERIVATION_BASELINE:
         stale = DERIVATION_BASELINE - violations
         if stale:
             errors.append(
-                "::error file=0028-elements.yaml::derivable-minimum-set ratchet shrank but the "
+                "::error file=.github/tdqs-elements.yaml::derivable-minimum-set ratchet shrank but the "
                 f"baseline still lists {len(stale)} violation(s) "
                 f"({', '.join(f'{t}/{e}' for t, e in sorted(stale))}) — drop them from "
                 f"DERIVATION_BASELINE in .github/scripts/check_tdqs_disclosure.py "

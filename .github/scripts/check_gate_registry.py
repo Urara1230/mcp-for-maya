@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""D-215 gate-registry consistency gate (ADR-0029 section 5).
+"""D-215 gate-registry consistency gate.
 
 ``.github/gate-registry.yaml`` is the human-authored pin registry: for every
 governance surface in ``.github/scripts/`` it records the bound class, where that
@@ -7,8 +7,8 @@ surface's expectation is derived, which pytest nodes pin it, and any exemption.
 
 Why a checker at all: the registry is only worth something if a NEW gate cannot
 be added without being registered. A hand-kept list drifts silently, and a
-silently unregistered gate is exactly the "law without teeth" state ADR-0029 was
-legislated against. So the bound set is enumerated from a MACHINE source (the
+silently unregistered gate is exactly the "law without teeth" state this rule
+forbids. So the bound set is enumerated from a MACHINE source (the
 ``check_*.py`` glob plus every other script in the directory -- no hand-copied
 list, D-215 7) and this checker reports the set difference in both directions.
 
@@ -38,7 +38,7 @@ Transition posture (D-215 4): this ships as ``::warning::`` and exits 0 for one
 observation period. The flip to hard red is stated in the ``gate-registry
 consistency`` step comment in ``.github/workflows/ci.yml`` -- L1 landed, first
 normal PR cycle completed on top of it, coverage self-check in the same flip
-commit -- and legislated in ADR-0029 section 5. It is deliberately NOT mirrored
+commit. It is deliberately NOT mirrored
 into the registry data file: that file is a machine-read index, and a prose
 ruling kept in two places is a second source of truth. (An earlier draft of this
 docstring pointed at ``governance.warning_to_blocking_flip`` in the registry,

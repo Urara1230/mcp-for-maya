@@ -84,7 +84,7 @@ def test_main_fail_message_carries_exemption_and_routing(tmp_path, monkeypatch, 
     monkeypatch.setattr("sys.argv", ["check_monolith_budget.py"])
     assert mod.main() == 1
     out = capsys.readouterr().out
-    assert "line shuffling" in out and "ADR-0027" in out
+    assert "line shuffling" in out and "same injection unit" in out
 
 
 def test_repo_monolith_within_budget():

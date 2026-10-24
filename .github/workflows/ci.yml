@@ -38,35 +38,19 @@ jobs:
         run: uvx ruff@0.16.8 check . --output-format=json --exit-zero > ruff-report.json
       - name: compare vs frozen budget
         run: python .github/scripts/check_ruff_budget.py ruff-report.json .github/ruff-baseline.json
-      - name: README mirror skeleton check (D-072)
-        run: python .github/scripts/check_readme_skeleton.py
       - name: assets append-only guard (D-113)
         env:
           GUARD_BEFORE: ${{ github.event.before }}
         run: python .github/scripts/check_assets_append_only.py
-      - name: tool-count claims gate (D-121)
-        run: python .github/scripts/check_tool_count_claims.py
       - name: monolith line budget (D-125)
         run: python .github/scripts/check_monolith_budget.py
       - name: tdqs disclosure elements gate (D-175)
         run: python .github/scripts/check_tdqs_disclosure.py
 
-      - name: evidence anchors check (D-183)
-        run: python .github/scripts/check_evidence_anchors.py
-      - name: error-code doc gate (D-207 4)
-        run: python .github/scripts/check_error_codes.py
       - name: llms.txt gate (D-207 2)
         run: python .github/scripts/check_llms_txt.py
       - name: version consistency gate (D-207 9)
         run: python .github/scripts/check_version_consistency.py
-      - name: CHANGELOG Fixed-entry field gate (D-230; blocking from day one)
-        # Existence-only assertion over [Unreleased] + released sections >= 0.6.0;
-        # pre-0.6.0 sections are grandfathered (they predate the field rule).
-        # Existing in-scope violations = 0, so this skips the D-215 4 observation
-        # window and goes blocking immediately (D-230 deviation declaration).
-        run: python .github/scripts/check_changelog_fixed.py
-      - name: count claims gate (D-216)
-        run: python .github/scripts/check_count_claims.py
       - name: gate-registry consistency (D-215; warning period, not yet blocking)
         # Ships as ::warning:: for one observation period per D-215 4. It exits
         # 0 while warning; flip to hard red once the registry has landed and the

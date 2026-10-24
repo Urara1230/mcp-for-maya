@@ -1,7 +1,7 @@
 """Regression tests for .github/scripts/check_tdqs_disclosure.py.
 
-D-175: static ratchet asserting that tool docstrings disclose required
-elements legislated by ADR-0028 and cataloged in docs/adr/0028-elements.yaml.
+D-175: static ratchet asserting that tool docstrings disclose the required
+elements cataloged in .github/tdqs-elements.yaml.
 """
 
 from __future__ import annotations

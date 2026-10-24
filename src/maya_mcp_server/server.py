@@ -172,7 +172,7 @@ register_export_tools(mcp)
 register_introspect_tools(mcp)
 
 # Unified security pipeline: every tool call passes through validation,
-# rate limiting, pattern scanning, and audit logging (D-018/ADR-0005).
+# rate limiting, pattern scanning, and audit logging (D-018).
 mcp.add_middleware(SecurityPipeline(config=_security_config, audit=_audit_logger))
 
 # Global session manager - initialized when server starts

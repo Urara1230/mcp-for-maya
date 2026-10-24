@@ -17,11 +17,10 @@ House rules:
 
 - Every fix ships with a regression test on the maya stub layer.
 - Real-Maya tests are a separate local manual tier (`pytest -m mayapy`, see docs/testing.md) — never mixed with the stub tier.
-- If your change makes a doc line stale, fix that line in the same commit (「文档传播矩阵」词条 in CONTEXT.md).
+- If your change makes a doc line stale, fix that line in the same commit (「文档传播矩阵」词条 in GLOSSARY.md).
 - When folding `[Unreleased]` into a release section, rewrite each Fixed entry's
-  `fixed version: [Unreleased]` literal to that release's version number by hand.
-  The `check_changelog_fixed.py` gate only checks field existence/non-emptiness —
-  it does not police this rewrite (D-230 fold-time rule; human step).
+  `fixed version: [Unreleased]` literal to that release's version number by hand
+  (D-230 fold-time rule; human step).
 
 ## Cross-module dependency rules (联动规范)
 
@@ -33,8 +32,8 @@ stale companions cause integration failures and gate reds.
 | `maya_scene_module.py` (scene_plan) | `scene_tools.py`, `server.py`, `README.md`, `README.zh-CN.md` | Scene planning tool needs MCP tool + docs |
 | `maya_scene_module.py` (aesthetic/lighting/scene_review functions) | `scene_tools.py`, `tests/test_maya_scene_module.py` | Inline `_score_*` functions are the sole implementation; tool descriptions + stub-tier coverage must match |
 | `maya_scene_module.py` (new function) | `scene_tools.py`, `server.py`, `README.md`, `README.zh-CN.md`, `tests/` | Every new Maya function needs an MCP tool, docs, and tests |
-| `maya_scene_module.py` (line-count growth) | `.github/monolith-budget.json` | Ratchet: growth past the cap fails lint; legitimate additions need a reasoned budget edit in the same PR; new capability routes to a same-unit separate file (ADR-0027), never appended to the monolith |
-| `visual_module.py` / `visual_tools.py` | `server.py` instructions, `pipeline.py` annotations, `docs/adr/0013`, `tests/test_visual_tools.py`, READMEs, `docs/threat-model.md` | Capture contract, annotations, and docs must stay in sync |
+| `maya_scene_module.py` (line-count growth) | `.github/monolith-budget.json` | Ratchet: growth past the cap fails lint; legitimate additions need a reasoned budget edit in the same PR; new capability routes to a separate file in the same injection unit, never appended to the monolith |
+| `visual_module.py` / `visual_tools.py` | `server.py` instructions, `pipeline.py` annotations, `tests/test_visual_tools.py`, READMEs, `docs/threat-model.md` | Capture contract, annotations, and docs must stay in sync |
 | `asset_tools.py` / `polyhaven.py` / `asset_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, asset tests, `tests/maya_stub/` (new cmds surface), READMEs | Host-side download/cache vs Maya-side import — every piece in sync |
 | `export_tools.py` / `export_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, export tests, `tests/maya_stub/` (export surface), READMEs | Host validation/registration vs Maya-side export contract |
 | `introspect_tools.py` / `introspect_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, `docs/visual-callform-matrix.md`, introspect tests, `tests/maya_stub/`, READMEs | Fragment concatenated into the `_mcp_scene` payload (same-unit file); the D-110 response budget (`limit`, `*_truncated`, `total_*` fields) is part of the contract |
@@ -45,10 +44,9 @@ stale companions cause integration failures and gate reds.
 | `connection_guide.py` | `server.py` (maya_setup_guide params), `tests/test_connection_guide.py` | Marker-block semantics + flags |
 | `cos_formatter.py` | `scene_tools.py` | Formatter changes affect all tool COS outputs |
 | Derived surfaces | — | `llms.txt` (from TOOL_ANNOTATIONS), `docs/guide/error-codes.md` (from `security.py`), and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived and gated — never hand-edit; `docs/guide/session-lifecycle.md` is prose with AST-verified anchors, NOT derived |
-| `.github/gate-registry.yaml` / `check_gate_registry.py` / `check_count_claims.py` / `*-spec.yaml` | `tests/`, `ci.yml`, `AGENTS.md`, `CHANGELOG.md` | See ADR-0029/0030: gates register pins (human-authored, never generated); exemptions carry `expires\|issue`; governance constants live in per-domain spec files, not code; spec files must not mirror object state (second source of truth) |
-| Evidence pointers in CHANGELOG/ADRs/evidence | `.github/evidence-anchor-forms.yaml` | Whitelist single source: pytest node ID > `path::symbol` > `sha:path:line` > bare `path:line` (warn-level hint in versioned docs) |
+| `.github/gate-registry.yaml` / `check_gate_registry.py` / `*-spec.yaml` | `tests/`, `ci.yml`, `AGENTS.md`, `CHANGELOG.md` | Gates register pins (human-authored, never generated); exemptions carry `expires\|issue`; governance constants live in per-domain spec files, not code; spec files must not mirror object state (second source of truth) |
 
-### Injected-module admission criteria (ADR-0027)
+### Injected-module admission criteria
 
 New Maya-side capability defaults to a NEW per-domain injected module — never
 into the `maya_scene_module.py` monolith. A new module is allowed only when all
@@ -69,14 +67,12 @@ config, not duplication.
 ### Changelog evidence rule
 
 Every `Added`/`Fixed`/`Changed` bullet in CHANGELOG.md MUST carry an executable
-evidence pointer (whitelist: `.github/evidence-anchor-forms.yaml`). Every
-`Fixed` entry records `Broken version:` → `fixed version:` fields
-(`check_changelog_fixed.py`, enforced for ≥ 0.6.0 + `[Unreleased]`).
+evidence pointer (a pytest node ID, `path::symbol`, or `sha:path:line`). Every
+`Fixed` entry records `Broken version:` → `fixed version:` fields.
 
 ### Assertion & evidence discipline
 
-- Enumeration/count assertions declare their domain or become machine-checked
-  claims (`check_count_claims.py`); recompute before restating a count.
+- Enumeration/count assertions declare their domain; recompute before restating a count.
 - Anything not reproducible is recorded "unverified" — never guess a cause.
 
 ### Asset directory discipline

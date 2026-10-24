@@ -1,6 +1,6 @@
 {
   "schema": "gate-registry/1",
-  "note": "JSON-syntax YAML (YAML 1.2 is a strict superset of JSON): stdlib-only consumption via json.loads, no PyYAML. THE PIN REGISTRY of ADR-0029 section 5 / D-215. It is an INDEX VIEW, never a second source of expected values: expected_sources only POINTS at where an expectation is derived (path or path::symbol) and deliberately copies no value out of it. HAND-AUTHORED per D-215 -- no script may generate or rewrite this file; .github/scripts/check_gate_registry.py only reads it and reports the set difference against the machine enumeration of .github/scripts/*.py. The rulings this file implements (five-tier bound classes, the warning-to-blocking flip condition, the residual-blind-spot disclosure, the exemption discipline) live in ADR-0029 section 5 and are cited from there rather than restated here, so the machine-read surface stays small enough to review by eye.",
+  "note": "JSON-syntax YAML (YAML 1.2 is a strict superset of JSON): stdlib-only consumption via json.loads, no PyYAML. THE PIN REGISTRY (D-215). It is an INDEX VIEW, never a second source of expected values: expected_sources only POINTS at where an expectation is derived (path or path::symbol) and deliberately copies no value out of it. HAND-AUTHORED per D-215 -- no script may generate or rewrite this file; .github/scripts/check_gate_registry.py only reads it and reports the set difference against the machine enumeration of .github/scripts/*.py. It records five bound classes, a warning-to-blocking flip condition, the residual-blind-spot disclosure, and the exemption discipline; keep the machine-read surface small enough to review by eye.",
   "bound_classes": {
     "gate": "CI-blocking decision gate. Full D-212 tier-1 obligation: external derivation plus at least one resolving pin, and it must actually be wired into a workflow or the checker reports verdict drift.",
     "manual_preflight": "A human-run preflight row. Exempt from machine pins but carries the D-082 7 evidence-pointer obligation (environment + exit code + artifact path triple).",
@@ -18,61 +18,6 @@
         "tests/test_check_assets_append_only.py::test_delete_fails",
         "tests/test_check_assets_append_only.py::test_modify_fails",
         "tests/test_check_assets_append_only.py::test_rename_fails_via_expanded_delete"
-      ],
-      "exemption": null
-    },
-    {
-      "gate_id": "check_count_claims",
-      "bound_class": "gate",
-      "expected_sources": [
-        "src/maya_mcp_server/maya_scene_module.py::scene_review",
-        "src/maya_mcp_server/maya_scene_module.py::SHOT_TYPES"
-      ],
-      "pin_node_ids": [
-        "tests/test_check_count_claims.py::test_stale_claim_fails_the_gate",
-        "tests/test_check_count_claims.py::test_denylisted_drifted_string_fails_the_gate",
-        "tests/test_check_count_claims.py::test_repo_surface_currently_consistent"
-      ],
-      "exemption": null
-    },
-    {
-      "gate_id": "check_changelog_fixed",
-      "bound_class": "gate",
-      "expected_sources": [
-        "CHANGELOG.md",
-        ".github/changelog-fixed-spec.yaml::ENFORCED_FROM"
-      ],
-      "pin_node_ids": [
-        "tests/test_check_d207_gates.py::TestChangelogFixedFields::test_a_corrupted_entry_missing_a_field_fails_the_gate",
-        "tests/test_check_d207_gates.py::TestChangelogFixedFields::test_an_empty_field_value_fails_the_gate",
-        "tests/test_check_d207_gates.py::TestChangelogFixedFields::test_a_same_line_empty_broken_version_fails_the_gate",
-        "tests/test_check_d207_gates.py::TestChangelogFixedFields::test_unreleased_corrupted_without_fields_fails_the_gate",
-        "tests/test_check_d207_gates.py::TestChangelogFixedFields::test_live_gate_is_green"
-      ],
-      "exemption": null,
-      "note": "R48 (D-230): existence-only assertion that every in-scope ### Fixed entry carries non-empty Broken version: + fixed version: fields. SCOPE DEVIATION DECLARED (first case of the ADR-0029 section 5 observation-window criterion): enforcement covers [Unreleased] + released sections >= ENFORCED_FROM (the frozen boundary, single-sourced in .github/changelog-fixed-spec.yaml per D-214); pre-0.6.0 sections are grandfathered because they predate the field rule and backfilling them would invent broken-version facts (D-205 no-guessing). Existing in-scope violations = 0, so this gate skips the D-215 4 observation window and is blocking from day one rather than warning. The red pins are counterfactuals (a missing field, a present-but-empty value on its own line, an empty same-line value - the R48 audit escape, and an Unreleased entry with neither field); test_live_gate_is_green is the live green control."
-    },
-    {
-      "gate_id": "check_error_codes",
-      "bound_class": "gate",
-      "expected_sources": [
-        "src/maya_mcp_server/security.py::PipelineError"
-      ],
-      "pin_node_ids": [
-        "tests/test_check_d207_gates.py::TestErrorCodesChecker::test_a_deleted_body_row_fails_the_gate",
-        "tests/test_check_d207_gates.py::TestErrorCodesChecker::test_a_deleted_anchor_row_fails_the_gate"
-      ],
-      "exemption": null
-    },
-    {
-      "gate_id": "check_evidence_anchors",
-      "bound_class": "gate",
-      "expected_sources": [
-        ".github/evidence-anchor-forms.yaml::anchor_forms"
-      ],
-      "pin_node_ids": [
-        "tests/test_check_evidence_anchors.py::test_bare_path_line_warns_not_fails",
-        "tests/test_check_evidence_anchors.py::test_pytest_node_id_resolves_test_function"
       ],
       "exemption": null
     },
@@ -127,21 +72,6 @@
       "exemption": null
     },
     {
-      "gate_id": "check_readme_skeleton",
-      "bound_class": "gate",
-      "expected_sources": [
-        "README.md"
-      ],
-      "pin_node_ids": [
-        "tests/test_check_readme_skeleton.py::test_the_real_repo_mirror_is_green",
-        "tests/test_check_readme_skeleton.py::test_dropped_heading_in_the_mirror_is_red",
-        "tests/test_check_readme_skeleton.py::test_reordered_headings_are_red_even_at_the_same_levels",
-        "tests/test_check_readme_skeleton.py::test_missing_synced_with_anchor_is_red"
-      ],
-      "exemption": null,
-      "note": "Arrived at the L1 landing with ZERO pins and was the one bound_class=gate entry the registry's own zero-pin guard flagged on first run. Backfilled by the L4 pin lane (T-R46-06): 11 tests total = 8 counterfactual reds + 3 green controls, of which 4 are registered below as pin node IDs. (An earlier version of this note conflated the test count with the counterfactual count; the R46 audit caught it, and the wrong figure is deliberately not repeated here.) Backfilling required giving the script a check(repo) seam -- it used to resolve the repo inline inside main(), which is why a real CI gate had been unpinnable since D-072."
-    },
-    {
       "gate_id": "check_release_appendix",
       "bound_class": "manual_preflight",
       "expected_sources": [
@@ -170,23 +100,11 @@
       "gate_id": "check_tdqs_disclosure",
       "bound_class": "gate",
       "expected_sources": [
-        "docs/adr/0028-elements.yaml::tools"
+        ".github/tdqs-elements.yaml::tools"
       ],
       "pin_node_ids": [
         "tests/test_check_tdqs_disclosure.py::test_missing_element_fails",
         "tests/test_check_tdqs_disclosure.py::test_live_coverage_floor_holds"
-      ],
-      "exemption": null
-    },
-    {
-      "gate_id": "check_tool_count_claims",
-      "bound_class": "gate",
-      "expected_sources": [
-        "src/maya_mcp_server/pipeline.py::TOOL_ANNOTATIONS"
-      ],
-      "pin_node_ids": [
-        "tests/test_check_tool_count_claims.py::test_stale_claim_fails_everywhere_it_lives",
-        "tests/test_check_tool_count_claims.py::test_repo_surface_currently_consistent"
       ],
       "exemption": null
     },

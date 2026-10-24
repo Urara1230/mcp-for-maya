@@ -1,5 +1,6 @@
 """Self-tests for tests/maya_stub — the harness must be right
-before product tests can be trusted (D-004/ADR-0002 stub tier)."""
+before product tests can be trusted (D-004 stub tier: maya_scene_module runs
+against a fake maya.cmds, not a live session)."""
 
 from __future__ import annotations
 

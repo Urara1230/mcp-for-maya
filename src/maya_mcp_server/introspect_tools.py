@@ -1,6 +1,7 @@
 """MCP scene-graph introspection tools (D-094): scene_describe + scene_nodes.
 
-Both tools ride the _mcp_scene injection unit (D-095 / ADR-0027 c4):
+Both tools ride the _mcp_scene injection unit in their own host-side file
+(D-095: file boundary = injection boundary = failure-domain boundary):
 their Maya-side code lives in introspect_module.py and is concatenated
 into the _mcp_scene payload by scene_tools._ensure_module_injected -
 same module name, same per-session trigger, same failure domain.

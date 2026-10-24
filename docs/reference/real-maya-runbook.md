@@ -3,7 +3,7 @@
 > **文档标识**：.scratch/t32/runbook.md (rev 1.1 返工修订版)  
 > **修订日期**：2026-09-29  
 > **审计返工依据**：2026-09-29 T-32a 独立审计报告（纠正 D-146 渠道与单次核销语义、跑序上下游依赖、框2 版本矩阵拆行、Scope 固定行 build/stdio 补齐、GUI 前置脏场景守卫、AC-01 逃生通道恢复 live GUI 降级退路、度量口径订正）  
-> **权威决策依据**：docs/decision-ledger.md D-148（R32 主题面裁决）、D-149（真机验证窗执行契约）、D-150（发版序与前向立法）、D-109（凭证入仓纪律）、D-131（用户末行裁决权）、D-049（环境披露档）、D-145β / D-146（发布收录与核销）、ADR-0023（发版窗增补块）、CONTEXT.md（脏场景守卫）  
+> **权威决策依据**：docs/decision-ledger.md D-148（R32 主题面裁决）、D-149（真机验证窗执行契约）、D-150（发版序与前向立法）、D-109（凭证入仓纪律）、D-131（用户末行裁决权）、D-049（环境披露档）、D-145β / D-146（发布收录与核销）、GLOSSARY.md（脏场景守卫）  
 > **性质声明**：本件为操作类非耐久运行手册（留存 .scratch，不污染仓内历史）；窗收尾时的 AC 卡骨架与逐框结果表作为正式裁决产物随成果合入 docs/evidence/ 与账本。
 
 ---
@@ -74,7 +74,7 @@ flowchart TD
 4. **Step 3 — mayapy 道实跑 (先行)**：运行 headless 注入回退、独立 commandPort 探针，并**优先完成框8 mayapy 动态签名采集**，产出实际签名数据。
 5. **Step 4 — 桌面道执行 (后置比对)**：提取 `visual_module.py` 与 `maya_scene_module.py` 中的 `cmds.*` 调用完成静态签名审计（框7）；利用 Step 3 采集的签名实物与 `tests/maya_stub/` 进行下游 diff 回灌对比（框8 下游）。
 6. **Step 5 — GUI 前置脏场景守卫 (Dirty-Scene Guard)**：
-   - 依赖规范：CONTEXT.md:55-58、ADR-0023:17-20 (D-067①)。
+   - 依赖规范：GLOSSARY.md 的「脏场景守卫」词条 (D-067①)。
    - 探针动作：进入 GUI 交互前，第一步必须执行只读探测：
      `cmds.file(q=True, modified=True)` 与 `cmds.file(q=True, sceneName=True)`。
    - 守卫准则：**若场景处于 modified 脏状态，绝对禁止强制执行 `file(new=True, force=True)`**，必须立即停手呈报用户三选一（保存/放弃/中止）；仅当场景完全干净时方可重置新场景。
@@ -358,12 +358,12 @@ flowchart TD
 
 ## 六、D-146 预签页 (Pre-Sign Page for Registry Verification Window)
 
-> **预签条款声明**：本节严格逐句引用 docs/decision-ledger.md:155 (D-145β)、ADR-0023:83 与 D-150① 裁决，无新增语义。
+> **预签条款声明**：本节严格逐句引用 docs/decision-ledger.md:155 (D-145β)、发布后段核销行（Registry publish 后 30 天一次性核销）与 D-150① 裁决，无新增语义。
 
 1. **起算锚前移至 0.4.1-publish (D-150①)**：
    - MCP Registry publish 窗口与下一次发版窗（0.4.1 patch 版）强绑定。
    - **D-146 30 天核销窗的起算时间锚确定为 `0.4.1-publish` 落账日**，而非 v1.0.0 发版日。
-2. **核销目标渠道与一次性核销规则 (D-145β / ADR-0023:83)**：
+2. **核销目标渠道与一次性核销规则 (D-145β: Registry publish 后 30 天一次性核销)**：
    - **核心核销渠道**：严格核验 `mcp.so`、`PulseMCP`、`VS Code gallery` 以及 Cline 客户端发现信号（D-147）。
    - **三态落账**：按收录登记表三态（收录正常 / 有条件收录 / 未收录或异常）如实落账。
    - **一次性核销原则**：非 CI 监控项，**30 天窗口到期时执行一次性核销，绝非 30 天内的持续轮询监控（一次性核销≠持续监控）**。

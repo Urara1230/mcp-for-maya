@@ -5,19 +5,10 @@ so an agent can classify a failure from the text alone without parsing prose
 (the D-019 host layer; see `docs/threat-model.md` §3). This page is the
 lookup table for those prefixes.
 
-**This page is derived, not hand-maintained.** `python
-.github/scripts/check_error_codes.py` reads the code set out of
-`src/maya_mcp_server/security.py` with `ast` and fails the lint job if this
-page and the code disagree in _either_ direction — an implemented code with no
-row, or a documented code that nothing raises. Adding an exception class
-without adding a row here turns CI red, which is the point.
-
-Regenerate the view after changing the classes:
-
-```bash
-python .github/scripts/check_error_codes.py --print   # code<TAB>class
-python .github/scripts/check_error_codes.py           # gate; exit 1 on drift
-```
+**Keep this page in sync with the code.** The host code set is defined by
+`src/maya_mcp_server/security.py`; adding a `PipelineError` subclass without
+adding a row here is a documentation bug. There is no machine gate for this
+page.
 
 ## Host-layer codes
 
@@ -42,10 +33,10 @@ not part of the contract.
 
 Maya-domain failures do **not** raise. They return a successful tool result
 whose payload is `{"error": {"code", "message", "suggestion"?}}` (the two-layer
-contract, ADR-0011). The code set there is owned by
+contract: host failures return `isError`; Maya domain failures return this
+structured object). The code set there is owned by
 `src/maya_mcp_server/maya_scene_module.py` and its injected siblings, and is
-**not** covered by `check_error_codes.py` — that gate asserts the _host_ set,
-which is the set this table enumerates. Domain codes are documented at their
+**not** part of the host set this table enumerates. Domain codes are documented at their
 definition site and are deliberately not mirrored here: a second copy of that
 list would be the third source of truth that D-183 exists to prevent.
 
@@ -94,5 +85,4 @@ Verify the whole column at once:
 
 ```bash
 python -m pytest tests/test_security.py::TestErrorCodeContract -q
-python .github/scripts/check_error_codes.py
 ```

@@ -1,4 +1,5 @@
-"""Unified security pipeline (D-018 / ADR-0005).
+"""Unified security pipeline (D-018: every tool call goes through validate,
+rate-limit, pattern scan, dispatch and audit).
 
 One FastMCP middleware funnels every tool call through:
     input validation -> rate limit -> pattern scan -> dispatch -> audit.

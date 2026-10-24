@@ -10,7 +10,8 @@ Key responsibilities:
 3. Provide human-readable fallback instructions when auto-setup fails
 4. Diagnose connection issues and suggest fixes
 
-Marker-block semantics (ADR-0005/D-017):
+Marker-block semantics (D-017; only the marker region is rewritten, the rest
+of userSetup.py is preserved):
 - The block lives between "# >>> mcp-for-maya >>>" / "# <<< mcp-for-maya <<<".
 - Missing file        -> create it directly.
 - Existing file, no marker -> return the proposed block first; only a

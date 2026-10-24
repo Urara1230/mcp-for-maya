@@ -3,7 +3,7 @@
 ``maya_scene_module.py`` is a registered monolith under T-07
 strangler discipline: incremental splits happen where fixes touch,
 never a big-bang rewrite — and the file must not keep growing
-("ratchet" — ADR-0006 family, fifth instance). The frozen budget
+("ratchet": frozen baseline, only downward edits). The frozen budget
 file caps each registered file's physical line count:
 
 - count > budget  -> fail the lint job
@@ -96,7 +96,8 @@ def main() -> int:
         )
         print(
             "Where new code goes instead: new Maya-side capability lands in "
-            "a same-injection-unit separate file per ADR-0027 criterion 4 "
+            "a separate file in the same injection unit (file boundary = "
+            "injection boundary = failure-domain boundary) "
             "(first case: introspect_module.py) — not appended to the "
             "monolith body."
         )

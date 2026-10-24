@@ -130,6 +130,6 @@ lines-after-imports = 2
 [tool.mypy]
 python_version = "3.10"
 strict = true
-# ratchet pawls (ADR-0017): unused ignores/config entries must surface immediately
+# ratchet pawls: unused ignores/config entries must surface immediately
 warn_unused_ignores = true
 warn_unused_configs = true

@@ -1,4 +1,7 @@
-"""T-05 (D-013/ADR-0010): Qt working-channel rewrite tests.
+"""T-05 (D-013): Qt working-channel rewrite tests.
+
+The Qt framed channel is the primary working channel; the native command
+port is bootstrap/headless fallback only.
 
 Seams covered without a real Maya session:
 - length-prefixed frame codec (encode_frame / FrameDecoder)

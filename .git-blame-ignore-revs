@@ -1,4 +1,4 @@
-# Mass reformat — ruff format . (D-045, ADR-0017, T-10b). Pure formatting, zero logic changes.
+# Mass reformat — ruff format . (D-045, T-10b). Pure formatting, zero logic changes.
 # Full 40-char SHA required — GitHub blame silently ignores abbreviated SHAs.
 # If impl/t10b-quality-gates is rebased before merge, this SHA must be refreshed.
 12e31cad7b39859272d15359bb6baa76b0db423d

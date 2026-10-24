@@ -24,7 +24,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / ".github" / "scripts" / "polarity_corpus_probe.py"
-ELEMENTS = REPO / "docs" / "adr" / "0028-elements.yaml"
+ELEMENTS = REPO / ".github" / "tdqs-elements.yaml"
 # D-214: the floors moved out of the script into this per-domain spec file.
 SPEC = REPO / ".github" / "polarity-corpus-spec.yaml"
 

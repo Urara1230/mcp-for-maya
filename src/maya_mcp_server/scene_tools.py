@@ -28,8 +28,9 @@ logger = logging.getLogger(__name__)
 
 # Module source paths for _mcp_scene. The introspection fragment
 # (introspect_module.py) is concatenated into the SAME injection unit
-# (D-095, ADR-0027 criterion 4): one module name / trigger / failure
-# domain, but independently maintained host-side source files.
+# (D-095): one module name / trigger / failure domain, but independently
+# maintained host-side source files. File boundary = injection boundary =
+# failure-domain boundary.
 _MODULE_SOURCE = Path(__file__).parent / "maya_scene_module.py"
 _INTROSPECT_FRAGMENT = Path(__file__).parent / "introspect_module.py"
 

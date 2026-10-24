@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gets deleted, and a deleted gate is worse than none.
   Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency` (6 tests).
 
-- **Pin registry + consistency gate (D-215, ADR-0029 §5)** —
+- **Pin registry + consistency gate (D-215)** —
   `.github/gate-registry.yaml` records, for every governance surface in
   `.github/scripts/`, its bound class, where its expectation is derived, which
   pytest nodes pin it, and any exemption. `check_gate_registry.py` enumerates
@@ -28,8 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (veto-power drift), exemption with no `expires|issue` or an expired one, and
   a zero-pin guard for `gate`/`manual_preflight`. It ships `::warning::` for one
   observation period. The flip condition is stated in the gate-registry step comment
-  in `.github/workflows/ci.yml` and legislated in ADR-0029 section 5; it is
-  deliberately not mirrored into the registry data file, which is a machine-read
+  in `.github/workflows/ci.yml`; it is deliberately not mirrored into the
+  registry data file, which is a machine-read
   index. (An earlier version of this entry pointed at a registry key that does
   not exist — the R46 audit caught the phantom pointer.)
   What is machine-checked is **registration discipline, not pin effectiveness** —
@@ -100,14 +100,14 @@ dimensions=5, shot types=8`.
   validation script `.github/scripts/check_tdqs_disclosure.py:1` hard-gated in
   CI lint workflow (`.github/workflows/ci.yml:51`), enforcing 30 required
   disclosure elements across 11 tools against single-source specification
-  `docs/adr/0028-elements.yaml:1`, backed by unit test suite
+  `.github/tdqs-elements.yaml:1`, backed by unit test suite
   `tests/test_check_tdqs_disclosure.py:1` (5 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in
   `.github/scripts/check_tdqs_disclosure.py::_negated` scopes the negation
   window to the enclosing clause instead of a fixed 80-char window, and
-  `docs/adr/0028-elements.yaml` gains the element-level `positive_exemptions`
+  `.github/tdqs-elements.yaml` gains the element-level `positive_exemptions`
   field plus the polarity direction limit (the guard applies only to purely
   positive pattern sets; negation-form elements stay unguarded). Negated-only
   matches stay warn-level. The two-track corpus measurement D-191①c requires is
@@ -125,7 +125,7 @@ dimensions=5, shot types=8`.
 ### Fixed
 
 - **Counterfactual pins did not follow the pin-form canon they were written
-  under (ADR-0029 ③, D-213 ②)** — the five S1/S2 counterfactual pins landed in
+  under (D-213 ②)** — the five S1/S2 counterfactual pins landed in
   the R46 lane under descriptive names (`test_a_helper_function_is_not_accepted_as_a_pin`
   and siblings) with no `counterfactual` docstring marker, so the clause that
   says a pin must be named `test_*_fails_the_gate` and declare itself a
@@ -249,12 +249,11 @@ Release-bearing floor update. Tag 语义基点历史锚：`f97857f`（exec-A: R4
 
 ### Changed
 
-- **TDQS description quality architecture decision record (D-174)** —
-  `docs/adr/0028-tdqs-description-quality.md:1` and machine-readable specification
-  `docs/adr/0028-elements.yaml:1` establishing P0 required disclosure elements
-  and single-direction `Boundary:` conventions.
+- **TDQS description quality specification (D-174)** —
+  machine-readable specification `.github/tdqs-elements.yaml:1` establishing P0
+  required disclosure elements and single-direction `Boundary:` conventions.
 
-- **P0 core tool descriptions rewritten (D-172, ADR-0028 §2)** —
+- **P0 core tool descriptions rewritten (D-172)** —
   `execute_code` (`src/maya_mcp_server/server.py:345`) rewritten to disclose
   arbitrary code scope, full session privileges, irreversible execution,
   `result_type` envelope, and session prerequisites; `write_module`
@@ -264,7 +263,7 @@ Release-bearing floor update. Tag 语义基点历史锚：`f97857f`（exec-A: R4
   disclose read-only spatial constraints without `auto_fix` mutations, session
   prerequisites, and disambiguation boundaries.
 
-- **P1 scene analysis tool disambiguation boundaries (D-173, ADR-0028 §3)** —
+- **P1 scene analysis tool disambiguation boundaries (D-173)** —
   added single-direction `Boundary:` lines across 9 scene tools in
   `src/maya_mcp_server/scene_tools.py:147` and
   `src/maya_mcp_server/introspect_tools.py:35` to eliminate conceptual
@@ -414,9 +413,8 @@ executed and its results are now in-repo, machine-readable form.
 - **Distribution surfaces registry table (D-144, D-145)** — created
   `docs/distribution-surfaces.md` tracking listing-surface three-state
   registrations (actionable, passive-observation-with-trigger, structural-rejection)
-  alongside 30-day post-publish verification obligations in ADR-0023.
-  Evidence: `docs/distribution-surfaces.md:1` +
-  `docs/adr/0023-t16f-window-and-release-activation.md:78`.
+  alongside 30-day post-publish verification obligations.
+  Evidence: `docs/distribution-surfaces.md:1`.
 
 ### Changed
 
@@ -424,8 +422,7 @@ executed and its results are now in-repo, machine-readable form.
   standardized forward release tagging to annotated tags (`git tag -a`) and
   bare `vX.Y.Z` release titles, while confirming `mypy-baseline.txt`
   legitimacy at repository root per upstream tooling defaults. Evidence:
-  `docs/decision-ledger.md:160` +
-  `docs/adr/0023-t16f-window-and-release-activation.md:85`.
+  `docs/decision-ledger.md:160`.
 
 - **Contributing guide PR tip budget policy clarification (D-142)** —
   clarified in `CONTRIBUTING.md` that budget gates evaluate PR tip state
@@ -458,7 +455,7 @@ executed and its results are now in-repo, machine-readable form.
   recovery comments and auto-closes. Job-level `issues: write`
   escalation only (workflow stays read-only) and the job is
   `continue-on-error` so its own failure never masks the drift red.
-  ADR-0023 gains the v1.0.0 release-checklist hard item — at least
+  The v1.0.0 release checklist gains a hard item — at least
   one human canary-review record (result + attribution in the
   decision ledger, red or green) must exist before v1.0.0 ships
   (obligation registered as D-127). Evidence:
@@ -475,7 +472,7 @@ executed and its results are now in-repo, machine-readable form.
   ratchet keeps closing instead of decaying into a high-water mark.
   Growth channel: human-approved budget edit in the same PR with the
   reason stated; new Maya-side capability routes to a
-  same-injection-unit separate file per ADR-0027 criterion 4
+  separate file in the same injection unit
   (`introspect_module.py` is the first case). Evidence:
   `.github/monolith-budget.json:2` +
   `.github/scripts/check_monolith_budget.py:39` +
@@ -526,7 +523,7 @@ executed and its results are now in-repo, machine-readable form.
   `tests/test_aesthetic_engine.py` (58 tests exercising only the
   dormant module) in the same commit. The Maya-side inline
   `_score_*` functions in `maya_scene_module.py` remain the sole,
-  live implementation — the single-source goal ADR-0003 once
+  live implementation — the single-source goal once
   vetoed now achieved in the opposite direction; the ADR carries
   errata + status notes, not a reopen. Coverage note: any numeric
   coverage delta reflects deleting dormant-only tests; production
@@ -535,8 +532,7 @@ executed and its results are now in-repo, machine-readable form.
   stated: `.github/ruff-baseline.json` (src E741 14→8 / F841 5→4;
   tests E741 10→3 / F401 16→9 / N801 1→0), `mypy-baseline.txt`
   (38 stale entries removed, 237→199), `.pre-commit-config.yaml`
-  exclude updated. Evidence: `docs/adr/0003-single-source-aesthetic-engine.md:9`
-  (errata + status notes) + `docs/decision-ledger.md` D-038/D-124 rows
+  exclude updated. Evidence: `docs/decision-ledger.md` D-038/D-124 rows
   - `tests/test_maya_scene_module.py::test_aesthetics_sampling`
     (production-path coverage). Recall path: `git log -G aesthetic_engine`.
 
@@ -567,8 +563,8 @@ warnings}` with a structured domain-error family
   `docs/threat-model.md` §5 local-file-write row)
 
 - **`scene_describe` / `scene_nodes` — scene-graph introspection
-  (D-094/D-095)** — first consumer of the ADR-0027 criterion-4
-  same-unit assembly: the Maya side lives in a separate host-maintained
+  (D-094/D-095)** — first consumer of the same-injection-unit
+  assembly: the Maya side lives in a separate host-maintained
   file (`src/maya_mcp_server/introspect_module.py`) concatenated into
   the `_mcp_scene` injection payload by `scene_tools` /
   `client.ensure_module_injected(extra_source_paths=...)` — one module
@@ -627,7 +623,7 @@ include_type_counts=False)` enumerates DAG + dependency nodes with
   decision per D-038, trigger = T-06 scheduling) and T-07
   (`maya_scene_module` monolith split — the D-095 introspection unit
   above is its first migrated slice; further slices follow the
-  ADR-0027 admission criteria). Ledger: `docs/decision-ledger.md`.
+  injection-module admission criteria). Ledger: `docs/decision-ledger.md`.
 
 ### Fixed
 
@@ -954,7 +950,7 @@ presence-baseline.json` collected on live Maya 2024 + allowlist +
 - Transactional safety: exportAll in-memory checkpoints with whitelisted filenames, automatic safety snapshot before rollback, explicit scene rebind.
 - Qt framed working channel (length-prefixed frames, up to 16 MiB) with a minimal native commandPort fallback for headless sessions.
 - `maya_setup_guide` (diagnose / install / guide / uninstall) with idempotent marker-block merge into userSetup.py and timestamped backups.
-- Project docs: CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, docs/threat-model.md, docs/adr/*, docs/testing.md, dual README (中文 + English).
+- Project docs: CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, docs/threat-model.md, docs/testing.md, dual README (中文 + English).
 - GitHub Actions CI: a lint job enforcing the frozen ruff budget (`.github/ruff-baseline.json`, ratchet-down-only) and a pytest matrix over ubuntu/windows x CPython 3.10/3.x; a release workflow on `v*` tags (test -> build -> publish via Trusted Publisher, `pypi` environment, PEP 740 attestations); Dependabot for GitHub Actions.
 
 ### Changed

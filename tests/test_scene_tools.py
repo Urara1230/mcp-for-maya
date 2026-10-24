@@ -192,12 +192,6 @@ class TestSceneToolsRegistration:
 class TestMayaSceneModule:
     """Test maya_scene_module.py can be imported (syntax check)."""
 
-    def test_module_source_exists(self):
-        """Module source file exists."""
-        from maya_mcp_server.scene_tools import _MODULE_SOURCE
-
-        assert _MODULE_SOURCE.exists()
-
     def test_module_source_is_valid_python(self):
         """Module source is valid Python (syntax check)."""
         from maya_mcp_server.scene_tools import _MODULE_SOURCE

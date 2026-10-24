@@ -5,7 +5,7 @@ on:
     tags: ["v*"]
 
 # GitHub Release page creation is NOT part of this workflow — it is a
-# manual step in the release checklist (docs/adr/0023 §D-068): created for
+# manual step in the release checklist (real-Maya window first, then publish): created for
 # minor versions, skipped for patch releases per D-084. Adjudicated D-108.
 # This workflow covers tag -> test -> build -> publish (PyPI trusted
 # publisher) only.

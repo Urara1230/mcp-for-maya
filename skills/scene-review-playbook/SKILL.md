@@ -48,4 +48,4 @@ Per-check weights are defined in the review engine — see the audit table in RE
 - errors: 0; warnings reviewed (not necessarily zero — judgment).
 - after fixes, re-run the affected checks; never re-report a stale score.
 
-> Custom validator registration is designed (ADR-0008) but not yet implemented — there is no `register` API to call today.
+> Custom validator registration is designed but not yet implemented — there is no `register` API to call today.

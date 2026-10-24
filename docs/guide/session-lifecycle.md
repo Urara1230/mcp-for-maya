@@ -61,5 +61,5 @@ rather than by reading this sentence.
 - Dedicated commandPort close: `src/maya_mcp_server/client.py::disconnect`
 - Shutdown wiring (the `finally:` a hard kill skips): `src/maya_mcp_server/__main__.py::run_server`
 - Session-manager teardown body: `src/maya_mcp_server/server.py::shutdown_session_manager`
-- Qt primary channel decisions: `docs/adr/0010-qt-primary-channel.md`
+- Qt primary channel: the Qt framed channel is the working channel; the native command port is bootstrap/headless fallback only
 - Teardown protocol behaviour: `tests/test_module_teardown.py::TestCreateModuleTeardown`

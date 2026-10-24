@@ -104,7 +104,7 @@ def prepare_code_for_result_capture(
 
 
 # ---------------------------------------------------------------------------
-# Length-prefixed wire framing (D-013 / ADR-0010)
+# Length-prefixed wire framing for the Qt framed channel (D-013)
 #
 # The Qt channel uses uint32-BE length-prefixed frames instead of
 # line-delimited JSON so multi-MB module sources and result payloads survive
@@ -489,7 +489,8 @@ class ClientChannel:
 
 
 class QtCommandServer:
-    """Qt-based TCP command server for Maya MCP (D-013 / ADR-0010).
+    """Qt-based TCP command server for Maya MCP (D-013: the primary working
+    channel; the native command port is bootstrap/headless fallback only).
 
     Runs on Maya's main thread inside the Qt event loop. readyRead is
     event-driven (no polling timer); each connection owns a ClientChannel

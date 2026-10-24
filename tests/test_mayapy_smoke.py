@@ -59,7 +59,7 @@ def test_measure_roundtrip_in_real_maya(real_maya):
 
 
 def test_checkpoint_rollback_reference_edit_roundtrip(real_maya, tmp_path):
-    """ADR-0004/D-007: checkpoint->rollback roundtrip on a scene carrying a
+    """D-007: checkpoint->rollback roundtrip on a true exportAll snapshot of a
     reference edit. exportAll flattens references into a self-contained
     snapshot; rollback must restore that state and rebind to the original
     scene path (S2). Manual tier — never CI.

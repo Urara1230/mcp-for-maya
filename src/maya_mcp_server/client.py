@@ -145,7 +145,7 @@ async def ensure_module_injected(
 
     extra_source_paths (D-095): additional source files concatenated
     into the SAME module payload before writing - one module name, one
-    namespace, one failure domain (ADR-0027 criterion 4). Fragment files
+    namespace, one failure domain. Fragment files
     must carry no __future__ import (it lands mid-file = SyntaxError).
     """
     key = session_key or "_default"
@@ -904,7 +904,8 @@ class MayaClient(BaseMayaClient):
                 # opening the fallback port - but only the one this call
                 # started: a pre-existing listener may still serve other
                 # clients, so stopping it unconditionally could kill live
-                # channels (audit F7; ADR-0023 port discipline).
+                # channels (audit F7: reap only the orphan this call started,
+                # never a pre-existing listener that may serve other clients).
                 if qt_started_by_us:
                     try:
                         await self._send_receive(self.STOP_QT_SERVER, raise_on_error=False)
@@ -999,7 +1000,7 @@ class MayaClient(BaseMayaClient):
 
 
 class MayaQtClient(BaseMayaClient):
-    """Async client for the custom Maya Qt command server (D-013/ADR-0010).
+    """Async client for the custom Maya Qt command server (D-013).
 
     Primary working channel: length-prefixed frames (16 MiB cap) over a
     localhost-only QTcpServer; per-connection FIFO queue Maya-side;

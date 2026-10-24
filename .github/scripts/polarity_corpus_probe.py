@@ -10,7 +10,7 @@ Two tracks, always reported separately (D-191(1)c):
 
   PRIMARY  the real validation surface, and the only denominator the
            zero-false-rejection judgement uses (D-190 4): each tool declared
-           in docs/adr/0028-elements.yaml against its OWN docstring,
+           in .github/tdqs-elements.yaml against its OWN docstring,
            checking only its OWN elements.
   STRESS   diagnostic only: every docstring-bearing function in
            src/maya_mcp_server x every element pattern (cartesian).
@@ -38,7 +38,7 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parent.parent.parent
-ELEMENTS = REPO / "docs" / "adr" / "0028-elements.yaml"
+ELEMENTS = REPO / ".github" / "tdqs-elements.yaml"
 CHECKER = REPO / ".github" / "scripts" / "check_tdqs_disclosure.py"
 NAIVE_WINDOW = 80  # the retired fixed-window form, kept only for comparison
 

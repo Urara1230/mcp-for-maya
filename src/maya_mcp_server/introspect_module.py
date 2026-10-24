@@ -1,4 +1,4 @@
-# --- _mcp_scene introspection fragment (D-094/D-095, ADR-0027 c4) ------
+# --- _mcp_scene introspection fragment (D-094/D-095): own file, same injection unit ---
 #
 # NOT a standalone injected module: scene_tools._ensure_module_injected
 # concatenates this file onto maya_scene_module.py and injects the

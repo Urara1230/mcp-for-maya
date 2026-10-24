@@ -1037,7 +1037,7 @@ def check_constraints(rules):
 
 
 # ============================================================
-# P0: Scene Checkpoint / Rollback (ADR-0004, D-015/D-016)
+# P0: Scene Checkpoint / Rollback (D-015/D-016): true exportAll snapshot, not references
 # ============================================================
 # checkpoint = cmds.file(exportAll) snapshot of MEMORY state -> checkpoints/
 # rollback   = open snapshot + rename back to the original scene path (S2);
