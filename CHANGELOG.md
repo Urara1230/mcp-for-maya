@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deliberately TOLERATES pyproject running ahead of the CHANGELOG while real
   work sits under `[Unreleased]` — a gate that is always red during development
   gets deleted, and a deleted gate is worse than none.
-  Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency` (6 tests).
+  Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency` (11 tests).
 
 - **Pin registry + consistency gate (D-215)** —
   `.github/gate-registry.yaml` records, for every governance surface in
@@ -26,28 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unregistered bound object, unresolvable pin node or expectation pointer,
   stale registration, `bound_class: gate` with no workflow invoking it
   (veto-power drift), exemption with no `expires|issue` or an expired one, and
-  a zero-pin guard for `gate`/`manual_preflight`. It ships `::warning::` for one
-  observation period. The flip condition is stated in the gate-registry step comment
-  in `.github/workflows/ci.yml`; it is deliberately not mirrored into the
-  registry data file, which is a machine-read
-  index. (An earlier version of this entry pointed at a registry key that does
-  not exist — the R46 audit caught the phantom pointer.)
+  a zero-pin guard for `gate`/`manual_preflight`. Findings are blocking
+  (`::error::`, exit 1); the one-observation-period warning phase ended with a
+  clean registry. The scope limit lives in `check_gate_registry.py`, which the
+  gate-registry step comment in `.github/workflows/ci.yml` points at; it is
+  deliberately not mirrored into the registry data file, which is a
+  machine-read index. (An earlier version of this entry pointed at a registry
+  key that does not exist — the R46 audit caught the phantom pointer.)
   What is machine-checked is **registration discipline, not pin effectiveness** —
   a hollow pin passes every rule, and that residual is disclosed rather than
   papered over.
-  Evidence: `tests/test_check_gate_registry.py` (24 tests),
-  `python .github/scripts/check_gate_registry.py` → registry OK, 17 entries.
-
-- **Bare count-claims gate (D-216)** — `check_count_claims.py` is one entry
-  point with per-family AST derivers dispatched internally, a family table fixed
-  in the script, and a denylist layer for historically drifted strings. Three
-  families are asserted against live source literals: `scene_review`'s 11
-  checks, the 5 aesthetic dimensions, and `SHOT_TYPES`' 8 entries. Frozen
-  release sections are exempt as point-in-time records; a doc that transcribes
-  an already-gated count needs no second assertion.
-  Evidence: `tests/test_check_count_claims.py` (16 tests),
-  `python .github/scripts/check_count_claims.py` → `checks=11, aesthetic
-dimensions=5, shot types=8`.
+  Evidence: `tests/test_check_gate_registry.py` (29 tests),
+  `python .github/scripts/check_gate_registry.py` → registry OK.
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the
@@ -72,7 +62,7 @@ dimensions=5, shot types=8`.
   (3 TN, 2 F) covering the `cannot`/`without` cue prefixes and the mirror-image
   clause position. Measured: 14 samples, adjudicable 12 == the floor,
   per-element TN 7 ≥ 3, 0 disagreements with the hand labels.
-  Evidence: `tests/test_polarity_corpus_probe.py` (11 collected),
+  Evidence: `tests/test_polarity_corpus_probe.py` (15 collected),
   `python .github/scripts/polarity_corpus_probe.py` → `TRACK2 (labelled)`.
 
 - **Line endings land in pre-commit, not CI (D-205 ③)** — `mixed-line-ending
@@ -82,26 +72,15 @@ dimensions=5, shot types=8`.
   So `.gitattributes` already normalises at commit, and a CI line-ending scan
   would be a permanently green dead check. The pre-commit layer is where worktree
   bytes actually get fixed — and having now fixed them, the same scan returns 0
-  for this worktree. Evidence: the "Assertion & Evidence Discipline" section in
-  AGENTS.md carries the mechanism pointer; the hook is the `mixed-line-ending`
-  entry in `.pre-commit-config.yaml`.
-
-- **`AGENTS.md` gains an Assertion & Evidence Discipline section (D-205 ①②)** —
-  three imperative rules in 9 lines, citing D-205 at the head: enumeration/count
-  assertions declare their domain or state the rule instead; versioned-doc
-  enumeration/count/retirement assertions default to a machine-checked carrier
-  while calibration claims stay prose under D-149; anything not reproducible is
-  recorded as “unverified” rather than assigned a guessed cause.
-  Evidence: the "Assertion & Evidence Discipline" section in AGENTS.md; the rule it
-  states is machine-enforced by
-  `tests/test_polarity_corpus_probe.py::TestD203FloorCaliber::test_the_old_basis_would_have_been_met_earlier`.
+  for this worktree. Evidence: the `mixed-line-ending` hook in
+  `.pre-commit-config.yaml`.
 
 - **TDQS disclosure ratchet CI gate (D-175)** — static AST and JSON
   validation script `.github/scripts/check_tdqs_disclosure.py:1` hard-gated in
-  CI lint workflow (`.github/workflows/ci.yml:51`), enforcing 30 required
-  disclosure elements across 11 tools against single-source specification
-  `.github/tdqs-elements.yaml:1`, backed by unit test suite
-  `tests/test_check_tdqs_disclosure.py:1` (5 passed).
+  CI lint workflow (`.github/workflows/ci.yml:48`), enforcing the required
+  disclosure elements across the gated tool set against single-source
+  specification `.github/tdqs-elements.yaml:1`, backed by unit test suite
+  `tests/test_check_tdqs_disclosure.py:1` (43 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in
@@ -119,8 +98,18 @@ dimensions=5, shot types=8`.
   (`tests/test_check_tdqs_disclosure.py::test_polarity_cross_clause_cue_does_not_negate`,
   `tests/test_check_tdqs_disclosure.py::test_polarity_same_clause_exemption_forgives_cue`,
   `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`);
-  `python .github/scripts/check_tdqs_disclosure.py` -> exit 0, 36 elements
-  across 12 tools, artifact `.github/scripts/check_tdqs_disclosure.py`.
+  `python .github/scripts/check_tdqs_disclosure.py` -> exit 0, 39 elements
+  across 13 tools, artifact `.github/scripts/check_tdqs_disclosure.py`.
+
+### Removed
+
+- **Governance layer teardown** — `docs/decision-ledger.md` and
+  `docs/handoffs/` were retired in `1c5befe`; `docs/adr/`, `CONTEXT.md`, six
+  CI gate scripts (`check_changelog_fixed.py`, `check_count_claims.py`,
+  `check_error_codes.py`, `check_evidence_anchors.py`,
+  `check_readme_skeleton.py`, `check_tool_count_claims.py`) and their four
+  test files were removed in `716ba79`. Tracker moved to GitHub Issues;
+  load-bearing decisions moved to comments at the code they constrain.
 
 ### Fixed
 
@@ -146,12 +135,12 @@ dimensions=5, shot types=8`.
 
 - **The S2 review record pointed at a bare `path:line` for its central claim** —
   the correction notice cites where the promotion record lives using
-  `polarity_corpus_probe.py:206-215`, a form D-183 holds drifts on every edit and
-  flags at warn level. It also cited a line range that the same record's own
-  derivation pin makes redundant. Now `path::symbol`.
+  `polarity_corpus_probe.py:206-215`, a form that drifts on every edit. It also
+  cited a line range that the same record's own derivation pin makes redundant.
+  Now `path::symbol`.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
-  Evidence: `python .github/scripts/check_evidence_anchors.py` → this file
-  contributes 0 warnings (total 41 → 40).
+  Evidence: `docs/evidence/polarity-corpus-s2-post-hoc-review-2026-10-03.md:20`
+  now uses the `path::symbol` form.
 
 - **The polarity sample floor was counting each sample once per guarded element
   (D-221 ② / S4)** — the label tally sat inside the per-element loop, so the
@@ -168,11 +157,12 @@ dimensions=5, shot types=8`.
   (`color_theory`, `spatial_composition`, `proportion_scale`,
   `lighting_quality`, `visual_flow`). A reader following the old wording would
   have looked for an 11-dimension breakdown that does not exist. Both strings
-  were agent-facing, and the count-claims gate reads docs rather than source,
-  so nothing else would have caught it.
+  were agent-facing; the count-claims gate that had read docs rather than
+  source was removed in the same teardown, so this entry records the fix.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
-  Evidence: `tests/test_check_count_claims.py::test_derivers_read_live_source_literals`;
-  `python .github/scripts/check_count_claims.py` → `aesthetic dimensions=5`.
+  Evidence: `git grep -n '11 dimension'` matches only this changelog entry;
+  the five aesthetic dimensions are the keys assigned in
+  `src/maya_mcp_server/maya_scene_module.py:1951-1955`.
 
 - **The track-2 floor report omitted D-198 ⑤'s second precondition
   (D-221 ② / S3)** — hard admission to the TDQS gate needs the floor AND the
@@ -180,17 +170,6 @@ dimensions=5, shot types=8`.
   verdict let "floor met" read as the whole promotion decision.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
   Evidence: `tests/test_polarity_corpus_probe.py::TestD203FloorCaliber::test_s3_two_precondition_caveat_is_printed`.
-
-- **`check_readme_skeleton` had been a CI gate with no pins since D-072** —
-  it resolved the repo root inline inside `main()`, so no pin could hand it a
-  corrupted copy, which is why a real gate sat in the lint job for months with
-  nothing able to fail it. It now takes a `check(repo)` seam and carries 11 tests: 8 counterfactual
-  reds plus 3 green controls, of which 4 are registered as pins. It was the one entry the new registry's zero-pin guard
-  flagged on arrival.
-  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
-  Evidence: `tests/test_check_readme_skeleton.py` (11 tests, incl.
-  `test_dropped_heading_in_the_mirror_is_red` and
-  `test_the_real_repo_mirror_is_green`).
 
 - **An overdue TDQS exemption could not fail CI (D-204)** — the `due` field was
   compared with `current >= due` and always warned, so a waiver left past its

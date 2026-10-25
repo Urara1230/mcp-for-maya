@@ -1,10 +1,10 @@
 # Maya MCP Server — v1.0.0 真机验证窗执行手册 (Runbook)
 
-> **文档标识**：.scratch/t32/runbook.md (rev 1.1 返工修订版)
+> **文档标识**：docs/reference/real-maya-runbook.md（原工作副本 `.scratch/t32/runbook.md`，rev 1.1 返工修订版；`.scratch/` 已不入仓）
 > **修订日期**：2026-09-29
 > **审计返工依据**：2026-09-29 T-32a 独立审计报告（纠正 D-146 渠道与单次核销语义、跑序上下游依赖、框2 版本矩阵拆行、Scope 固定行 build/stdio 补齐、GUI 前置脏场景守卫、AC-01 逃生通道恢复 live GUI 降级退路、度量口径订正）
-> **权威决策依据**：docs/decision-ledger.md D-148（R32 主题面裁决）、D-149（真机验证窗执行契约）、D-150（发版序与前向立法）、D-109（凭证入仓纪律）、D-131（用户末行裁决权）、D-049（环境披露档）、D-145β / D-146（发布收录与核销）、GLOSSARY.md（脏场景守卫）
-> **性质声明**：本件为操作类非耐久运行手册（留存 .scratch，不污染仓内历史）；窗收尾时的 AC 卡骨架与逐框结果表作为正式裁决产物随成果合入 docs/evidence/ 与账本。
+> **权威决策依据**：退役决策账本 D-148（R32 主题面裁决）、D-149（真机验证窗执行契约）、D-150（发版序与前向立法）、D-109（凭证入仓纪律）、D-131（用户末行裁决权）、D-049（环境披露档）、D-145β / D-146（发布收录与核销）、GLOSSARY.md（脏场景守卫）；账本原文恢复：`git show '1c5befe^:docs/decision-ledger.md'`
+> **性质声明**：本件原为操作类非耐久运行手册（原留存 `.scratch/`），现作为历史归档收入 `docs/reference/`；窗收尾时的 AC 卡骨架与逐框结果表作为正式裁决产物随成果合入 `docs/evidence/`。
 
 ---
 
@@ -109,7 +109,7 @@ flowchart TD
   - `docs/evidence/probes/probe-box01-mayapy-suite.json`
   - `meta`: `{ "env": "mayapy 3.10.8 (Maya 2024, Build 202302170737)", "box": 1, "claim_boundary": "Proves checkpoint/rollback and reference-edit integrity under mayapy." }`
 - **Escape Hatch (合法降级退路，D-138⑦)**：
-  - 依据 `docs/testing.md:53-60` 与 `docs/decision-ledger.md` D-138⑦：若宿主 mayapy 环境存在缺陷导致 `maya.standalone` 报 `0xC0000005` 崩溃（Windows access violation），**明确允许合法降级至 live GUI 会话通道（`pytest -m gui`）完成 Tier-2 语义验证**。记录真实探针结果并附 crash 日志，不强行阻断。
+  - 依据 `docs/testing.md:53-60` 与退役账本 D-138⑦（恢复：`git show '1c5befe^:docs/decision-ledger.md'`）：若宿主 mayapy 环境存在缺陷导致 `maya.standalone` 报 `0xC0000005` 崩溃（Windows access violation），**明确允许合法降级至 live GUI 会话通道（`pytest -m gui`）完成 Tier-2 语义验证**。记录真实探针结果并附 crash 日志，不强行阻断。
 
 ---
 
@@ -358,7 +358,7 @@ flowchart TD
 
 ## 六、D-146 预签页 (Pre-Sign Page for Registry Verification Window)
 
-> **预签条款声明**：本节严格逐句引用 docs/decision-ledger.md:155 (D-145β)、发布后段核销行（Registry publish 后 30 天一次性核销）与 D-150① 裁决，无新增语义。
+> **预签条款声明**：本节严格逐句引用退役账本 D-145β（原文 docs/decision-ledger.md:155；恢复：`git show '1c5befe^:docs/decision-ledger.md'`）、发布后段核销行（Registry publish 后 30 天一次性核销）与 D-150① 裁决，无新增语义。
 
 1. **起算锚前移至 0.4.1-publish (D-150①)**：
    - MCP Registry publish 窗口与下一次发版窗（0.4.1 patch 版）强绑定。
