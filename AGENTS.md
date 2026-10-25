@@ -8,6 +8,9 @@ python -m maya_mcp_server -vv
 uv run python -m pytest tests/ -q          # stub tier
 uvx ruff@0.17.1 check . && uv run python -m mypy src/ | uv run mypy-baseline filter
 
+## Gates
+A "governance gate" is any `run:` step of the `lint` job in `.github/workflows/ci.yml`; `.github/gate-registry.yaml` indexes every enforced check with its pins, and `check_gate_registry.py` fails an unregistered or unwired one, so neither list can rot quietly. The three baseline ratchets are the ruff budget, the monolith line budget and the mypy baseline — all three only ever move down.
+
 ## Don't touch
 - `src/maya_mcp_server/maya_scene_module.py` is line-capped by `.github/monolith-budget.json`; new Maya-side capability goes in a separate file of the same injection unit.
 - `llms.txt`, `docs/guide/error-codes.md`, and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived; never hand-edit.
