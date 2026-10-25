@@ -17,7 +17,7 @@
 
 | 渠道 | 结构匹配性 | 受众质量 | 进入成本/凭据面 | 宣称纪律 | 动作锚 |
 |---|---|---|---|---|---|
-| 官方 MCP Registry | ✅ stdio 一等支持（D-143β 已核） | 权威上游，全聚合器消费（Glama 官方明文 superset 全量摄入；下游镜像有实证同步缺口——GitHub 镜像 discussion #203757——故下游收录态逐一核销勿假设） | mcp-publisher CLI + GitHub device flow=用户人工门；server.json 草稿见任务书 T-30h | server.json 描述走 D-132 句式 | **已收录（2026-09-30，v0.5.0 active via mcp-publisher 1.7.9；v0.4.1→v0.5.0 isLatest 翻转已核）**；发新版须重 publish（操作契约见下「Registry publish 小节」）；**v0.6.0 重 publish 挂账中**（见小节实况注记） |
+| 官方 MCP Registry | ✅ stdio 一等支持（D-143β 已核） | 权威上游，全聚合器消费（Glama 官方明文 superset 全量摄入；下游镜像有实证同步缺口——GitHub 镜像 discussion #203757——故下游收录态逐一核销勿假设） | mcp-publisher CLI + GitHub device flow=用户人工门；server.json 草稿见任务书 T-30h | server.json 描述走 D-132 句式 | **已收录（2026-09-30 首录 v0.5.0，v0.4.1→v0.5.0 isLatest 翻转已核；2026-10-25 17:29 UTC 重 publish v0.6.0，status=active・isLatest=true，version 与 PyPI 0.6.0 精确一致，核验见小节实况）**；发新版须重 publish（操作契约见下「Registry publish 小节」） |
 | Glama | ✅ 已收录+已认领（2026-09-30，由 Xxx91n 完成 OAuth Claim；自动索引页 HTTP 200）；构建面依赖 Dockerfile——**无 Dockerfile 构建面=不分发常态，禁主动启 Docker 构建/健康检查面**（Maya GUI 宿主构建恒失败→健康检查红反损 listing） | 中流量，生态搜索 SEO 好，Maya 密度低 | Add MCP Server 提交 repo URL→GitHub OAuth claim（个人账号直连免 glama.json） | claim 文案走 D-132 句式（已用 D-165γ 终稿） | **已完成（2026-09-30，T-30f 闭环，D-166 记录）**；预期=占位+元数据所有权，非分发流量（D-144③）。**R38 TDQS 提分窄焦批 PR #58 已合并（4d01b44，覆盖 D-172..D-175）；金丝雀观察：当前页面评估基线仍为 2026-09-30 06:25 UTC 的 B 3.4/5.0，待后台更新或随下一发版实测生效（D-175②③）**。**备注（遗漏面 #7）：claim 后改 repo 描述/logo 须重走 Claim ownership 流程触发同步** |
 | awesome-mcp-servers | ✅ 纯列表，无运行时匹配要求 | 87-94K★，生态最权威列表，长期 SEO 背链 | fork+PR（格式=owner/repo+语言 emoji+字母序），🤖🤖🤖 fast-track；行稿备稿见任务书 T-30g | 一句话描述走 D-132 beta 语气 | **PR 已发出（2026-09-30，[#15382](https://github.com/punkpeye/awesome-mcp-servers/pull/15382) 待合并；已在 Art & Culture 分类按字母序插行）**，覆盖 D-164α/D-165αβ，D-166 记录 |
 
@@ -52,11 +52,11 @@
 
 ## Registry publish 小节（可行动第一行的操作契约，遗漏面 #5）
 
-- server.json 每次 publish 生成新版本记录；**发新版须重 publish，且 version 字段与 PyPI 精确一致**（T-30h 动作序：version 改届时 PyPI 精确版本→mcp-publisher validate 离线→人工门 login github+publish→curl+registry status 命令查 active）。
+- server.json 每次 publish 生成新版本记录；**发新版须重 publish，且 version 字段与 PyPI 精确一致**（T-30h 动作序：version 改届时 PyPI 精确版本→mcp-publisher validate 离线→人工门 login github+publish→登录态 Registry API GET /v0/servers/{name}/versions/{version} 查 status/isLatest）。
 - 下架/更名走 publish 侧 status 变更（active/deprecated/deleted，Registry API 原生字段），非删记录——原生可控退路。
-- **publish 完成即刻账本落 publish 日期=D-146 30 天核销窗起算点（非发版日）**。
+- **publish 完成即刻于本表落 publish 日期=D-146 30 天核销窗起算点（非发版日）**。
 - **核销触发链（D-229）**：本小节义务由 release-preflight **第 10 行「收录面义务行」**逐行核销（执行附证据/延缓附理由+复审日）——本表↔runbook 双向链接就此落地，v0.6.0 当窗漏执的根因（义务无消费者）由此封闭。
-- **挂账实况（2026-10-08）**：v0.6.0 发布后重 publish **未执行**（R48 挂账 T-R48-00）；匿名直查 registry API 曾返 404=记录存在性未独立证实——复证须带认证（mcp-publisher registry status/登录态 API），复证前禁下「缺席」结论。
+- **实况（2026-10-08 挂账 → 2026-10-25 结清；裁决 #86，执行 #88）**：v0.6.0 发布后重 publish 曾**未执行**（R48 挂账 T-R48-00）。2026-10-25 先以 mcp-publisher 1.8.4 离线 `validate`（exit 0），维护者执行 `mcp-publisher login github` 与 `mcp-publisher publish`（exit 0，published 0.6.0）；1.8.4 的 `status` 子命令只写不读，故以登录态 Registry API 复证：`GET /v0/servers/io.github.Xxx91n%2Fmcp-for-maya/versions/0.6.0` → HTTP 200，`version=0.6.0`、`status=active`、`isLatest=true`、`publishedAt=2026-10-25T17:29:14Z`，与 PyPI 0.6.0 精确一致。30 天核销窗起算=2026-10-25。匿名 404 仍不作为缺席证据。
 - 核销产出=每渠道「Registry 同步已发生/未发生」事实，**按本表三态重新判置并落账**（遗漏面 #1：判置变化→先落账本再改表；未收录且无信号→维持被动观察或注销债；已收录→观察态转静默，无需动作）。
 
 ## 关联
