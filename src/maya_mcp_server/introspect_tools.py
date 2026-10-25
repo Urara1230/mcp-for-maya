@@ -1,7 +1,7 @@
-"""MCP scene-graph introspection tools (D-094): scene_describe + scene_nodes.
+"""MCP scene-graph introspection tools: scene_describe + scene_nodes.
 
 Both tools ride the _mcp_scene injection unit in their own host-side file
-(D-095: file boundary = injection boundary = failure-domain boundary):
+(file boundary = injection boundary = failure-domain boundary):
 their Maya-side code lives in introspect_module.py and is concatenated
 into the _mcp_scene payload by scene_tools._ensure_module_injected -
 same module name, same per-session trigger, same failure domain.
@@ -72,7 +72,7 @@ def register_introspect_tools(mcp: Any) -> None:
                 re-query).
             limit: Max items returned per face (attrs and connections).
                 Soft default 200; a caller may relax explicitly to the
-                hard cap 1000 (D-110) - bounds response size only, not
+                hard cap 1000 - bounds response size only, not
                 the per-attribute query cost.
             session_key: Maya session key (auto-selected if one session).
 

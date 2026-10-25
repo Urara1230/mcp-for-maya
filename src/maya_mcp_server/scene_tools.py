@@ -27,8 +27,8 @@ from maya_mcp_server.security import InputValidationError
 logger = logging.getLogger(__name__)
 
 # Module source paths for _mcp_scene. The introspection fragment
-# (introspect_module.py) is concatenated into the SAME injection unit
-# (D-095): one module name / trigger / failure domain, but independently
+# (introspect_module.py) is concatenated into the SAME injection unit:
+# one module name / trigger / failure domain, but independently
 # maintained host-side source files. File boundary = injection boundary =
 # failure-domain boundary.
 _MODULE_SOURCE = Path(__file__).parent / "maya_scene_module.py"
@@ -62,7 +62,7 @@ def mark_dirty(session_key: str | None = None) -> None:
 async def _ensure_module_injected(client: Any, session_key: str | None) -> None:
     """Ensure _mcp_scene module is injected into Maya session.
 
-    Delegates to client.ensure_module_injected (D-083); reads the module
+    Delegates to client.ensure_module_injected; reads the module
     source from disk and writes it via write_module. Only injects once
     per session.
     """

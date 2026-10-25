@@ -1,11 +1,11 @@
-"""_mcp_export - Maya-side scene export (D-091/D-092).
+"""_mcp_export - Maya-side scene export.
 
 Injected lazily via write_module on the first scene_export call (same
 pattern as _mcp_asset/_mcp_visual, shared ensure_module_injected
 helper). Writes scene content to a file on the MAYA host through
 cmds.file exportAll/exportSelected - no network surface.
 
-Contract (D-092, pinned by a live Maya 2024 probe):
+Contract (pinned by a live Maya 2024 probe):
 - path: required, normalized (expanduser + abspath), parent dir
   auto-created, existing target is a domain error unless overwrite=True
 - format: enum {fbx, obj, usd}; falls back to the path extension;
@@ -48,7 +48,7 @@ def _err(code: str, message: str, suggestion: str | None = None) -> dict[str, An
 
 
 def _resolve_format(path: str, format: str | None) -> tuple[str, str] | dict[str, Any]:
-    """Resolve the export format and final path (D-092 mirror rules).
+    """Resolve the export format and final path.
 
     Returns (path, format) on success or an error dict. An explicit
     format that disagrees with a present extension errors out - the

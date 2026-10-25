@@ -1,3 +1,5 @@
+[历史记录 · 正文保持原样] 本文中的 .scratch/ 与 docs/decision-ledger.md 已随治理收口退役；账本恢复：git show '1c5befe^:docs/decision-ledger.md'；.scratch/ 不入仓。
+
 第三轮锐评:账本文化开始反噬修辞层——两处新埋的雷与一次我方的公开撤稿
 
 审计对象:Xxx91n/mcp-for-maya @ b2640f1。自第二轮基线 aed9298 起 148 个提交(38 fix / 22 test / 55 docs),发布 v0.1.0→v0.2.0 四版,其中 0.1.1 已 yank(PyPI API 实测:whl+tar.gz 双 yanked: True)。本机实测:685 passed / 24 skipped(21.9s);ruff 预算 src 79 / tests 28 全绿且已细化到 per-rule;mypy 222 错但已用 mypy-baseline.txt(237 行)接入 CI 专属闸(ci.yml:39-57);README 镜像骨架校验本地跑通("26 headings match 1:1")。
