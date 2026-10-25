@@ -52,11 +52,11 @@
 
 ## Registry publish 小节（可行动第一行的操作契约，遗漏面 #5）
 
-- server.json 每次 publish 生成新版本记录；**发新版须重 publish，且 version 字段与 PyPI 精确一致**（T-30h 动作序：version 改届时 PyPI 精确版本→mcp-publisher validate 离线→人工门 login github+publish→登录态 Registry API GET /v0/servers/{name}/versions/{version} 查 status/isLatest）。
+- server.json 每次 publish 生成新版本记录；**发新版须重 publish，且 version 字段与 PyPI 精确一致**（T-30h 动作序：version 改届时 PyPI 精确版本→mcp-publisher validate 离线→人工门 login github+publish→登录态 Registry API GET /v0.1/servers/{serverName}/versions/{version} 查 status/isLatest（serverName 需 URL-encode；端点公开可读，登录态用于排除匿名歧义））。
 - 下架/更名走 publish 侧 status 变更（active/deprecated/deleted，Registry API 原生字段），非删记录——原生可控退路。
 - **publish 完成即刻于本表落 publish 日期=D-146 30 天核销窗起算点（非发版日）**。
 - **核销触发链（D-229）**：本小节义务由 release-preflight **第 10 行「收录面义务行」**逐行核销（执行附证据/延缓附理由+复审日）——本表↔runbook 双向链接就此落地，v0.6.0 当窗漏执的根因（义务无消费者）由此封闭。
-- **实况（2026-10-08 挂账 → 2026-10-25 结清；裁决 #86，执行 #88）**：v0.6.0 发布后重 publish 曾**未执行**（R48 挂账 T-R48-00）。2026-10-25 先以 mcp-publisher 1.8.4 离线 `validate`（exit 0），维护者执行 `mcp-publisher login github` 与 `mcp-publisher publish`（exit 0，published 0.6.0）；1.8.4 的 `status` 子命令只写不读，故以登录态 Registry API 复证：`GET /v0/servers/io.github.Xxx91n%2Fmcp-for-maya/versions/0.6.0` → HTTP 200，`version=0.6.0`、`status=active`、`isLatest=true`、`publishedAt=2026-10-25T17:29:14Z`，与 PyPI 0.6.0 精确一致。30 天核销窗起算=2026-10-25。匿名 404 仍不作为缺席证据。
+- **实况（2026-10-08 挂账 → 2026-10-25 结清；裁决 #86，执行 #88）**：v0.6.0 发布后重 publish 曾**未执行**（R48 挂账 T-R48-00）。2026-10-25 先以 mcp-publisher 1.8.4 离线 `validate`（exit 0），维护者执行 `mcp-publisher login github` 与 `mcp-publisher publish`（exit 0，published 0.6.0）；1.8.4 的 `status` 子命令只写不读，故以登录态 Registry API 复证：`GET /v0.1/servers/io.github.Xxx91n%2Fmcp-for-maya/versions/0.6.0` → HTTP 200，`version=0.6.0`、`status=active`、`isLatest=true`、`publishedAt=2026-10-25T17:29:14Z`，与 PyPI 0.6.0 精确一致。30 天核销窗起算=2026-10-25。匿名 404 仍不作为缺席证据。
 - 核销产出=每渠道「Registry 同步已发生/未发生」事实，**按本表三态重新判置并落账**（遗漏面 #1：判置变化→先落账本再改表；未收录且无信号→维持被动观察或注销债；已收录→观察态转静默，无需动作）。
 
 ## 关联
