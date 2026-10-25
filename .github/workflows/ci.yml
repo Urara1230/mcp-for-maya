@@ -55,6 +55,11 @@ jobs:
         # Hard gate: findings are red. The observation period ended with a
         # clean registry; see check_gate_registry.py for the scope limit.
         run: python .github/scripts/check_gate_registry.py
+      - name: doc-claims gate
+        # Hard gate: the unreleased lane may only claim artifacts that exist.
+        # See check_doc_claims.py for the scope limit -- released sections are
+        # point-in-time records and a landing pointer is not proof of a claim.
+        run: python .github/scripts/check_doc_claims.py
       - name: pre-commit fallback (all files)
         run: |
           pip install pre-commit

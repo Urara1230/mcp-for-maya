@@ -66,8 +66,12 @@ config, not duplication.
 
 ### Changelog evidence rule
 
-Every `Added`/`Fixed`/`Changed` bullet in CHANGELOG.md MUST carry an executable
-evidence pointer (a pytest node ID, `path::symbol`, or `sha:path:line`). Every
+Every `Added`/`Fixed`/`Changed` bullet in CHANGELOG.md's `[Unreleased]` lane
+MUST carry an executable evidence pointer: a pytest node ID, `path::symbol`,
+`sha:path:line`, or an executed command with its observed result. Released
+sections are point-in-time records and are never re-checked. Enforced by
+`.github/scripts/check_doc_claims.py`, which also fails a pointer that no longer
+resolves and a test count that no longer matches the suite it cites. Every
 `Fixed` entry records `Broken version:` → `fixed version:` fields.
 
 ### Assertion & evidence discipline
