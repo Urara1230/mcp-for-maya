@@ -45,7 +45,7 @@ _security_config = SecurityConfig()
 
 
 def _product_version() -> str:
-    """Product version for the handshake's serverInfo (D-060).
+    """Product version for the handshake's serverInfo.
 
     serverInfo.version is the implementation version per the MCP spec
     (protocolVersion travels separately) - left unset, FastMCP leaks its
@@ -161,7 +161,7 @@ register_scene_tools(mcp)
 register_visual_tools(mcp)
 
 # One AuditLogger shared by the pipeline (per-call events) and the
-# asset tools (result-side download detail: URL/size/files_hash, D-075).
+# asset tools (result-side download detail: URL/size/files_hash).
 _audit_logger = (
     AuditLogger(Path(_security_config.audit_log_path) if _security_config.audit_log_path else None)
     if _security_config.audit_enabled
@@ -172,7 +172,7 @@ register_export_tools(mcp)
 register_introspect_tools(mcp)
 
 # Unified security pipeline: every tool call passes through validation,
-# rate limiting, pattern scanning, and audit logging (D-018).
+# rate limiting, pattern scanning, and audit logging.
 mcp.add_middleware(SecurityPipeline(config=_security_config, audit=_audit_logger))
 
 # Global session manager - initialized when server starts

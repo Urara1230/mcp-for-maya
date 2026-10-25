@@ -68,7 +68,7 @@ def create_module(name: str, code: str, overwrite: bool = False) -> str:
                 }
             }
         )
-    # Teardown protocol (D-058 / upstream #4): replacing the sys.modules
+    # Teardown protocol (upstream #4): replacing the sys.modules
     # entry would orphan the old module's globals - give it a chance to
     # release resources (e.g. a listening QtCommandServer) first. A failing
     # hook must not block the replacement; it surfaces as a warning.
