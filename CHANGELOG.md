@@ -56,19 +56,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documented claims are checked against the tree** —
   `.github/scripts/check_doc_claims.py` reads the `[Unreleased]` lane plus the
   two rule files and fails a bullet that carries no allowed evidence form, a
-  pointer that no longer resolves, a bare `path:line` inside an `Evidence`
-  clause, or a test count that no longer matches the suite it cites. Run against
-  the changelog as it stood before the 0.7.0 truth repair it flags 7 bullets,
+  pointer that no longer resolves, a bare `path:line` cited anywhere in the
+  bullet, or a test count that no longer matches the suite it cites. Run against
+  the `[Unreleased]` lane as merged in #96 it reports 3 findings; against the
+  lane as it stood before that repair (`def69db`) 14 findings across 9 bullets,
   including the three that described gates the governance teardown had already
-  deleted. `CONTRIBUTING.md`'s Changelog evidence rule gained the fourth allowed
-  form the checker accepts — an executed command with its observed result —
+  deleted. Reproduce either number by pointing this script at that revision's
+  changelog. `CONTRIBUTING.md`'s Changelog evidence rule gained the fourth
+  allowed form the checker accepts — an executed command with its observed
+  result —
   because a claim about a config asset has no symbol to name, and two
   `[Unreleased]` entries (the pre-commit line-endings move and the TDQS ratchet
   gate) now carry one. Released sections are never re-checked: they are
   point-in-time records, and a gate that "corrected" them would be a rewriting
   machine.
-  Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`,
-  `uv run python -m pytest tests/test_check_doc_claims.py -q` → 12 passed;
+  Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`;
+  `tests/test_check_doc_claims.py` (16 tests);
   `python .github/scripts/check_doc_claims.py` → doc-claims OK.
 
 - **Sample-size floor counts verdict-bearing labels only (D-203)** —

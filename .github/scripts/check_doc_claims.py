@@ -8,7 +8,7 @@ the Changelog evidence rule in CONTRIBUTING.md:
 
   D1a  the bullet carries at least one allowed evidence form
   D1b  every pointer it carries resolves (pytest node, ``path::symbol``, path)
-  D1c  no bare ``path:line`` sits inside an ``Evidence`` clause
+  D1c  no bare ``path:line`` is cited anywhere in the bullet
   D1d  a test count next to a suite citation matches the tests that suite defines
 
 D2 -- AGENTS.md and CONTRIBUTING.md:
@@ -26,8 +26,19 @@ SCOPE LIMITS, stated so nobody reads more into this than it does:
   Added/Fixed/Changed only.
 * D1b proves a pointer LANDS, not that what it lands on proves the claim. A
   pointer to a real test that asserts nothing relevant passes every rule here.
+  The same limit falls on the command form: a ``git grep`` whose only match is
+  the very line citing it satisfies D1a and D1b and means nothing. Relevance is
+  a reviewer's judgement, so it is disclosed here rather than approximated by a
+  regex that would red honest measurement output to catch one dishonest shape.
   That residual is the same one the pin registry discloses, and it is
   disclosed rather than papered over.
+* D1d polices a count only in the two shapes it can read -- ``(29 tests)`` and
+  ``collects 29 tests``. An arrow result like ``-> exit 0, 17 passed`` is a
+  dated measurement of a suite that has since grown; asserting against it
+  would red a record the repo has ruled must stay as filed.
+* D1d declines a file that uses the ``parametrize`` MARKER, decided from the
+  decorator rather than the word, because a docstring mention must not switch
+  the rule off -- and this file's own test suite mentions it.
 
 Invocation: check_doc_claims.py [repo-root]
 """
@@ -66,24 +77,44 @@ RECOVERY_CMD = re.compile(r"[0-9a-f]{7,}\^?:[\w./\-]+")
 PYTEST_NODE = re.compile(r"tests/[\w.\-/]+\.py::[\w.\-]+")
 PATH_SYMBOL = re.compile(r"[\w.\-/]+\.(?:py|yaml|yml|json|md|txt)::[\w.\-]+")
 SHA_PATH_LINE = re.compile(r"\b[0-9a-f]{7,}:[\w./\-]+:[0-9]+")
+# The result must follow the command, and an arrow is the only separator the
+# lane uses: `polarity_corpus_probe.py -> TRACK2 (labelled)` is a real verdict.
+# What no form rule can see is whether the output PROVES the claim -- a `git
+# grep` whose only match is the line citing it passes every rule here. That is
+# disclosed below, not legislated.
 EXEC_LINE = re.compile(
     r"(?:uv run |uvx |python3? |pre-commit |but |git )"
-    r".*(?:→|->|exit [0-9]|rc[= ]|OK|Passed|passed|clean|registry OK)"
+    r"\S.*(→|->).+\S"
 )
 
-# D1d: a count beside a suite citation is a claim about that suite. The phrasing
-# varies, so each shape is matched on its own; group 1 is always the number.
+# D1d: a count beside a suite citation is a claim about that suite. Only these
+# two shapes are policed: an arrow-prefixed result ("-> exit 0, 17 passed") is a
+# dated measurement of a suite that has since grown, and asserting against it
+# would red a record the repo has ruled must stay as filed.
 COUNT_CLAIMS = (
     re.compile(r"\((\d+) (tests|passed|collected)\)"),
-    re.compile(r"(?:collects|defines) (\d+) tests"),
-    re.compile(r"[→-]>\s*(\d+) passed"),
+    re.compile(r"(?:collects|defines|hold[s]?) (\d+) tests"),
 )
 PATH_REF = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)?)")
 
 
+def _unwrap_code(text: str) -> str:
+    """Join identifiers that markdown wrapped inside a code span.
+
+    A long pytest node ID breaks across lines at column 100 in this file.
+    Flattening alone turns ``...::test_the_real_\\n  repo_is_clean`` into a node
+    with a space in it, and the checker then reports a perfectly good pointer as
+    dead: a false red aimed at whoever wrote the longest line.
+    """
+    out = []
+    for part in re.split(r"(`[^`]*`)", text):
+        out.append(re.sub(r"\n\s*", "", part) if part.startswith("`") else part)
+    return "".join(out)
+
+
 def _evidence_clause(text: str) -> str:
     """Return the part of a bullet that starts at its evidence claim."""
-    m = re.search(r"Evidence", text)
+    m = re.search(r"[Ee]vidence", text)
     return text[m.start() :] if m else ""
 
 
@@ -137,6 +168,10 @@ def _check_pointers(root: Path, text: str, where: str) -> list[str]:
             s.startswith(f"{path}::") for s in symbols
         ):
             continue
+        # Same relief the rule files get: a Changed bullet may name the artifact
+        # it retired, so long as it hands the reader a way to recover it.
+        if any(path in cmd for cmd in RECOVERY_CMD.findall(text)):
+            continue
         if not (root / path).exists():
             findings.append(f"{where}: cited path {path} does not exist")
     return findings
@@ -167,7 +202,15 @@ def _ast_test_count(path: Path, parts: list[str]) -> int | None:
 
     if parts and parts[-1].startswith("test_"):
         return 1
-    if "parametrize" in source:
+    # A DECORATOR, not the word: the first version tested the whole source as a
+    # string, and this very file's own test docstrings mention parametrize -- so
+    # the count rule silently stopped applying to the gate's own evidence.
+    if any(
+        "parametrize" in ast.unparse(dec)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        for dec in node.decorator_list
+    ):
         return None
 
     if parts:
@@ -188,7 +231,7 @@ def _ast_test_count(path: Path, parts: list[str]) -> int | None:
 def _check_counts(root: Path, text: str, where: str) -> list[str]:
     """D1d: a count beside a suite citation must match what that suite defines."""
     findings = []
-    flat = re.sub(r"\s+", " ", text)
+    flat = re.sub(r"\s+", " ", _unwrap_code(text))
     for pattern in COUNT_CLAIMS:
         for m in pattern.finditer(flat):
             claimed = int(m.group(1))
@@ -237,7 +280,7 @@ def check_changelog(root: Path) -> list[str]:
         # disclosed below rather than passed off as precision: a command and a
         # result in the same bullet count even when they sit in different
         # sentences.
-        flat = re.sub(r"\s+", " ", text)
+        flat = re.sub(r"\s+", " ", _unwrap_code(text))
 
         forms = [
             name

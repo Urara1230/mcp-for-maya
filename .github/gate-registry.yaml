@@ -31,10 +31,12 @@
         "tests/test_check_doc_claims.py::test_a_bullet_without_evidence_fails_the_gate",
         "tests/test_check_doc_claims.py::test_a_dead_pytest_node_fails_the_gate",
         "tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_a_dead_path_in_the_agents_file_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_an_executed_command_with_a_result_is_an_evidence_form",
         "tests/test_check_doc_claims.py::test_the_real_repo_is_clean"
       ],
       "exemption": null,
-      "note": "Checks that what the unreleased lane CLAIMS still exists: an allowed evidence form per bullet, every pointer resolving (by AST, same rule as this registry), no bare path:line inside an Evidence clause, and a test count matching the suite it cites. Admitted limits, stated rather than stacked: released CHANGELOG sections are point-in-time records and are never re-checked; a parametrised suite declines the count assertion because a def-site count is not a collected count; and a pointer that lands on a real but irrelevant test passes -- this checks that a handle exists, not that it proves the claim, which is the same residual the pin discipline discloses."
+      "note": "Checks that the unreleased lane CLAIMS only what the tree still holds: an allowed evidence form per bullet, pointers that resolve by AST, no bare path:line, and counts that match the suite cited. Released sections are point-in-time records and are never re-checked. Scope limits live in the script docstring, not copied here."
     },
     {
       "gate_id": "check_gate_registry",

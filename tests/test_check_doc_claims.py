@@ -183,6 +183,55 @@ def test_a_parametrised_suite_is_left_to_pytest(tmp_path):
     assert M.check_changelog(root) == []
 
 
+def test_a_dead_cited_path_in_a_bullet_fails_the_gate(tmp_path):
+    """Counterfactual: the lane may name a retired file only with a recovery
+    command; a bare dead path is still a dead path."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `python .github/scripts/gone.py` → ok, "
+        "and `.github/scripts/deeper.py` is referenced too.\n",
+    )
+    findings = M.check_changelog(root)
+    assert any(".github/scripts/deeper.py" in f for f in findings), findings
+
+
+def test_a_recovery_command_is_not_a_dead_path(tmp_path):
+    """Green control: a Changed bullet may name what it retired, given the
+    reviewer a way to read it. Without this the gate reds the honest record."""
+    root = _repo(
+        tmp_path,
+        "- **Old gate retired** — see `git show '716ba79^:.github/scripts/gone.py'`;\n"
+        "  Evidence: `python .github/scripts/check_doc_claims.py` → doc-claims OK.\n",
+    )
+    (root / ".github" / "scripts").mkdir(parents=True, exist_ok=True)
+    (root / ".github" / "scripts" / "check_doc_claims.py").write_text("x = 1\n")
+    assert M.check_changelog(root) == []
+
+
+def test_a_wrapped_node_id_still_resolves(tmp_path):
+    """Green control: a long node ID breaks across lines at the column cap, and
+    reading it as two tokens would report a good pointer as dead."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_wrap.py::test_a_long_\n"
+        "  node_name_is_kept`.\n",
+    )
+    _add_test_file(root, "test_wrap.py", ["test_a_long_node_name_is_kept"])
+    assert M.check_changelog(root) == []
+
+
+def test_a_command_without_a_result_is_not_an_evidence_form(tmp_path):
+    """Counterfactual: naming a command is not the same as reporting what it
+    did -- the lane is full of 'run this' claims that never say the verdict."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: run `python .github/scripts/probe.py` "
+        "and look at the output.\n",
+    )
+    findings = M.check_changelog(root)
+    assert any("no allowed evidence form" in f for f in findings), findings
+
+
 def test_the_real_repo_is_clean():
     """Live green control: the shipped tree passes every rule above."""
     assert M.check(REPO) == []

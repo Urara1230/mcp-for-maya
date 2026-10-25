@@ -9,7 +9,7 @@ uv run python -m pytest tests/ -q          # stub tier
 uvx ruff@0.17.1 check . && uv run python -m mypy src/ | uv run mypy-baseline filter
 
 ## Gates
-A "governance gate" is any `run:` step of the `lint` job in `.github/workflows/ci.yml`; `.github/gate-registry.yaml` indexes every enforced check with its pins, and `check_gate_registry.py` fails an unregistered or unwired one, so neither list can rot quietly. The three baseline ratchets are the ruff budget, the monolith line budget and the mypy baseline — all three only ever move down.
+A "governance gate" is any check a job runs in `.github/workflows/ci.yml`; `.github/gate-registry.yaml` indexes every enforced one with its pins, and `check_gate_registry.py` fails an unregistered or unwired entry, so neither list can rot quietly. To see what CI actually runs, read the `run:` lines: `grep -E 'run: python .github/scripts' .github/workflows/ci.yml`. The three baseline ratchets only ever move down — ruff budget and monolith line budget are `lint` steps, the mypy baseline is its own job.
 
 ## Don't touch
 - `src/maya_mcp_server/maya_scene_module.py` is line-capped by `.github/monolith-budget.json`; new Maya-side capability goes in a separate file of the same injection unit.
