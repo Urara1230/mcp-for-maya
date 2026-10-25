@@ -76,11 +76,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.pre-commit-config.yaml`.
 
 - **TDQS disclosure ratchet CI gate (D-175)** — static AST and JSON
-  validation script `.github/scripts/check_tdqs_disclosure.py:1` hard-gated in
-  CI lint workflow (`.github/workflows/ci.yml:48`), enforcing the required
+  validation script `.github/scripts/check_tdqs_disclosure.py` hard-gated in
+  the CI lint workflow's `tdqs disclosure elements gate` step
+  (`.github/workflows/ci.yml`), enforcing the required
   disclosure elements across the gated tool set against single-source
-  specification `.github/tdqs-elements.yaml:1`, backed by unit test suite
-  `tests/test_check_tdqs_disclosure.py:1` (43 passed).
+  specification `.github/tdqs-elements.yaml`, backed by unit test suite
+  `tests/test_check_tdqs_disclosure.py` (43 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in
@@ -139,8 +140,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cited a line range that the same record's own derivation pin makes redundant.
   Now `path::symbol`.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
-  Evidence: `docs/evidence/polarity-corpus-s2-post-hoc-review-2026-10-03.md:20`
-  now uses the `path::symbol` form.
+  Evidence: the correction notice in
+  `docs/evidence/polarity-corpus-s2-post-hoc-review-2026-10-03.md` now cites
+  `.github/scripts/polarity_corpus_probe.py::adjudicate`.
 
 - **The polarity sample floor was counting each sample once per guarded element
   (D-221 ② / S4)** — the label tally sat inside the per-element loop, so the
@@ -160,9 +162,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   were agent-facing; the count-claims gate that had read docs rather than
   source was removed in the same teardown, so this entry records the fix.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
-  Evidence: `git grep -n '11 dimension'` matches only this changelog entry;
-  the five aesthetic dimensions are the keys assigned in
-  `src/maya_mcp_server/maya_scene_module.py:1951-1955`.
+  Evidence: the five keys assigned in
+  `src/maya_mcp_server/maya_scene_module.py::_compute_full_aesthetic_score`;
+  `python .github/scripts/check_tdqs_disclosure.py` → exit 0 over the
+  agent-facing description surface.
 
 - **The track-2 floor report omitted D-198 ⑤'s second precondition
   (D-221 ② / S3)** — hard admission to the TDQS gate needs the floor AND the
