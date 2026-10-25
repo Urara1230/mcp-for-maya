@@ -80,7 +80,7 @@ Domain vocabulary. Each entry is a term and a definition of at most two sentence
 
 **人工确认门**: repo 改名、push main、建 tag/Release、PyPI 发布、改 secret 须用户执行或逐条批准；低风险可逆动作 agent 自主。
 
-**冻结预算 (frozen budget)**: lint/类型错误计数预算入库冻结、只降不升；预算下调须同 commit 写明理由，CI 禁止自动写预算。
+**冻结预算 (frozen budget)**: lint/类型错误计数预算入库冻结、只降不升。
 
 **棘爪 (ratchet pawl)**: 冻结预算之外的防侵蚀机制，堵住「抑制项只增不减」的侧门，例如 warn_unused_ignores 与 noqa 审计。
 
