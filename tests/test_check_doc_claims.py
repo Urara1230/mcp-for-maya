@@ -325,6 +325,42 @@ def test_a_bare_line_citation_is_caught_for_every_cited_extension(tmp_path):
     assert ".github/conf.toml:3" in findings, findings
 
 
+def test_a_count_next_to_a_full_node_counts_that_node(tmp_path):
+    """Counterfactual: the citation's ``::`` tail must be read whole. Stopping
+    at the class made a '(2 tests)' claim beside a single test pass, because the
+    count was checked against the wrong subject."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_two.py::TGroup::test_one` (2 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_two.py").write_text(
+        "class TGroup:\n    def test_one(self): pass\n    def test_two(self): pass\n",
+        encoding="utf-8",
+    )
+    findings = M.check_changelog(root)
+    assert any("it defines 1" in f for f in findings), findings
+
+
+def test_a_parametrized_cited_test_declines_the_count(tmp_path):
+    """Counterfactual on the wrong direction: the decline must be decided BEFORE
+    the single-test shortcut, or a correct '3 tests' claim about a parametrized
+    test is redded as holding 1."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_three.py::test_multi` (3 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_three.py").write_text(
+        'import pytest\n\n\n@pytest.mark.parametrize("n", [1, 2, 3])\n'
+        "def test_multi(n):\n    assert n\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
 def test_the_real_repo_is_clean():
     """Live green control: the shipped tree passes every rule above."""
     assert M.check(REPO) == []

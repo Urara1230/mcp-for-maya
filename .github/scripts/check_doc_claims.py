@@ -106,7 +106,11 @@ COUNT_CLAIMS = (
     re.compile(r"\((\d+) (tests|passed|collected)\)"),
     re.compile(r"(?:collects|defines|hold[s]?) (\d+) tests"),
 )
-PATH_REF = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)?)")
+# Every ``::`` component, not one: the first version stopped after the class, so
+# `tests/x.py::TestGroup::test_one` was read as a citation of the class and a
+# "(2 tests)" claim beside it passed -- the count was checked against the wrong
+# subject, and a wrong claim went green.
+PATH_REF = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)*)")
 
 
 def _unwrap_code(text: str) -> str:
@@ -203,29 +207,52 @@ def _ast_test_count(path: Path, parts: list[str]) -> int | None:
         # files: counting only def-test_x under-reports the real collected size.
         return isinstance(node, TEST_DEFS) and node.name.startswith("test_")
 
+    def marks(node: ast.AST) -> bool:
+        # A DECORATOR, not the word: the first version searched the whole source
+        # as a string, and this very file's own test docstrings mention
+        # parametrize -- so the count rule silently stopped applying to the
+        # gate's own evidence.
+        return any("parametrize" in ast.unparse(dec) for dec in node.decorator_list)
+
     def methods(class_node: ast.ClassDef) -> int:
         return sum(1 for sub in class_node.body if is_test(sub))
 
-    if parts and parts[-1].startswith("test_"):
-        return 1
-    # A DECORATOR, not the word: the first version tested the whole source as a
-    # string, and this very file's own test docstrings mention parametrize -- so
-    # the count rule silently stopped applying to the gate's own evidence.
-    # ClassDef is included because a marker on the class parametrises every
-    # method in it, which no per-function scan can see.
-    if any(
-        "parametrize" in ast.unparse(dec)
-        for node in ast.walk(tree)
-        if isinstance(node, (TEST_DEFS[0], TEST_DEFS[1], ast.ClassDef))
-        for dec in node.decorator_list
-    ):
+    def find_class(name: str) -> ast.ClassDef | None:
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == name:
+                return node
         return None
 
+    # Decide what the citation covers before counting anything: a parametrized
+    # test collects more items than it defines, so the count must decline rather
+    # than report the def-site number as a mismatch. This runs FIRST because the
+    # single-test shortcut used to return 1 here, redding a correct "3 tests"
+    # claim before the decline could ever run.
+    def covered(nodes: list[ast.AST]) -> bool:
+        return any(marks(n) for n in nodes if isinstance(n, (*TEST_DEFS, ast.ClassDef)))
+
+    if not parts:
+        if covered([n for n in ast.walk(tree)]):
+            return None
+    else:
+        cls = find_class(parts[0])
+        if cls is None:
+            # one part naming a module-level test function
+            if covered([n for n in tree.body if getattr(n, "name", None) == parts[-1]]):
+                return None
+        else:
+            # `::Class`, or `::Class::test`: the class is in scope either way,
+            # and a method-level marker counts as much as a class-level one.
+            inside = [sub for sub in cls.body if getattr(sub, "name", None) == parts[-1]]
+            if covered([cls, *cls.body] if len(parts) == 1 else [cls, *inside]):
+                return None
+
+    if parts and parts[-1].startswith("test_"):
+        return 1
+
     if parts:
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef) and node.name == parts[0]:
-                return methods(node)
-        return None
+        cls = find_class(parts[0])
+        return methods(cls) if cls is not None else None
 
     total = 0
     for node in tree.body:

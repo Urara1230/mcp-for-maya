@@ -72,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   point-in-time records, and a gate that "corrected" them would be a rewriting
   machine.
   Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`;
-  `tests/test_check_doc_claims.py` (21 tests);
+  `tests/test_check_doc_claims.py` (23 tests);
   `python .github/scripts/check_doc_claims.py` → doc-claims OK.
 
 - **Sample-size floor counts verdict-bearing labels only (D-203)** —
