@@ -75,8 +75,8 @@ class SessionManager:
         self.scan_interval = scan_interval
         self.client_type = client_type
         self.failed_port_retry_after = failed_port_retry_after
-        # config ports positively identified as non-Python: never re-probed
-        # while they keep LISTENing
+        # config ports positively identified as non-Python: the port
+        # exemption set - never re-probed while they keep LISTENing
         self._non_python_ports: set[str] = set()
         self.include_ports = (
             include_ports

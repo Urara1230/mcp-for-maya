@@ -77,8 +77,10 @@ _ATTR_FACET_FLAGS = (
 # totals - never silent. The caps bound RESPONSE SIZE only: the ~10
 # attributeQuery calls per attribute are a separate main-thread cost axis
 # inside Maya - if real-Maya timing proves problematic that is a distinct
-# profiling/batched-query debt, not a reason to widen
-# these caps.
+# profiling/batched-query debt, to be opened when something is measured,
+# not a reason to widen these caps. The two caps are constants on purpose:
+# no env or config knob, and raising one is a decision - they are inferred,
+# not measured.
 _DESCRIBE_SOFT_CAP = 200
 _DESCRIBE_HARD_CAP = 1000
 
@@ -172,7 +174,7 @@ def describe_node(
     children, index_matters, enum, enum_values, min, max, (+ soft_min,
     soft_max, value)}], attrs_truncated, total_count, connections?[
     {src_plug, dst_plug, direction}], connections_truncated?,
-    total_connections?}. Budget: each face returns at most
+    total_connections?}. Response-size budget: each face returns at most
     limit items (soft default 200, caller-relaxable up to the hard cap
     1000); over-budget output is truncated and disclosed via
     *_truncated + totals - never silent. Consumers narrow and re-query

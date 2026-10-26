@@ -37,8 +37,8 @@ API_BASE = "https://api.polyhaven.com"
 ALLOWED_HOSTS = frozenset(
     {
         "api.polyhaven.com",
-        # Observed CDN host (the design listed dl.polyhaven.com; the
-        # API actually returns dl.polyhaven.org URLs - both whitelisted).
+        # Observed CDN host: the API returns dl.polyhaven.org URLs; the
+        # originally assumed dl.polyhaven.com stays listed too.
         "dl.polyhaven.org",
         "dl.polyhaven.com",
     }

@@ -68,8 +68,8 @@ class MayaUnavailableError(PipelineError):
     code = "maya_unavailable"
 
 
-# Backwards-compatible name: the error contract pins the code, existing
-# code the class name.
+# Backwards-compatible name: the two-layer error contract fixes the code,
+# existing code the class name.
 MayaConnectionError = MayaUnavailableError
 
 
@@ -162,8 +162,8 @@ async def ensure_module_injected(
 
         import platformdirs as _pd
 
-        # Hygiene: mkstemp under the platformdirs user cache (no
-        # predictable shared-temp path), 0600 perms, try/finally unlink.
+        # Injection temp-file hygiene: mkstemp under the platformdirs user
+        # cache (no predictable shared-temp path), 0600 perms, unlink in finally.
         _dir = _os.path.join(_pd.user_cache_dir("mcp-for-maya"), "inject")
         _os.makedirs(_dir, exist_ok=True)
         _fd, _tmp = _tf.mkstemp(prefix=tmp_prefix, suffix=".py", dir=_dir)

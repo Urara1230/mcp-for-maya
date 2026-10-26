@@ -1,5 +1,5 @@
 """Unified security pipeline: every tool call goes through validate,
-rate-limit, pattern scan, dispatch and audit).
+rate-limit, pattern scan, dispatch and audit.
 
 One FastMCP middleware funnels every tool call through:
     input validation -> rate limit -> pattern scan -> dispatch -> audit.
