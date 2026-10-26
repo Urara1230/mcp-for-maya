@@ -54,18 +54,27 @@ Pre-import the module in its own `execute_code` call, then send call expressions
 ```python
 # 0) scene_review() or scene_snapshot() first: that is what puts _mcp_scene in the session
 # execute_code 1: import _mcp_scene
-# execute_code 2, expression only:
+# execute_code 2, one expression per call:
 _mcp_scene.register_validator(
     "roots_named",
     lambda: (False, "3 root objects are unnamed"),  # or just True/False
-    severity="warning",
+    severity="warning",  # "error" | "warning" | "info" — the built-in vocabulary
     weight=2,
-    family="studio",
+    family="studio",  # free label the report groups this rule under
 )
-_mcp_scene.list_validators()  # _mcp_scene.unregister_validator("roots_named") drops it
+_mcp_scene.list_validators()
+_mcp_scene.unregister_validator("roots_named")
 ```
 
-A predicate returns `bool` or `(bool, message)`; anything else is recorded as `check_error` rather than guessed at. A predicate that raises is isolated the same way — and `check_error` counts as failed, so it costs its weight and lands in `issues` like any other violation while the rest of the review runs. One limit, stated plainly: the isolation catches `Exception`, so a `BaseException` such as `KeyboardInterrupt` still stops the run — that is a human stopping Maya, not a rule misbehaving. Weights must be finite, positive and of a kind (1-100): a registration that would push the registry total past the float range is refused with `weight_overflow` rather than landing an unparsable score. Same name overwrites, so re-registering after a reconnect is safe — and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". Pre-1.0 API: it may break before 1.0, with a changelog note.
+What each call hands back:
+
+- `register_validator(name, predicate, severity="error", weight=1, family="custom", message=None)` → `{"registered": name, "overwritten": bool, "count": int}`. Same name overwrites, so `overwritten: true` is the expected answer on a re-register, not a second copy of the rule. `message=` is the rule's own report text, used whenever the predicate returns none of its own — on a failure and on a pass alike; a `(bool, message)` return wins over it.
+- `list_validators()` → `{"count": int, "validators": [{"name": ..., "family": ..., "severity": ..., "weight": ..., "message": ...}]}`, in run order. It is how you read the active names, and it never echoes the predicate — that is a live callable and would not survive the JSON trip back to the host.
+- `unregister_validator(name)` → `{"unregistered": name, "count": int}`. A name that is not registered comes back as the error envelope with `validator_not_found`; it is not a silent no-op.
+
+Registration is the only place a mistake is cheap, and a refused call returns `{"error": {"code": ..., "message": ...}}`, plus a `suggestion` where there is one, instead of raising: `invalid_validator_name`, `invalid_predicate`, `invalid_severity`, `invalid_weight`, `invalid_family`, `invalid_message`. Nothing runs at registration time, so a bad predicate is only discovered when the review runs — and is then isolated the same way as one that raises.
+
+A predicate returns `bool` or `(bool, message)`; anything else is recorded as `check_error` rather than guessed at. A predicate that raises is isolated the same way — and `check_error` counts as failed, so it costs its weight and lands in `issues` like any other violation while the rest of the review runs. One limit, stated plainly: the isolation catches `Exception`, so a `BaseException` such as `KeyboardInterrupt` still stops the run — that is a human stopping Maya, not a rule misbehaving. Weights must be finite, positive and of a kind (1-100): a registration that would push the registry total past the float range is refused with `weight_overflow` rather than landing an unparsable score. Re-registering after a reconnect is safe, and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". Pre-1.0 API: it may break before 1.0, with a changelog note.
 
 ## Done means
 
