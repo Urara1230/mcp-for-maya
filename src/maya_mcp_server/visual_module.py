@@ -1,9 +1,9 @@
-"""Maya-side visual capture module - injected as _mcp_visual (D-023/D-024).
+"""Maya-side visual capture module - injected as _mcp_visual.
 
 GUI-only capture paths. The host never injects this module into a
 headless session (framed_channel gate), but every public function
 still re-checks GUI capability and returns the two-layer error
-contract's domain shape {error:{code,message,suggestion}} (D-019)
+contract's domain shape {error:{code,message,suggestion}}
 for extreme headless-ish GUI environments (missing omui/PySide,
 batch mode, no modelPanel).
 
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Optional GUI dependencies - defensive import (D-024)
+# Optional GUI dependencies - defensive import
 # ---------------------------------------------------------------------------
 
 _omui: Any = None
@@ -87,7 +87,7 @@ _GUI_REQUIRED_SUGGESTION = (
 
 
 def _err(code: str, message: str, suggestion: str | None = None) -> dict[str, Any]:
-    """D-019 domain error shape: {error:{code,message,suggestion?}}."""
+    """Domain error shape: {error:{code,message,suggestion?}}."""
     e = {"code": code, "message": str(message)}
     if suggestion:
         e["suggestion"] = suggestion
@@ -97,7 +97,7 @@ def _err(code: str, message: str, suggestion: str | None = None) -> dict[str, An
 def _gui_block() -> dict[str, Any] | None:
     """None when GUI capture is possible, else the structured error.
 
-    Maya-side gate of the double headless check (D-024/D-025): batch
+    Maya-side gate of the double headless check: batch
     mode OR no modelPanel -> gui_session_required. Import failure of
     omui/PySide in extreme headless-ish GUI envs maps to the same code.
     """
@@ -129,7 +129,7 @@ def _gui_block() -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
-# Viewport state helpers (D-026 net-zero side effect machinery)
+# Viewport state helpers (net-zero side effect machinery)
 # ---------------------------------------------------------------------------
 
 
@@ -164,8 +164,8 @@ def _camera_switch_restored(panel: str, camera: str | None) -> Iterator[None]:
     Switching a modelPanel's camera is instantaneous, visible, and NOT
     undoable - so the restore is what makes this net-zero. The finally
     block guards on panel survival; a failed restore is logged, never
-    raised over the business result (D-026). Camera switching uses the
-    unambiguous modelPanel named-argument API (D-039).
+    raised over the business result. Camera switching uses the
+    unambiguous modelPanel named-argument API.
     """
     prev_camera = None
     if camera:
@@ -233,7 +233,7 @@ def _encode_file(path: str, max_size: int, out_format: str, quality: int) -> tup
 
 
 # Whether the VP2 float readback buffer arrives bottom-up — now a
-# FALLBACK DEFAULT, not the arbiter (D-082d): the per-session runtime
+# FALLBACK DEFAULT, not the arbiter: the per-session runtime
 # probe (_probe_vp2_direction) answers first, the MAYA_MCP_VP2_BOTTOM_UP
 # env override answers before that, and this constant only covers the
 # case where the probe itself could not resolve a direction.
@@ -262,8 +262,8 @@ def _vp2_color_image(view: Any) -> Any:
     RGBA-ordered floats, so writeToFile's built-in float->byte
     conversion emits a correct PNG with no Python-side pixel copy —
     MScriptUtil was removed in Maya 2024 and the float* pointer-wrap
-    path is gone for good (D-056⑤, live-verified on 2024.0.0.4640;
-    probe artifact pending docs/evidence intake — D-109).
+    path is gone for good (live-verified on 2024.0.0.4640;
+    probe artifact pending docs/evidence intake).
     Versions lacking the flag fall back to the default BGRA read;
     writeToFile still honors the image's channel-order marker on write.
     """
@@ -277,7 +277,7 @@ def _vp2_color_image(view: Any) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# VP2 readback-direction runtime probe (D-082d)
+# VP2 readback-direction runtime probe
 # ---------------------------------------------------------------------------
 
 
@@ -354,7 +354,7 @@ def _probe_vp2_direction(view: Any, panel: str | None) -> bool | None:
     Builds a disposable ortho camera + red surfaceShader cube far below
     the scene (user content stays out of frame), points the active model
     panel at it for one refresh, and checks which vertical half of the
-    readback carries the red block. Net-zero (D-026 discipline extended):
+    readback carries the red block. Net-zero, extended to this probe:
     undo recording is suspended WITHOUT flushing the user's queue, and
     selection / panel camera / scene-dirty flag are all restored — every
     created node is deleted on every path. Returns None on any failure
@@ -449,7 +449,7 @@ def _probe_vp2_direction(view: Any, panel: str | None) -> bool | None:
 
 
 # ---------------------------------------------------------------------------
-# Public: viewport snapshot (D-023 readColorBuffer path)
+# Public: viewport snapshot (readColorBuffer path)
 # ---------------------------------------------------------------------------
 
 
@@ -477,7 +477,7 @@ def viewport_snapshot(
     try:
         view = _omui.M3dView.active3dView()
         panel = _active_model_panel()
-        # Row order is probed per-session at runtime (D-082d); the env
+        # Row order is probed per-session at runtime; the env
         # override MAYA_MCP_VP2_BOTTOM_UP and the T-18a constant are the
         # documented fallbacks — the constant no longer arbitrates alone.
         bottom_up = _vp2_direction(view, panel)
@@ -521,7 +521,7 @@ def viewport_snapshot(
 
 
 # ---------------------------------------------------------------------------
-# Public: render preview (D-023 playblast path + D-026 side-effect discipline)
+# Public: render preview (playblast path + side-effect discipline)
 # ---------------------------------------------------------------------------
 
 
@@ -547,7 +547,7 @@ def render_preview(
 ) -> dict[str, Any]:
     """Single-frame playblast from *camera* (or the panel's current camera).
 
-    Net-zero side effect (D-026): the panel camera and the timeline are
+    Net-zero side effect: the panel camera and the timeline are
     restored on every path - success or failure - unless the process is
     killed mid-call. width/height arrive already rounded up to /4 by
     the host (playblast Windows constraint).
@@ -589,7 +589,7 @@ def render_preview(
             )
             produced = _find_playblast_output(tmp_base, png_path)
             # Headless playblast silently writes zero-byte files -
-            # never let that masquerade as success (D-025).
+            # never let that masquerade as success.
             if produced is None or os.path.getsize(produced) == 0:
                 return _err(
                     "capture_empty",

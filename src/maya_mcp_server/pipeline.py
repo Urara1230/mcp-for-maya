@@ -1,5 +1,5 @@
-"""Unified security pipeline (D-018: every tool call goes through validate,
-rate-limit, pattern scan, dispatch and audit).
+"""Unified security pipeline: every tool call goes through validate,
+rate-limit, pattern scan, dispatch and audit.
 
 One FastMCP middleware funnels every tool call through:
     input validation -> rate limit -> pattern scan -> dispatch -> audit.
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Tool annotations \u2014 the single matrix (D-018). All 25 tools, all four hints.
+# Tool annotations \u2014 the single matrix. All 25 tools, all four hints.
 # read_only_hint also drives the read/write rate-limit bucket.
 # ---------------------------------------------------------------------------
 
@@ -93,10 +93,10 @@ TOOL_ANNOTATIONS: dict[str, mt.ToolAnnotations] = {
     "scene_checkpoint_list": _READ,
     "scene_aesthetics": _READ,
     "scene_review": _READ,
-    # scene-graph introspection (D-094): read-only DG queries
+    # scene-graph introspection: read-only DG queries
     "scene_describe": _READ,
     "scene_nodes": _READ,
-    # visual loop: net-zero side effect discipline makes readOnly honest (D-026)
+    # visual loop: net-zero side effect discipline makes readOnly honest
     "scene_viewport_snapshot": _READ,
     "scene_render_preview": _READ,
     # mutation-class tools: scene/filesystem effects, not destructive (7)
@@ -107,10 +107,10 @@ TOOL_ANNOTATIONS: dict[str, mt.ToolAnnotations] = {
     "camera_orbit": _WRITE_SAFE,
     "add_session": _WRITE_SAFE,
     # writes a host-local file via Maya; overwrite=False default, the
-    # docstring discloses overwrite irreversibility (D-092)
+    # docstring discloses overwrite irreversibility
     "scene_export": _WRITE_SAFE,
     # Poly Haven asset pipeline: openWorld - first tools reaching the
-    # network (D-075); https + host whitelist + md5 + size caps host-side
+    # network; https + host whitelist + md5 + size caps host-side
     "asset_search": _READ_NET,
     # idempotent via same-name GRP_asset_<id> dedup (force=True opts out)
     "asset_import": _WRITE_NET_IDEMPOTENT,
@@ -127,7 +127,7 @@ def tool_annotations(name: str) -> mt.ToolAnnotations:
 
 
 # ---------------------------------------------------------------------------
-# Strict policy mode (D-207 1/7) — operator-side misuse guardrails.
+# Strict policy mode — operator-side misuse guardrails.
 #
 # This is NOT a hostile-agent boundary: an agent that can still call
 # execute_code is inside the trust boundary already, and no env flag changes
@@ -176,7 +176,7 @@ class SecurityPipeline(Middleware):
     """The single choke point every MCP tool call passes through.
 
     Rejections (validation/rate-limit/pattern block) raise PipelineError
-    -> MCP isError with a [code] prefix (D-019 host layer). Every call \u2014
+    -> MCP isError with a [code] prefix (host layer). Every call \u2014
     success, error, or rejected \u2014 is recorded to the audit JSONL.
     """
 
@@ -207,7 +207,7 @@ class SecurityPipeline(Middleware):
         context: MiddlewareContext[mt.ListToolsRequest],
         call_next: CallNext[mt.ListToolsRequest, Sequence[Tool]],
     ) -> Sequence[Tool]:
-        """Hide policy-disabled tools from tools/list (D-207 1).
+        """Hide policy-disabled tools from tools/list.
 
         A tool the agent cannot see is one it will not plan around; on_call_tool
         still denies it, because hiding is an affordance and not a boundary.
@@ -232,7 +232,7 @@ class SecurityPipeline(Middleware):
         warnings: list[dict[str, str]] = []
         try:
             session_id = _resolve_session_id(context, args)
-            # 0. strict policy mode (D-207 1) — before validation and rate
+            # 0. strict policy mode — before validation and rate
             # limiting, so a denied call costs nothing and never consumes a token.
             if tool_name in policy_disabled_tools():
                 raise PolicyDisabledError(
@@ -332,7 +332,7 @@ def _resolve_session_id(context: MiddlewareContext[Any], args: dict[str, Any]) -
 def _result_is_error(result: Any) -> bool:
     """Detect domain-level errors inside a successful tool result.
 
-    The two-layer contract (D-019) returns domain failures as
+    The two-layer contract returns domain failures as
     {"error": {...}} payloads rather than exceptions; for audit purposes
     they count as outcome="error".
     """

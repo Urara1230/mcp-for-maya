@@ -1,4 +1,4 @@
-# --- _mcp_scene introspection fragment (D-094/D-095): own file, same injection unit ---
+# --- _mcp_scene introspection fragment: own file, same injection unit ---
 #
 # NOT a standalone injected module: scene_tools._ensure_module_injected
 # concatenates this file onto maya_scene_module.py and injects the
@@ -70,15 +70,17 @@ _ATTR_FACET_FLAGS = (
 )
 
 
-# Response-size caps (D-110): the attrs and connections faces each default
+# Response-size caps: the attrs and connections faces each default
 # to a soft cap of _DESCRIBE_SOFT_CAP items; a caller may explicitly relax
 # via limit= up to _DESCRIBE_HARD_CAP (same idiom as scene_nodes
 # limit=50/cap=100). Truncation is disclosed via *_truncated flags plus
 # totals - never silent. The caps bound RESPONSE SIZE only: the ~10
 # attributeQuery calls per attribute are a separate main-thread cost axis
-# inside Maya - if real-Maya timing proves problematic that is a distinct
-# profiling/batched-query debt (registered D-118), not a reason to widen
-# these caps.
+# inside Maya - that axis has its own profiling/batched-query debt, recorded
+# here: it opens only when a real-Maya measurement finds the per-node
+# describe cost problematic, never before that. It is not a reason to widen
+# these caps. The two caps are constants on purpose: no env or config knob,
+# and raising one is a decision - they are inferred, not measured.
 _DESCRIBE_SOFT_CAP = 200
 _DESCRIBE_HARD_CAP = 1000
 
@@ -165,14 +167,14 @@ def describe_node(
     include_connections: bool = True,
     limit: int = _DESCRIBE_SOFT_CAP,
 ) -> dict[str, Any]:
-    """Instance-level API self-description of one node (D-094).
+    """Instance-level API self-description of one node.
 
     Returns {node, type, attrs[{name, exists, attr_type, readable,
     writable, connectable, keyable, multi, hidden, locked, storable,
     children, index_matters, enum, enum_values, min, max, (+ soft_min,
     soft_max, value)}], attrs_truncated, total_count, connections?[
     {src_plug, dst_plug, direction}], connections_truncated?,
-    total_connections?}. D-110 budget: each face returns at most
+    total_connections?}. Response-size budget: each face returns at most
     limit items (soft default 200, caller-relaxable up to the hard cap
     1000); over-budget output is truncated and disclosed via
     *_truncated + totals - never silent. Consumers narrow and re-query
@@ -233,7 +235,7 @@ def list_nodes(
     cursor: str | None = None,
     include_type_counts: bool = False,
 ) -> dict[str, Any]:
-    """Bounded enumeration of scene nodes incl. non-DAG (D-094).
+    """Bounded enumeration of scene nodes incl. non-DAG.
 
     ls(type=) is inheritance-aware in Maya; exactType= pins exact type.
     The cursor is a positional offset into the deterministic sorted

@@ -1,13 +1,13 @@
-"""MCP visual tools (D-023..D-026): GUI-only viewport/render capture.
+"""MCP visual tools: GUI-only viewport/render capture.
 
 scene_viewport_snapshot and scene_render_preview close the visual
 loop for the ICEV VERIFY step. They live behind a double headless
 gate (host-side framed_channel short-circuit + Maya-side capability
 check) and return the frozen v1.0 mixed contract
-[ImageContent, TextContent(JSON metadata)] (D-025).
+[ImageContent, TextContent(JSON metadata)].
 
 Each tool lazy-injects the _mcp_visual module on first call, per
-session, mirroring the _mcp_scene idempotent pattern (D-024).
+session, mirroring the _mcp_scene idempotent pattern.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ _MAGIC = {"jpeg": b"\xff\xd8\xff", "png": b"\x89PNG\r\n\x1a\n"}
 
 
 async def _ensure_visual_injected(client: Any, session_key: str | None) -> None:
-    """Inject _mcp_visual once per session (mirrors _mcp_scene, D-024).
+    """Inject _mcp_visual once per session (mirrors _mcp_scene).
 
     Never reached on headless sessions: callers gate on framed_channel
     first, so the omui/PySide imports inside the module can never fire
@@ -61,7 +61,7 @@ async def _ensure_visual_injected(client: Any, session_key: str | None) -> None:
 
 
 def _require_gui_channel(client: Any) -> None:
-    """Host-side headless gate: zero round-trip short-circuit (D-024/D-019)."""
+    """Host-side headless gate: zero round-trip short-circuit."""
     if not getattr(client, "framed_channel", False):
         raise GuiSessionRequiredError(
             "visual tools require a Maya GUI session (Qt framed channel)",
@@ -94,7 +94,7 @@ def _validate_max_size(max_size: int) -> int:
 
 
 def _round4(n: int) -> int:
-    """Round up to a multiple of 4 - playblast widthHeight constraint (D-025)."""
+    """Round up to a multiple of 4 - playblast widthHeight constraint."""
     n = int(n)
     if n <= 0:
         raise InputValidationError("width/height must be positive")
@@ -102,7 +102,7 @@ def _round4(n: int) -> int:
 
 
 def _check_payload(result: dict[str, Any], fmt: str) -> bytes:
-    """Server-side artifact validation (D-025): non-empty + magic match.
+    """Server-side artifact validation: non-empty + magic match.
 
     Headless playblast empirically writes zero-byte files without
     erroring; the domain module guards too, but the server never
@@ -127,7 +127,7 @@ def _check_payload(result: dict[str, Any], fmt: str) -> bytes:
 
 
 def _mixed_result(result: dict[str, Any], raw: bytes, session_key: str, fmt: str) -> list[Any]:
-    """Frozen v1.0 return contract: [ImageContent, TextContent] (D-025)."""
+    """Frozen v1.0 return contract: [ImageContent, TextContent]."""
     meta: dict[str, Any] = {
         "session": session_key,
         "camera": result.get("camera"),
@@ -150,7 +150,7 @@ def _mixed_result(result: dict[str, Any], raw: bytes, session_key: str, fmt: str
 
 
 def register_visual_tools(mcp: Any) -> None:
-    """Register GUI-only visual tools on the FastMCP instance (D-024).
+    """Register GUI-only visual tools on the FastMCP instance.
 
     Args:
         mcp: FastMCP server instance.
@@ -221,7 +221,7 @@ def register_visual_tools(mcp: Any) -> None:
         GUI sessions only - headless sessions get a structured
         gui_session_required error.
 
-        Side-effect disclosures (read_only_hint is honest, D-026):
+        Side-effect disclosures (read_only_hint is honest):
         1. Switching the panel camera via the modelPanel camera flag
            is instantaneous, visible, and NOT undoable in Maya.
         2. Net-zero side effect: the panel camera is restored on every

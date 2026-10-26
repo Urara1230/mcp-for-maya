@@ -53,7 +53,7 @@ def _result_str(response: CommandResponse) -> str:
 # Buffer size limit to prevent unbounded memory growth (10MB)
 MAX_BUFFER_SIZE = 10_485_760
 
-# Connect retry schedule (D-013): exponential backoff 0.5s / 1s / 2s
+# Connect retry schedule: exponential backoff 0.5s / 1s / 2s
 CONNECT_RETRY_DELAYS = (0.5, 1.0, 2.0)
 
 # Post-connect liveness gate: a Qt server in headless Maya can accept TCP
@@ -68,7 +68,8 @@ class MayaUnavailableError(PipelineError):
     code = "maya_unavailable"
 
 
-# Backwards-compatible name: D-019 pins the code, existing code the class name.
+# Backwards-compatible alias: the wire code is maya_unavailable per the
+# two-layer error contract; this name is still both raised and imported.
 MayaConnectionError = MayaUnavailableError
 
 
@@ -85,7 +86,7 @@ class MayaExecutionError(PipelineError):
 
 
 def _domain_error_text(error: Any) -> str:
-    """Render a wire error as "code: message" (D-019).
+    """Render a wire error as "code: message".
 
     Wire errors are dual-schema: known domain errors carry {"code": ...}
     and exceptions carry {"type", "traceback"}. The code must survive into
@@ -135,15 +136,14 @@ async def ensure_module_injected(
 ) -> None:
     """Ensure a Maya-side helper module is injected into the session.
 
-    Shared by _mcp_scene/_mcp_asset (D-083): reads the module source
+    Shared by _mcp_scene/_mcp_asset: reads the module source
     from disk and writes it via write_module, once per session. For
     large modules on the NATIVE (headless/bootstrap) channel the source
     is staged through a unique mkstemp file to avoid command-port
     buffer issues; the Qt framed channel carries length-prefixed frames
-    up to 16 MiB, so GUI sessions inject directly via write_module
-    (D-013).
+    up to 16 MiB, so GUI sessions inject directly via write_module.
 
-    extra_source_paths (D-095): additional source files concatenated
+    extra_source_paths: additional source files concatenated
     into the SAME module payload before writing - one module name, one
     namespace, one failure domain. Fragment files
     must carry no __future__ import (it lands mid-file = SyntaxError).
@@ -162,8 +162,8 @@ async def ensure_module_injected(
 
         import platformdirs as _pd
 
-        # D-082a hygiene: mkstemp under the platformdirs user cache (no
-        # predictable shared-temp path), 0600 perms, try/finally unlink.
+        # Injection temp-file hygiene: mkstemp under the platformdirs user
+        # cache (no predictable shared-temp path), 0600 perms, unlink in finally.
         _dir = _os.path.join(_pd.user_cache_dir("mcp-for-maya"), "inject")
         _os.makedirs(_dir, exist_ok=True)
         _fd, _tmp = _tf.mkstemp(prefix=tmp_prefix, suffix=".py", dir=_dir)
@@ -205,7 +205,7 @@ def module_call(module: str, fn_name: str, *args: Any, **kwargs: Any) -> str:
 
     Shared call-construction primitive for every injected domain
     (_mcp_scene/_mcp_asset/_mcp_export/_mcp_visual), generalized from
-    the per-domain _X_call copies (D-098). Only domain-agnostic call
+    the per-domain _X_call copies. Only domain-agnostic call
     construction lives here; per-domain binding stays in each
     _ensure_X_injected.
     """
@@ -219,7 +219,7 @@ def module_call(module: str, fn_name: str, *args: Any, **kwargs: Any) -> str:
 async def exec_module_code(client: BaseMayaClient, code: str) -> Any:
     """Execute injected-module call code and decode the JSON result.
 
-    Shared executor for the module_call family (D-098): execute with
+    Shared executor for the module_call family: execute with
     result_type=JSON, raise on wire/domain errors, decode a string
     payload. Caching, when a domain wants it, wraps this no-cache core
     (scene_tools._execute_scene_code).
@@ -244,7 +244,7 @@ class BaseMayaClient(ABC):
     GET_BUFFERED_OUTPUT: ClassVar[str]
 
     # True when the transport carries length-prefixed frames and can move
-    # multi-MB payloads safely (D-013). False = native commandPort, whose
+    # multi-MB payloads safely. False = native commandPort, whose
     # line protocol is bootstrap/headless-only and never promised large loads.
     framed_channel: ClassVar[bool] = False
 
@@ -473,7 +473,7 @@ class BaseMayaClient(ABC):
             CommandResponse with result and error info.
             Note: stdout/stderr are delivered via MCP Resources, not returned here.
         """
-        # Normalize at the boundary (D-046): enum members pass through,
+        # Normalize at the boundary: enum members pass through,
         # plain strings like "JSON" are coerced. 0.1.1 crashed here on
         # result_type.value when str-typed callers (scene_tools,
         # visual_tools) reached this shared method.
@@ -604,7 +604,7 @@ class MayaClient(BaseMayaClient):
         async with self._lock:
             try:
                 # Send command - commandPort executes on newline, so the
-                # terminator is unconditional (D-041): without it the
+                # terminator is unconditional: without it the
                 # command parks in the receive buffer until the next send
                 # flushes it through (off-by-one).
                 self._writer.write(command.encode("utf-8") + b"\n")
@@ -674,7 +674,7 @@ class MayaClient(BaseMayaClient):
             return self._port_type
 
         try:
-            # Bilingual probe (D-059 / upstream #1): Python 3 answers 0.5
+            # Bilingual probe (upstream #1): Python 3 answers 0.5
             # (true division); everything else classifies MEL. T-18a live
             # pin (Maya 2024.0.0.4640, zh locale): a real MEL port answers
             # eval("1/2") with a syntax-error body, not silent 0 - the
@@ -743,7 +743,7 @@ class MayaClient(BaseMayaClient):
                 update_response = await self._send_receive(
                     cmd, {"name": "maya_mcp", "code": inject_code, "overwrite": True}
                 )
-                # D-058: the overwrite above is the one path that triggers
+                # The overwrite above is the one path that triggers
                 # _mcp_teardown - a failed cleanup surfaces as a "warning"
                 # key in create_module's payload; log it instead of
                 # dropping the response (N1).
@@ -867,7 +867,7 @@ class MayaClient(BaseMayaClient):
                     try:
                         if not qt_client.is_connected:
                             await qt_client.connect()
-                        # Liveness gate (D-013): in headless Maya a Qt listener
+                        # Liveness gate: in headless Maya a Qt listener
                         # can accept TCP while readyRead never fires - a zombie
                         # channel. Probe the framed protocol before registering.
                         alive = await asyncio.wait_for(qt_client.ping(), timeout=QT_PROBE_TIMEOUT)
@@ -892,7 +892,7 @@ class MayaClient(BaseMayaClient):
             if qt_client is not None:
                 new_client = qt_client
             else:
-                # Headless Maya (mayapy) has no Qt event loop. Per D-013 the
+                # Headless Maya (mayapy) has no Qt event loop. The
                 # native commandPort is the minimal fallback working channel
                 # there - it never promises large payloads.
                 logger.warning(
@@ -975,7 +975,7 @@ class MayaClient(BaseMayaClient):
                         f"{inner_error.get('message', 'module creation failed')}"
                     )
                 raise MayaExecutionError(str(inner_error))
-            # D-058: an overwrite whose old-module teardown failed still
+            # An overwrite whose old-module teardown failed still
             # succeeded - surface the warning instead of dropping it
             warning = result.get("warning")
             if warning:
@@ -1000,7 +1000,7 @@ class MayaClient(BaseMayaClient):
 
 
 class MayaQtClient(BaseMayaClient):
-    """Async client for the custom Maya Qt command server (D-013).
+    """Async client for the custom Maya Qt command server.
 
     Primary working channel: length-prefixed frames (16 MiB cap) over a
     localhost-only QTcpServer; per-connection FIFO queue Maya-side;
@@ -1140,7 +1140,7 @@ class MayaQtClient(BaseMayaClient):
                     )
 
                 # Check for error - keep the wire code in the message
-                # ("code: message", same as the native write_module path, D-019)
+                # ("code: message", same as the native write_module path)
                 if raise_on_error and response.get("error"):
                     raise MayaExecutionError(_domain_error_text(response["error"]))
 

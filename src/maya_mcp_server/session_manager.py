@@ -31,7 +31,7 @@ def _parse_port_filter(raw: str | None) -> set[int] | None:
 
     "7001,7005-7010" -> {7001, 7005, ..., 7010}. Returns None for empty or
     missing input. Malformed entries raise ValueError so a typo fails loud
-    at startup instead of silently scanning everything (D-059).
+    at startup instead of silently scanning everything.
     """
     if not raw:
         return None
@@ -66,17 +66,17 @@ class SessionManager:
             scan_interval: Seconds between background scans
             client_type: Type of client to use for Maya communication
             failed_port_retry_after: Cooldown before a failed config port is
-                probed again (D-013 _failed_ports dedup)
+                probed again (_failed_ports dedup)
             include_ports: If set, only these config ports are probed
-                (D-059; falls back to MAYA_MCP_INCLUDE_PORTS)
-            exclude_ports: Config ports never probed (D-059; falls back to
+                (falls back to MAYA_MCP_INCLUDE_PORTS)
+            exclude_ports: Config ports never probed (falls back to
                 MAYA_MCP_EXCLUDE_PORTS). Env values use "7001,7005-7010" syntax
         """
         self.scan_interval = scan_interval
         self.client_type = client_type
         self.failed_port_retry_after = failed_port_retry_after
-        # config ports positively identified as non-Python: never re-probed
-        # while they keep LISTENing (D-059 exemption set)
+        # config ports positively identified as non-Python: the port
+        # exemption set - never re-probed while they keep LISTENing
         self._non_python_ports: set[str] = set()
         self.include_ports = (
             include_ports
@@ -94,7 +94,7 @@ class SessionManager:
         #   we use a "config" command port to bootstrap a dedicated communication port, and only
         #   the latter are considered "sessions"
         self._config_to_session: dict[str, str] = {}
-        # config keys whose last probe failed -> monotonic timestamp (D-013 dedup)
+        # config keys whose last probe failed -> monotonic timestamp
         self._failed_ports: dict[str, float] = {}
         # session keys with stream capture
         self._stream_capture_installed: set[str] = set()
@@ -172,7 +172,7 @@ class SessionManager:
 
         Only scans configuration ports (outside the communication port range).
         Communication ports are per-client dedicated ports created during bootstrap.
-        localhost-only (D-013): non-loopback listener addresses are skipped;
+        localhost-only: non-loopback listener addresses are skipped;
         wildcard binds (0.0.0.0/::) normalize to 127.0.0.1. Failed probes are
         deduplicated via _failed_ports with a retry cooldown.
         """
@@ -188,7 +188,7 @@ class SessionManager:
                 host = "127.0.0.1"
             elif not is_loopback_host(host):
                 # localhost-only enforcement: a Maya instance bound to a LAN
-                # address is out of scope for the local agent (D-013)
+                # address is out of scope for the local agent
                 logger.debug(f"Skipping non-loopback listener {host}:{port}")
                 continue
 
@@ -204,12 +204,12 @@ class SessionManager:
             if config_key in self._config_to_session:
                 continue
 
-            # Permanent exemption (D-059): ports that answered the probe as
+            # Permanent exemption: ports that answered the probe as
             # non-Python are never re-probed while they keep LISTENing
             if config_key in self._non_python_ports:
                 continue
 
-            # Include/exclude filter (D-059, upstream #1 workaround
+            # Include/exclude filter (upstream #1 workaround
             # productized): bounds which listener ports get probed at all
             if self.include_ports is not None and port not in self.include_ports:
                 continue
@@ -240,7 +240,7 @@ class SessionManager:
         for key in [k for k in self._failed_ports if k not in listening_config_keys]:
             del self._failed_ports[key]
 
-        # Same lifecycle for the exemption set (D-059): a port leaves it
+        # Same lifecycle for the exemption set: a port leaves it
         # only once it disappears from LISTEN, so whatever shows up on it
         # next gets probed fresh
         for key in [k for k in self._non_python_ports if k not in listening_config_keys]:
@@ -266,7 +266,7 @@ class SessionManager:
             await client.disconnect()
             return new_client
         except MayaConnectionError:
-            # D-059: a port that answered the probe as definitively
+            # A port that answered the probe as definitively
             # non-Python (e.g. a MEL commandPort) goes on the session-level
             # exemption set - one log line per port per session, then the
             # scanner never touches it again while it keeps LISTENing
@@ -447,7 +447,7 @@ class SessionManager:
             # channel - that is the session, not the config-port client
             new_client = await client.bootstrap(client_type=self.client_type.value)
         except MayaConnectionError:
-            # D-059: an explicit add on a port that turns out non-Python
+            # An explicit add on a port that turns out non-Python
             # still earns the exemption so the scanner leaves it alone
             if getattr(client, "_port_type", None) is PortType.MEL:
                 self._non_python_ports.add(config_key)
@@ -478,7 +478,7 @@ class SessionManager:
         if client is None:
             return False
         try:
-            # Framed (Qt) clients expose a richer health probe (D-013);
+            # Framed (Qt) clients expose a richer health probe;
             # native clients fall back to ping.
             if getattr(client, "framed_channel", False):
                 health_fn = getattr(client, "health", None)
