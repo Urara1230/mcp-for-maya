@@ -8,7 +8,7 @@ compatibility: "Tested on Claude Code only; requires mcp-for-maya MCP server"
 
 > **Experimental.** Evaluated on Claude Code only; untested on Codex/Gemini CLI/Cursor. Tracked in issue #3.
 
-`scene_review()` runs up to 11 deterministic checks and returns `{checks, issues, score}` — score is 0-100 (weighted per-check, normalized). Studio validators registered in the session add a `custom` section with its own score.
+`scene_review()` runs up to 11 deterministic checks and returns `{checks, issues, score, total_issues, errors, warnings, standards}` — score is 0-100 (weighted per-check, normalized). Studio validators registered in the session add a `custom` section with its own score.
 
 ## Checks
 
@@ -24,7 +24,7 @@ compatibility: "Tested on Claude Code only; requires mcp-for-maya MCP server"
 | aesthetics | 5-dimension aesthetic score (color/composition/scale/lighting/flow) |
 | lighting | three-point setup, fill ratio, decay |
 | organization | overall hierarchy health |
-| constraints | custom rule violations |
+| constraints | the built-in 500-object budget (not the `custom` section below) |
 
 Per-check weights are defined in the review engine — see the audit table in README/AGENTS.md for exact max points; this card intentionally does not duplicate them.
 
@@ -45,7 +45,7 @@ Per-check weights are defined in the review engine — see the audit table in RE
 
 ## Studio validators
 
-Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `validators` (per-rule `status`, `severity`, `weight`, `message`), `score`/`max_score` in weight points from one denominator, and `issues` for whatever did not pass. The built-in 0-100 never moves and the section is absent when nothing is registered.
+Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `validators` (each with `name`, `family`, `severity`, `weight`, `passed`, `status`, `message`), `score`/`max_score` in weight points from one denominator, and `issues` (each with `severity`, `check: "custom"`, `name`, `family`, `msg`) for whatever did not pass. The built-in 0-100 never moves and the section is absent when nothing is registered.
 
 Pre-import the module in its own `execute_code` call, then send call expressions — `import _mcp_scene; _mcp_scene.register_validator(...)` in one payload is the shape that fails under result capture.
 
