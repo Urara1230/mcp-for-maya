@@ -47,12 +47,12 @@ Per-check weights are defined in the review engine — see the audit table in RE
 
 Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `validators` (each with `name`, `family`, `severity`, `weight`, `passed`, `status`, `message`), `score`/`max_score` in weight points from one denominator, and `issues` (each with `severity`, `check: "custom"`, `name`, `family`, `msg`) for whatever did not pass. The built-in 0-100 never moves and the section is absent when nothing is registered.
 
-`_mcp_scene` is not in a fresh session until some scene tool injects it, and `execute_code` never injects anything — it only forwards code to Maya. Run a scene tool once first (`scene_review()` itself, or `scene_snapshot()`); the audit before you register is the built-in one.
+`_mcp_scene` is not in a fresh session until a tool that uses it injects it, and `execute_code` never injects anything — it only forwards code to Maya. Run `scene_review()` (or `scene_snapshot()`) once first; the audit before you register is the built-in one.
 
 Pre-import the module in its own `execute_code` call, then send call expressions — `import _mcp_scene; _mcp_scene.register_validator(...)` in one payload is the shape that fails under result capture.
 
 ```python
-# 0) a scene tool first: that is what puts _mcp_scene into the session
+# 0) scene_review() or scene_snapshot() first: that is what puts _mcp_scene in the session
 # execute_code 1: import _mcp_scene
 # execute_code 2, expression only:
 _mcp_scene.register_validator(
