@@ -174,18 +174,20 @@ def test_callform_about_batch_is_true(real_maya):
 
 def _injection_unit():
     """Exec the real _mcp_scene payload shape in mayapy: monolith source
-    + introspection fragment concatenated into one namespace - the same
-    bytes the host ships via write_module (D-095). A __future__ slip or
-    py-unsafe syntax in the fragment fails here exactly as in Maya."""
+    + both fragments concatenated into one namespace - the same bytes the
+    host ships via write_module (D-095). A __future__ slip or py-unsafe
+    syntax in a fragment fails here exactly as in Maya."""
     import sys
     import types
     from pathlib import Path
 
     src_dir = Path(__file__).resolve().parents[1] / "src" / "maya_mcp_server"
     source = (src_dir / "maya_scene_module.py").read_text(encoding="utf-8")
-    frag = src_dir / "introspect_module.py"
-    if frag.exists():
-        source += "\n\n" + frag.read_text(encoding="utf-8")
+    # No exists() guard: the host reads the fragments unconditionally, so a
+    # missing one has to fail here rather than silently shrink this payload
+    # below the shipped one.
+    for frag_name in ("introspect_module.py", "validator_module.py"):
+        source += "\n\n" + (src_dir / frag_name).read_text(encoding="utf-8")
     mod = types.ModuleType("_mcp_scene")
     mod.__file__ = str(src_dir / "maya_scene_module.py")
     sys.modules.pop("_mcp_scene", None)

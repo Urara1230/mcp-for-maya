@@ -27,12 +27,14 @@ from maya_mcp_server.security import InputValidationError
 logger = logging.getLogger(__name__)
 
 # Module source paths for _mcp_scene. The introspection fragment
-# (introspect_module.py) is concatenated into the SAME injection unit:
+# (introspect_module.py) and the custom-validator fragment
+# (validator_module.py) are concatenated into the SAME injection unit:
 # one module name / trigger / failure domain, but independently
 # maintained host-side source files. File boundary = injection boundary =
 # failure-domain boundary.
 _MODULE_SOURCE = Path(__file__).parent / "maya_scene_module.py"
 _INTROSPECT_FRAGMENT = Path(__file__).parent / "introspect_module.py"
+_VALIDATOR_FRAGMENT = Path(__file__).parent / "validator_module.py"
 
 # Global cache per session (keyed by session_key)
 _caches: dict[str, SceneCache] = {}
@@ -73,7 +75,7 @@ async def _ensure_module_injected(client: Any, session_key: str | None) -> None:
         source_path=_MODULE_SOURCE,
         tmp_prefix="_mcp_scene_src_",
         injected_sessions=_injected_sessions,
-        extra_source_paths=[_INTROSPECT_FRAGMENT],
+        extra_source_paths=[_INTROSPECT_FRAGMENT, _VALIDATOR_FRAGMENT],
     )
 
 
@@ -879,6 +881,13 @@ result
         constraint validation, orphan detection, naming, componentization, conflicts, lighting quality, and scene organization. Returns a score (0-100)
         and detailed issue list.
 
+        Rules registered in the Maya session with
+        `_mcp_scene.register_validator(...)` (call it through execute_code) are
+        reported in a separate "custom" section - `validators` per rule,
+        `score`/`max_score` in weight points, `issues` for what did not pass.
+        The built-in score is unchanged and the section is absent when nothing
+        is registered.
+
         Boundary: Disambiguated from scene_validate (narrow rule-based
         spatial constraint checking) and scene_aesthetics (in-depth
         5-dimension aesthetic theory scoring).
@@ -901,7 +910,7 @@ result
         await _ensure_module_injected(client, session_key)
 
         checks_obj = None if checks == "all" else [c.strip() for c in checks.split(",")]
-        code = module_call("_mcp_scene", "scene_review", checks_obj)
+        code = module_call("_mcp_scene", "scene_review_with_validators", checks_obj)
         result = await _execute_scene_code(client, code, session_key, use_cache=False)
 
         if format == "json":
@@ -911,10 +920,31 @@ result
             errors = result.get("errors", 0)
             warnings = result.get("warnings", 0)
             issues = result.get("issues", [])
+
+            def rows(items: list[dict[str, Any]], label_key: str) -> list[str]:
+                """[SEVERITY] label: msg — the row shape every issue list shares."""
+                return [
+                    f"  [{i.get('severity', '?').upper()}] {i.get(label_key)}: {i.get('msg')}"
+                    for i in items[:10]
+                ]
+
             lines = [f"REVIEW: score={score}/100 | errors={errors} | warnings={warnings}"]
-            for issue in issues[:10]:
-                sev = issue.get("severity", "?").upper()
-                lines.append(f"  [{sev}] {issue.get('check')}: {issue.get('msg')}")
+            lines += rows(issues, "check")
+            # Studio validators keep their own score line: a compact view that
+            # dropped them would read as "the studio rules passed".
+            custom = result.get("custom")
+            if custom:
+                failing = custom["issues"]
+                validators = custom["validators"]
+                # check_error split out: a broken rule is not a rule the
+                # scene violated, and one summary number would mix them.
+                broken = sum(1 for v in validators if v["status"] == "check_error")
+                lines.append(
+                    f"CUSTOM: score={custom['score']}/{custom['max_score']}"
+                    f" | validators={len(validators)} | failing={len(failing) - broken}"
+                    f" | check_error={broken}"
+                )
+                lines += rows(failing, "name")
             return "\n".join(lines)
 
     @mcp.tool(annotations=TOOL_ANNOTATIONS["scene_plan"])
