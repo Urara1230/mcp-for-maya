@@ -26,12 +26,10 @@ The rules:
   R6 zero_pin_guard              a gate/manual_preflight entry with no pin at
                                  all (fail-on-empty, OPA precedent)
 
-On the rule count: "new gate unregistered" and "bound object unregistered" are
-one set difference under two names. This checker implements the difference ONCE
-and splits the reporting by whether the object is CI-wired (R4), rather than
-manufacturing a duplicate rule to inflate the count. Stating the collapse is
-the honest delivery; a rule that re-reports the same fact under a second id
-would be ceremony that reads as coverage.
+On the rule count: R1 and R3 are ONE set difference read in two directions --
+bound but unregistered, registered but gone. Splitting either of them into a
+second rule would lengthen the list without buying coverage, and a rule that
+re-asserts a fact already reported reads as coverage it does not have.
 
 Posture: hard gate. Findings are reported as ``::error`` and the process exits
 1; the observation period ended with a clean registry, and warnings must not

@@ -46,6 +46,13 @@ and `'without'` had never been exercised as cue prefixes, and no sample yet put
 the negated match **before** a clause split while the second clause carried no
 match.
 
+> **Marker text moved (2026-10-27).** The ledger-id migration retired the id
+> from that comment, so it now reads `# --- track-3 promotions ---`. Same
+> marker, same five samples: `tests/test_polarity_corpus_probe.py` derives the
+> cohort from the marker line and goes red if the text moves again, so the
+> pointer above stays followable even though the literal it quotes is the
+> pre-migration text.
+
 Track-2 arithmetic at the time of this review (unchanged by the correction — the
 corpus is the same 14 samples either way):
 

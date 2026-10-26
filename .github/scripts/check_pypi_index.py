@@ -1,8 +1,9 @@
 """PyPI index dual-source probe — weekly drift-canary lane.
 
-Catches the failure class this lane exists for: the 0.4.0 upload landed (files
-+ attestation + per-version JSON) but the simple index rolled back during a
-PyPI maintenance window — pip resolution silently fell to 0.3.0.
+Catches the index-registration regression this lane was written for: the 0.4.0
+upload landed (files + attestation + per-version JSON) but the simple index
+rolled back during a PyPI maintenance window — pip resolution silently fell to
+0.3.0.
 
 Two sources, independent lanes:
 
