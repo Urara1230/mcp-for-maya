@@ -32,12 +32,12 @@ MAX_MODULE_NAME_LENGTH = 256
 # Module name validation pattern (Python identifier with dots)
 MODULE_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$")
 
-# Rate limiting configuration (D-018: split read/write token buckets)
+# Rate limiting configuration (split read/write token buckets)
 RATE_LIMIT_WINDOW = 60.0  # seconds
 RATE_LIMIT_READ_MAX_CALLS = 100  # read-class tools per window per session
 RATE_LIMIT_WRITE_MAX_CALLS = 20  # mutation-class tools per window per session
 
-# Audit log configuration (D-018)
+# Audit log configuration
 AUDIT_APP_NAME = "mcp-for-maya"
 AUDIT_LOG_FILENAME = "audit.jsonl"
 AUDIT_MAX_BYTES = 10 * 1024 * 1024  # 10 MiB per segment
@@ -47,7 +47,7 @@ AUDIT_VALUE_PREVIEW_CHARS = 60
 
 
 # ---------------------------------------------------------------------------
-# Error contract (D-019): host-side failures raise coded exceptions which
+# Error contract: host-side failures raise coded exceptions which
 # surface through MCP isError with a [code] prefix embedded in the text.
 # ---------------------------------------------------------------------------
 
@@ -103,7 +103,7 @@ class ServerNotReadyError(PipelineError):
 class GuiSessionRequiredError(PipelineError):
     """Raised when a GUI-only tool is called on a headless session.
 
-    Host-side gate of the double headless check (D-024/D-025): the
+    Host-side gate of the double headless check: the
     framed_channel short-circuit raises this before any round trip.
     The Maya-side layer returns the same code as a domain error.
     """
@@ -112,7 +112,7 @@ class GuiSessionRequiredError(PipelineError):
 
 
 class PolicyDisabledError(PipelineError):
-    """Raised when an operator policy flag disables a tool (D-207 1).
+    """Raised when an operator policy flag disables a tool.
 
     Misuse guardrail, NOT a hostile-agent boundary: an agent that can run
     execute_code bypasses every flag here. The threat model restates that
@@ -126,7 +126,7 @@ class PolicyDisabledError(PipelineError):
 class CaptureEmptyError(PipelineError):
     """Raised when a visual capture produces a zero-byte artifact.
 
-    Hard server-side check (D-025): headless playblast empirically
+    Hard server-side check: headless playblast empirically
     writes empty files without erroring - never pass that through as
     success.
     """
@@ -223,7 +223,7 @@ def validate_session_key(session_key: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Rate limiting: real token buckets, split read/write, per session (D-018)
+# Rate limiting: real token buckets, split read/write, per session
 # ---------------------------------------------------------------------------
 
 
@@ -310,7 +310,7 @@ class RateLimiter:
 
 
 # ---------------------------------------------------------------------------
-# Pattern scanning (D-018): warn-by-default, block only precise rules,
+# Pattern scanning: warn-by-default, block only precise rules,
 # detection decoupled from enforcement via a rule_id x tool x param
 # exclusion table.
 # ---------------------------------------------------------------------------
@@ -339,7 +339,7 @@ class PatternRule:
     param_kinds: frozenset[str] | None = None
 
 
-# Broad warn-only rules: recorded to the audit log, never block (D-018).
+# Broad warn-only rules: recorded to the audit log, never block.
 PATTERN_RULES: list[PatternRule] = [
     # --- precise block rules (zero-false-positive class) ---
     PatternRule(
@@ -537,7 +537,7 @@ def sanitize_error_message(message: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Audit log (D-018): dedicated JSONL file, independent rotation, 0600,
+# Audit log: dedicated JSONL file, independent rotation, 0600,
 # dual-written to the app logger, and never blocks tool execution.
 # ---------------------------------------------------------------------------
 
@@ -628,7 +628,7 @@ def build_audit_event(
     duration_ms: float,
     warnings: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    """Build one audit event dict (the JSONL schema, D-018)."""
+    """Build one audit event dict (the JSONL schema)."""
     return {
         "event_id": str(uuid.uuid4()),
         "timestamp": datetime.now(timezone.utc)
