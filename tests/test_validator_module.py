@@ -121,6 +121,30 @@ class TestRegistration:
             assert res["error"]["code"] == "invalid_weight", repr(bad)
         assert env.module.list_validators()["count"] == 0
 
+    @pytest.mark.parametrize(
+        "order",
+        [
+            (7.98336123813888e291, 1.7976931348623157e308, 7.98336123813888e291),
+            (1.7976931348623157e308, 7.98336123813888e291, 7.98336123813888e291),
+            (7.98336123813888e291, 7.98336123813888e291, 1.7976931348623157e308),
+        ],
+    )
+    def test_the_guard_and_the_report_agree_on_the_total(self, env, order):
+        """sum() is order-dependent (the builtin compensates on CPython 3.12+,
+        Maya 2023's 3.9 does not), so a guard using it accepted this registry
+        while the report printed Infinity - invalid JSON. The exact fsum total
+        is what both sides use, so the third weight is refused in every order
+        and no accepted registry can emit an unparsable section."""
+        accepted = []
+        for index, weight in enumerate(order):
+            res = env.module.register_validator(f"v{index}", lambda: True, weight=weight)
+            if "error" in res:
+                assert res["error"]["code"] == "weight_overflow", res
+                break
+            accepted.append(index)
+        assert accepted == [0, 1], "two of these weights fit, all three do not"
+        json.dumps(env.module.custom_validator_results(), allow_nan=False)
+
     def test_unregister_demands_the_same_name_contract_as_register(self, env):
         """A non-string must return the envelope, not raise TypeError out of
         a dict lookup."""

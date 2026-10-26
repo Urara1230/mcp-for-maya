@@ -43,6 +43,22 @@ def _val_err(code: str, message: str, suggestion: str | None = None) -> dict[str
     return {"error": err}
 
 
+def _has_finite_total(weights: list[float]) -> bool:
+    """Whether the exact sum of weights is a representable float.
+
+    math.fsum, not sum(): the builtin is order-dependent - CPython 3.12+
+    compensates, Maya 2023's 3.9 does not - so a guard and a report that both
+    use it can disagree about one registry. fsum is the exact total, and it
+    raises rather than returning inf, which is what lets register_validator
+    promise the number custom_validator_results later prints.
+    """
+    try:
+        math.fsum(weights)
+    except OverflowError:
+        return False
+    return True
+
+
 def register_validator(
     name: str,
     predicate: Callable[[], Any],
@@ -106,10 +122,9 @@ def register_validator(
     # refuse a re-registration whose result is finite. Infinity is not valid
     # JSON, and an Infinity score costs the caller the whole scene_review.
     replaced = _VALIDATORS.get(name)
-    total = new_weight + sum(
-        (reg["weight"] for reg in _VALIDATORS.values() if reg is not replaced), 0.0
-    )
-    if not math.isfinite(total):
+    weights = [reg["weight"] for reg in _VALIDATORS.values() if reg is not replaced]
+    weights.append(new_weight)
+    if not _has_finite_total(weights):
         return _val_err(
             "weight_overflow",
             f"registering {weight!r} would overflow the registry weight total",
@@ -255,10 +270,12 @@ def custom_validator_results() -> dict[str, Any] | None:
         if not v["passed"]
     ]
 
-    # 0.0 seed: with nothing passed, sum() would return int 0 and the section
-    # would read "score": 0 against a float "max_score".
-    earned = sum((v["weight"] for v in validators if v["passed"]), 0.0)
-    available = sum((v["weight"] for v in validators), 0.0)
+    # fsum, the same total register_validator tested against - and a subset of
+    # positive weights can only be smaller, so both stay representable.
+    # fsum returns float even for an empty selection, which sum() would report
+    # as int 0 against a float max_score.
+    earned = math.fsum(v["weight"] for v in validators if v["passed"])
+    available = math.fsum(v["weight"] for v in validators)
 
     return {
         "validators": validators,
