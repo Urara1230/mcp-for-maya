@@ -188,7 +188,7 @@ class TestD203FloorCaliber:
         the record to be revisited rather than left describing a set that no
         longer exists."""
         source = SCRIPT.read_text(encoding="utf-8")
-        marker = "--- track-3 promotions (D-203) ---"
+        marker = "--- track-3 promotions ---"
         assert marker in source, (
             "the track-3 promotion marker is gone; the S2 record's cohort "
             "definition no longer has anything to derive from"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""D-215 gate-registry consistency gate.
+"""Gate-registry consistency gate.
 
 ``.github/gate-registry.yaml`` is the human-authored pin registry: for every
 governance surface in ``.github/scripts/`` it records the bound class, where that
@@ -10,35 +10,34 @@ be added without being registered. A hand-kept list drifts silently, and a
 silently unregistered gate is exactly the "law without teeth" state this rule
 forbids. So the bound set is enumerated from a MACHINE source (the
 ``check_*.py`` glob plus every other script in the directory -- no hand-copied
-list, D-215 7) and this checker reports the set difference in both directions.
+list) and this checker reports the set difference in both directions.
 
-The rules, mapped to D-215's five red conditions:
+The rules:
 
-  R1 unregistered_bound_object   D-215 (1)  a bound object with no registry entry
-  R2 unresolvable_pointer       D-215 (2)+(3) a registered pin node or
-                                            expected_source that does not resolve
-  R3 stale_registration         D-215 (3)  an entry naming an object that is gone
-  R4 gate_class_not_wired       D-212 (2)  bound_class=gate but no workflow runs
-                                            it -- veto-power drift: the entry
-                                            claims hard-gate standing it does not have
-  R5 bad_exemption              D-215 (5)  an exemption with no expires|issue, or
-                                            one whose expires date has passed
-  R6 zero_pin_guard             D-215 3    a gate/manual_preflight entry with no
-                                            pin at all (fail-on-empty, OPA precedent)
+  R1 unregistered_bound_object   a bound object with no registry entry
+  R2 unresolvable_pointer        a registered pin node or expected_source that
+                                 does not resolve
+  R3 stale_registration          an entry naming an object that is gone
+  R4 gate_class_not_wired        bound_class=gate but no workflow runs it --
+                                 veto-power drift: the entry claims hard-gate
+                                 standing it does not have
+  R5 bad_exemption               an exemption with no expires|issue, or one
+                                 whose expires date has passed
+  R6 zero_pin_guard              a gate/manual_preflight entry with no pin at
+                                 all (fail-on-empty, OPA precedent)
 
-On D-215's numbering: the ruling lists "new gate unregistered" as its own
-condition, separate from "bound object unregistered". Those are the same set
-difference under two names, so this checker implements the difference ONCE and
-splits the reporting by whether the object is CI-wired (R4) rather than
-manufacturing a duplicate rule to make the count read five. Stating the collapse
-is the honest delivery; a rule that re-reports the same fact under a second id
+On the rule count: "new gate unregistered" and "bound object unregistered" are
+one set difference under two names. This checker implements the difference ONCE
+and splits the reporting by whether the object is CI-wired (R4), rather than
+manufacturing a duplicate rule to inflate the count. Stating the collapse is
+the honest delivery; a rule that re-reports the same fact under a second id
 would be ceremony that reads as coverage.
 
 Posture: hard gate. Findings are reported as ``::error`` and the process exits
 1; the observation period ended with a clean registry, and warnings must not
 become permanent. There is deliberately no non-blocking mode.
 
-Scope honesty (D-215 6): what is checked here is REGISTRATION DISCIPLINE, not
+Scope honesty: what is checked here is REGISTRATION DISCIPLINE, not
 pin effectiveness. A hollow pin passes every rule below and is still not a pin.
 That residual is disclosed in the registry file and mitigated elsewhere.
 
@@ -63,14 +62,14 @@ SCRIPTS = REPO / ".github" / "scripts"
 WORKFLOWS = REPO / ".github" / "workflows"
 DEFAULT_REGISTRY = REPO / ".github" / "gate-registry.yaml"
 
-# D-212 tiers that carry the full pin obligation. An `instrument` is exempt:
+# The tiers that carry the full pin obligation. An `instrument` is exempt:
 # its obligation is the sensitivity track, not a per-PR pin.
 PIN_REQUIRED_CLASSES = frozenset({"gate", "manual_preflight"})
 KNOWN_CLASSES = frozenset({"gate", "manual_preflight", "instrument"})
 
 
 # --------------------------------------------------------------------------
-# Machine enumeration (D-215 7: the bound set is read, never transcribed)
+# Machine enumeration: the bound set is read, never transcribed
 # --------------------------------------------------------------------------
 
 
@@ -108,7 +107,7 @@ def wired_gate_ids(workflows_dir: Path) -> set[str]:
 
 
 # --------------------------------------------------------------------------
-# Pointer resolution -- the WEAK, one-way check D-215 3 asked for
+# Pointer resolution -- deliberately WEAK and one-way
 # --------------------------------------------------------------------------
 
 
@@ -150,8 +149,8 @@ def resolve_pointer(root: Path, pointer: str) -> str | None:
     A pointer is ``path`` or ``path::symbol``. This is deliberately ONE-WAY and
     WEAK: it proves the pointer lands on something that exists, not that the
     thing it points at is the correct expectation. Verifying the latter means
-    proving a pin fires, which is the sensitivity experiment track (D-215 5),
-    not this gate.
+    proving a pin fires, which is the sensitivity experiment track, not
+    this gate.
     """
     if "::" in pointer:
         rel, symbol = pointer.split("::", 1)
@@ -187,9 +186,8 @@ def _collectible_names(path: Path) -> set[str]:
     ``tests/test_x.py::ALL_TOOLS`` both "resolved" and would have been accepted
     as registered pins. A helper is not a pin and a constant is not a pin, so
     accepting them made the registry look covered while pinning nothing —
-    precisely the shape D-213 2 legislates against ("only running without
-    asserting is not a pin", ESLint's "invalid cases must have at least one
-    error").
+    precisely the shape this rule forbids: "only running without asserting is
+    not a pin" (ESLint's "invalid cases must have at least one error").
 
     The rule mirrors pytest's own default ``python_functions = test*``: a
     module-level function counts only if its name starts with ``test``, and
@@ -263,14 +261,14 @@ def check(
     try:
         data = json.loads(registry_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
-        # This is the checker's ADMITTED TERMINATION LAYER (D-213 4): an
+        # This is the checker's ADMITTED TERMINATION LAYER: an
         # unreadable or corrupt registry is reported and stops here. No fourth
         # layer is added on top of it.
         return [f"registry unreadable: {e}"]
 
     entries = data.get("entries")
     if not isinstance(entries, list) or not entries:
-        # fail-on-empty (OPA --fail-on-empty precedent, D-213 4). An empty
+        # fail-on-empty (OPA --fail-on-empty precedent). An empty
         # registry is not "nothing to report", it is a registry that governs
         # nothing -- the failure mode this whole gate exists to prevent.
         return ["registry has no entries -- an empty registry governs nothing"]
@@ -292,7 +290,7 @@ def check(
             continue
         registered[gate_id] = entry
 
-    # R1 -- a bound object nobody registered (D-215 1)
+    # R1 -- a bound object nobody registered
     for gate_id in sorted(bound - set(registered)):
         findings.append(
             f"{gate_id}: bound object is not registered -- every governance "
@@ -300,7 +298,7 @@ def check(
             "(D-215 1)"
         )
 
-    # R3 -- an entry pointing at an object that no longer exists (D-215 3)
+    # R3 -- an entry pointing at an object that no longer exists
     for gate_id in sorted(set(registered) - bound):
         findings.append(
             f"{gate_id}: stale registration -- the script no longer exists "
@@ -317,7 +315,7 @@ def check(
             )
             continue
 
-        # R2 -- registered pointers that do not resolve (D-215 2)
+        # R2 -- registered pointers that do not resolve
         sources = entry.get("expected_sources")
         if not isinstance(sources, list):
             findings.append(f"{gate_id}: expected_sources must be a list")
@@ -335,7 +333,7 @@ def check(
             if reason:
                 findings.append(f"{gate_id}: pin node {node_id}: {reason}")
 
-        # R6 -- zero-pin guard (D-215 3, fail-on-empty)
+        # R6 -- zero-pin guard (fail-on-empty)
         if bound_class in PIN_REQUIRED_CLASSES and not pins:
             findings.append(
                 f"{gate_id}: bound_class {bound_class} carries no pin "
@@ -343,7 +341,7 @@ def check(
                 "claim, not a gate"
             )
 
-        # R4 -- veto-power drift (D-212 2)
+        # R4 -- veto-power drift
         if bound_class == "gate" and gate_id not in wired:
             findings.append(
                 f"{gate_id}: registered bound_class=gate but no workflow under "
@@ -351,7 +349,7 @@ def check(
                 "as an instrument (D-212 2, verdict drift)"
             )
 
-        # R5 -- exemption discipline (D-215 5)
+        # R5 -- exemption discipline
         exemption = entry.get("exemption")
         if exemption is not None:
             if not isinstance(exemption, dict):

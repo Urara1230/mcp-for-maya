@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Version-consistency gate (D-207 9).
+"""Version-consistency gate.
 
 Four places carry the product version and they drift apart silently:
 
@@ -11,16 +11,16 @@ Four places carry the product version and they drift apart silently:
 The failure mode this buys down is not cosmetic. A tag is cut from a commit
 whose pyproject says 0.6.0 while the wheel metadata and the __init__ say
 something else, or the shipped CHANGELOG names a release that never happened.
-D-107 (tag == diff) checks the tag against the tree; this checks the tree
-against itself.
+The release checklist's changelog-vs-tag-diff audit checks the tag against
+the tree; this checks the tree against itself.
 
-THE SERVER.JSON TRIPLE (D-229 2, added R48)
--------------------------------------------
-server.json at the repo root is the mcp-publisher registry manifest (its
-default read path per D-150 2). Its top-level "version" field must equal
+THE SERVER.JSON TRIPLE
+----------------------
+server.json sits at the repo root because that is mcp-publisher's own default
+read path, not a placement we chose; its top-level "version" field must equal
 pyproject EXACTLY - it is an in-repo manifest, so asserting it is a legal
 push-CI check. What we deliberately do NOT assert is registry-active state or
-that PyPI actually has the version (D-164 beta empty-spin prohibition): those
+that PyPI actually has the version (the empty-spin prohibition): those
 are external facts no push-CI gate may claim. The assertion object is the
 manifest text in the tree, nothing beyond it.
 
@@ -75,7 +75,7 @@ def _v(text: str) -> tuple[int, ...]:
 
 
 def server_json_version(path: Path) -> tuple[int, ...] | None:
-    """Top-level "version" field of the mcp-publisher manifest (D-229 2)."""
+    """Top-level "version" field of the mcp-publisher manifest."""
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -132,9 +132,9 @@ def main() -> int:
             f"{m.group(1)} but pyproject.toml is {pp_s} (D-207 9)"
         )
 
-    # D-229 2: the registry manifest at the repo root must match pyproject.
+    # The registry manifest at the repo root must match pyproject.
     # Manifest equality only - never assert registry-active or PyPI-has-version
-    # (D-164 beta empty-spin prohibition).
+    # (the empty-spin prohibition).
     if not SERVER_JSON.exists():
         errors.append(
             "::error file=server.json::missing at the repo root - it is the "

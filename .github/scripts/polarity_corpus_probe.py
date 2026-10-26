@@ -1,21 +1,21 @@
-"""D-191(1)c two-track polarity corpus measurement (D-190 / T-R42-02).
+"""Two-track polarity corpus measurement (T-R42-02).
 
 Manual measurement instrument, NOT a CI gate -- same shape as
 check_release_appendix.py (release-preflight item, human-run). It measures;
 check_tdqs_disclosure.py is what gates. Run it to reproduce the corpus
 evidence quoted in check_tdqs_disclosure.py, and at the 0.6.0 preflight
-when D-190(4)/D-189 decide whether negated_only may be promoted warn->hard.
+that decides whether negated_only may be promoted warn->hard.
 
-Two tracks, always reported separately (D-191(1)c):
+Two tracks, always reported separately:
 
   PRIMARY  the real validation surface, and the only denominator the
-           zero-false-rejection judgement uses (D-190 4): each tool declared
+           zero-false-rejection judgement uses: each tool declared
            in .github/tdqs-elements.yaml against its OWN docstring,
            checking only its OWN elements.
   STRESS   diagnostic only: every docstring-bearing function in
            src/maya_mcp_server x every element pattern (cartesian).
 
-Caliber (pinned because the pre-hardening evidence did not pin it, D-191 1c):
+Caliber (pinned because the pre-hardening evidence did not pin it):
 the stress corpus is every function/async-function carrying a docstring,
 counted per OCCURRENCE -- methods and nested defs included, nothing
 de-duplicated. The 264 figure in the 2026-09-30 evidence was a probe
@@ -135,8 +135,8 @@ def stress_track(checker, tools, docs):
 
 
 # ---------------------------------------------------------------------------
-# D-198 track 2 -- hand-labelled criteria corpus. The ONLY false-negative
-# denominator (D-191 1c): every sample carries a label and a one-sentence
+# Track 2 -- hand-labelled criteria corpus. The ONLY false-negative
+# denominator: every sample carries a label and a one-sentence
 # defensible reason, so a disagreement is a conversation, not a number.
 #
 # Three labels, and the third is NOT a false negative:
@@ -146,8 +146,8 @@ def stress_track(checker, tools, docs):
 #                       that the exemption list must forgive
 #   known_limitation    a real negation the clause-scope rule deliberately
 #                       forgives because the cue sits in an EARLIER clause.
-#                       This is the traded-away false-positive class from
-#                       D-190 1, counted as a design limitation, never as an FN.
+#                       This is the traded-away false-positive class,
+#                       counted as a design limitation, never as an FN.
 # ---------------------------------------------------------------------------
 
 TRUE_NEGATIVE = "true_negative"
@@ -203,7 +203,7 @@ LABELLED_CORPUS = [
         "text": "No geometry is removed; instead a camera is created and animated.",
         "why": "semicolon splits the clause, so the guard sees only the positive second half",
     },
-    # --- track-3 promotions (D-203) ---
+    # --- track-3 promotions ---
     # Track 3 mutates the 4 real seed clauses found in the docstrings by 4 cue
     # prefixes and 4 clause splits, and reports absolute counts only. Promotion
     # into this corpus means a human confirmed the mutated sentence really is a
@@ -249,21 +249,21 @@ LABELLED_CORPUS = [
 ]
 
 # ---------------------------------------------------------------------------
-# D-214: both floors are GOVERNANCE constants (they move when a ruling moves,
+# Both floors are GOVERNANCE constants (they move when a ruling moves,
 # not when this code moves), so their single source is the per-domain spec
 # file -- read here, never restated inline. Restating a ruling's number in
-# code is how MIN_ADJUDICABLE=12 lost its basis in the first place (D-205).
+# code is how MIN_ADJUDICABLE=12 lost its basis in the first place.
 #
 # The spec file carries the full basis, caliber and precondition caveat:
 #   .github/polarity-corpus-spec.yaml
-#     MIN_ADJUDICABLE           12, ratified by D-203 2 (coverage argument,
-#                              explicitly not a statistical one)
+#     MIN_ADJUDICABLE           12, ratified by a coverage argument,
+#                              explicitly not a statistical one
 #     MIN_ADJUDICABLE_caliber   true_negative + forgiven only;
-#                              known_limitation excluded (D-203 1)
+#                              known_limitation excluded
 #     ..._counting_unit         one count per SAMPLE, not per guarded element
 #     ..._precondition_caveat   the floor is ONE of two preconditions for
-#                              warn->hard promotion (D-198 5)
-#     MIN_TN_PER_ELEMENT        3, the per-element anti-dilution floor (D-203 3)
+#                              warn->hard promotion
+#     MIN_TN_PER_ELEMENT        3, the per-element anti-dilution floor
 # ---------------------------------------------------------------------------
 SPEC = REPO / ".github" / "polarity-corpus-spec.yaml"
 _MIN_SPEC = json.loads(SPEC.read_text(encoding="utf-8"))
@@ -282,11 +282,11 @@ def adjudicate(checker, guarded):
     this instrument is read by humans, so stdout is a report, not an interface.
     """
     counts = {TRUE_NEGATIVE: 0, FORGIVEN: 0, KNOWN_LIMITATION: 0}
-    # D-221 2 (S4). The label tally is per SAMPLE. It used to sit inside the
+    # The label tally is per SAMPLE. It used to sit inside the
     # guarded-element loop below, so every element re-counted the whole corpus
     # and the floor numerator came out inflated by len(guarded) -- the floor
     # could then be cleared with a fraction of the samples it claims to
-    # require. D-203's caliber is one count per labelled sample, so the tally
+    # require. The caliber is one count per labelled sample, so the tally
     # is hoisted out here and the per-element counters stay per element.
     for sample in LABELLED_CORPUS:
         counts[sample["label"]] += 1
@@ -337,7 +337,7 @@ def labelled_track(checker, tools):
         print(
             f"    MISMATCH {row[0]}/{row[1]}: labelled {row[2]}, guard said {row[3]} -- {row[4]!r}"
         )
-    # D-203: the floor is over TN+F only. known_limitation is reported above for
+    # The floor is over TN+F only. known_limitation is reported above for
     # transparency and deliberately excluded from the count that gates.
     # Iterate the guarded ELEMENTS, not the per_element_tn keys. An element
     # with zero true negatives has no key at all, so keying off the dict made
@@ -360,8 +360,8 @@ def labelled_track(checker, tools):
     )
     # The floor verdict is reported INDEPENDENTLY of the label-agreement verdict.
     # Chaining them with elif let a label disagreement swallow a floor
-    # violation, which is the same silence D-203 was legislated against: two
-    # independent questions, two independent answers.
+    # violation, which is the same silence this floor's caliber exists to
+    # prevent: two independent questions, two independent answers.
     if adjudicated < MIN_ADJUDICABLE:
         print(
             f"  NOT YET ADJUDICABLE: {adjudicated} adjudicable "
@@ -379,11 +379,11 @@ def labelled_track(checker, tools):
             f"MIN_ADJUDICABLE={MIN_ADJUDICABLE} and every guarded element "
             f"carries >= {MIN_TN_PER_ELEMENT} true negatives (D-203)"
         )
-    # D-198 5, restored by D-221 2 (S3). Hard admission is a TWO-precondition
-    # gate, not one: (a) the PRIMARY track reports zero false rejections AND
+    # Hard admission is a TWO-precondition gate, not one: (a) the PRIMARY
+    # track reports zero false rejections AND
     # (b) this track-2 floor is met. Printing only the floor verdict let a
     # reader take "floor met" as the whole promotion decision, which is the
-    # single-condition reading D-198 5 legislated against. Restated here (not
+    # single-condition reading this caveat exists to block. Restated here (not
     # only in the spec file) because this line IS the promotion report.
     print(
         "  NOTE (D-198 5): this floor is ONE of two preconditions for warn->hard "
@@ -396,7 +396,7 @@ def labelled_track(checker, tools):
 
 
 # ---------------------------------------------------------------------------
-# D-198 track 3 -- programmatic mutation surface. Reports absolute counts and
+# Track 3 -- programmatic mutation surface. Reports absolute counts and
 # construction coverage ONLY. It is never a denominator: a generated sentence
 # has no ground truth, so any ratio computed over it would be a made-up
 # number. Promotion into track 2 requires a human confirming a true negative.
