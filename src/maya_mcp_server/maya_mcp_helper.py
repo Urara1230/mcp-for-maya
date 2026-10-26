@@ -11,7 +11,7 @@ from collections import deque
 from typing import Any
 
 
-# Dual-runtime floor (D-060 / upstream #3): this module is injected into
+# Dual-runtime floor (upstream #3): this module is injected into
 # Maya's own interpreter - Maya >= 2023 ships Python >= 3.9. Refuse early
 # with an actionable message instead of dying later inside ast.unparse.
 if sys.version_info < (3, 9):  # noqa: UP036 - injected side runs Maya's own interpreter, not the host's
@@ -73,7 +73,7 @@ def prepare_code_for_result_capture(
 
     # ast.unparse is 3.9+; on patched/forked interpreters where
     # sys.version_info lies, degrade to no-capture rather than crashing on
-    # AttributeError (D-060, second layer of the floor guard).
+    # AttributeError (second layer of the floor guard).
     if not hasattr(ast, "unparse"):
         return code, False
 
@@ -104,7 +104,7 @@ def prepare_code_for_result_capture(
 
 
 # ---------------------------------------------------------------------------
-# Length-prefixed wire framing for the Qt framed channel (D-013)
+# Length-prefixed wire framing for the Qt framed channel
 #
 # The Qt channel uses uint32-BE length-prefixed frames instead of
 # line-delimited JSON so multi-MB module sources and result payloads survive
@@ -112,7 +112,7 @@ def prepare_code_for_result_capture(
 # ---------------------------------------------------------------------------
 
 FRAME_HEADER_SIZE = 4
-MAX_FRAME_SIZE = 16 * 1024 * 1024  # 16 MiB (D-013 band: 8-16 MiB)
+MAX_FRAME_SIZE = 16 * 1024 * 1024  # 16 MiB, upper bound of the 8-16 MiB band
 
 
 class FrameTooLargeError(Exception):
@@ -304,7 +304,7 @@ def dispatch_request(request: dict[str, Any], server: Any = None) -> dict[str, A
     Transport-agnostic: used by ClientChannel (Qt framed channel) and
     testable without Qt. Returns the response dict - never raises.
 
-    Error schema is dual (D-019): known domain errors use
+    Error schema is dual: known domain errors use
     {"code": ..., "message": ..., "suggestion"?}; unexpected exceptions use
     {"type", "message", "traceback"}. Clients must handle both.
     """
@@ -489,7 +489,7 @@ class ClientChannel:
 
 
 class QtCommandServer:
-    """Qt-based TCP command server for Maya MCP (D-013: the primary working
+    """Qt-based TCP command server for Maya MCP (the primary working
     channel; the native command port is bootstrap/headless fallback only).
 
     Runs on Maya's main thread inside the Qt event loop. readyRead is
@@ -524,7 +524,7 @@ class QtCommandServer:
         """Stop the server and close all client channels."""
         self._running = False
         # Unwire the signal, not just the sockets: after a module reload the
-        # new copy must not see this orphaned instance still firing (D-058).
+        # new copy must not see this orphaned instance still firing.
         try:
             self._server.newConnection.disconnect(self._on_new_connection)
         except (TypeError, RuntimeError):
@@ -589,7 +589,7 @@ _qt_server: QtCommandServer | None = None
 def start_qt_server(port: int) -> str:
     """Start the Qt command server and return the port number.
 
-    Headless guard (D-013): in mayapy, PySide6 imports fine and QTcpServer
+    Headless guard: in mayapy, PySide6 imports fine and QTcpServer
     .listen() even succeeds, but no QCoreApplication event loop exists so
     readyRead is never dispatched - a zombie channel that accepts TCP but
     answers nothing. Detect before binding and report a domain error so the
@@ -656,7 +656,7 @@ def get_qt_server_port() -> str:
 
 
 def _mcp_teardown() -> str:
-    """Idempotent module teardown (D-058 / upstream issue #4).
+    """Idempotent module teardown (upstream issue #4).
 
     create_module(overwrite=True) invokes this hook on the OLD module
     object before evicting it from sys.modules. Every resource is released

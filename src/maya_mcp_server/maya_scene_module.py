@@ -7,7 +7,7 @@ All functions return JSON strings for direct use with execute_code(result_type="
 Performance targets: 100 objects < 50ms, 1000 objects < 200ms.
 """
 
-# annotations lazily evaluated: the D-095 assembled payload concatenates
+# annotations lazily evaluated: the assembled payload concatenates
 # introspect_module.py below this file's end, so the fragment's PEP-604
 # annotations are strings at Maya-runtime (Py3.9) - never evaluated.
 from __future__ import annotations
@@ -26,7 +26,7 @@ import maya.cmds as cmds
 
 
 def _err(code: str, message: str, suggestion: str | None = None) -> dict:
-    """Maya-domain error result (D-019): {"error": {code, message, suggestion?}}."""
+    """Maya-domain error result: {"error": {code, message, suggestion?}}."""
     err: dict = {"code": code, "message": message}
     if suggestion:
         err["suggestion"] = suggestion
@@ -1037,7 +1037,7 @@ def check_constraints(rules):
 
 
 # ============================================================
-# P0: Scene Checkpoint / Rollback (D-015/D-016): true exportAll snapshot, not references
+# P0: Scene Checkpoint / Rollback: true exportAll snapshot, not references
 # ============================================================
 # checkpoint = cmds.file(exportAll) snapshot of MEMORY state -> checkpoints/
 # rollback   = open snapshot + rename back to the original scene path (S2);
@@ -1058,7 +1058,7 @@ def _scene_file_path() -> str:
     """Current scene file path (absoluteName semantics), "" when untitled.
 
     expandName resolves env vars / relative forms to an absolute path \u2014
-    sceneName alone can return an unresolved name (D-015 disambiguation).
+    sceneName alone can return an unresolved name.
     """
     import os
 
@@ -1084,7 +1084,7 @@ def _checkpoint_dir(
 
     Saved scenes: <scene_dir>/checkpoints. Untitled scenes: ad-hoc
     snapshots go under <maya workspace>/checkpoints so they still land
-    somewhere recoverable (D-015/D-016).
+    somewhere recoverable.
 
     Returns (dir, None) or ("", error_dict).
     """
@@ -1158,7 +1158,7 @@ def _write_snapshot(cp_path: str) -> dict[str, Any] | None:
 
 
 def _suggest_name(name: Any) -> str:
-    """Sanitized suggestion for a rejected name \u2014 never auto-applied (D-015)."""
+    """Sanitized suggestion for a rejected name \u2014 never auto-applied."""
     cleaned = re.sub(r"[^A-Za-z0-9_-]", "_", str(name)).strip("_")
     return cleaned or "checkpoint"
 
@@ -1195,7 +1195,7 @@ def _rb_error(
     suggestion: str | None = None,
     **extra: Any,
 ) -> dict[str, Any]:
-    """Structured rollback/checkpoint error carrying scene identity (D-019)."""
+    """Structured rollback/checkpoint error carrying scene identity."""
     err: dict[str, Any] = {"code": code, "message": msg}
     if suggestion:
         err["suggestion"] = suggestion
@@ -1364,7 +1364,7 @@ def rollback_to_checkpoint(filename: str, discard_current_state: bool = False) -
     "skipped_by_user").
 
       For untitled scenes the auto snapshot lands in the workspace
-      ad-hoc checkpoints dir (D-016d); failure still aborts unless escaped.
+      ad-hoc checkpoints dir; failure still aborts unless escaped.
 
     Honest bounds: snapshots contain no undo history \u2014 call
     scene_snapshot afterwards to rebuild context; references are
@@ -1485,7 +1485,7 @@ def rollback_to_checkpoint(filename: str, discard_current_state: bool = False) -
             # -rename must be used by itself on real Maya — combining it
             # with prompt=False raises "the -rename flag must be used by
             # itself" (live-verified on Maya 2024; probe artifact pending
-            # docs/evidence intake at the next real-Maya window — D-109;
+            # docs/evidence intake at the next real-Maya window;
             # the stub never modeled that constraint).
             cmds.file(rename=scene_before)
         except Exception as e:
@@ -3016,7 +3016,7 @@ def scene_review(checks=None):
                         b = sample[j].split("|")[-1]
                         # DAG-path prefix: true ancestor relation only.
                         # The old substring test false-positived on
-                        # siblings like |GEO_wall vs |GEO_wall2 (D-037).
+                        # siblings like |GEO_wall vs |GEO_wall2.
                         is_pc = sample[j].startswith(sample[i] + "|") or sample[i].startswith(
                             sample[j] + "|"
                         )
@@ -3073,7 +3073,7 @@ def scene_review(checks=None):
                 dag = sel.getDagPath(0)
                 wb = _world_bbox(dag)
                 # Key by full DAG path so the parent-child exclusion
-                # can do a real ancestor test (D-037).
+                # can do a real ancestor test.
                 obj_bounds[t] = {
                     "short": t.split("|")[-1],
                     "min": [wb.min[i] for i in range(3)],
@@ -3115,7 +3115,7 @@ def scene_review(checks=None):
                 )
 
                 if inside_b or inside_a:
-                    # DAG-path prefix: true ancestor relation only (D-037).
+                    # DAG-path prefix: true ancestor relation only.
                     is_pc = path_b.startswith(path_a + "|") or path_a.startswith(path_b + "|")
                     is_grp = any(
                         name_a.startswith(p) or name_b.startswith(p)
@@ -4466,7 +4466,7 @@ def _predict_conflicts(transforms):
             dag = sel.getDagPath(0)
             wb = _world_bbox(dag)
             # Key by full DAG path so the parent-child exclusion
-            # can do a real ancestor test (D-037).
+            # can do a real ancestor test.
             obj_bounds[t] = {
                 "short": t.split("|")[-1],
                 "min": [wb.min[i] for i in range(3)],
@@ -4495,7 +4495,7 @@ def _predict_conflicts(transforms):
 
             # If gaps are very small, it's a near-miss
             if gap_x < 10 and gap_y < 10 and gap_z < 10:
-                # DAG-path prefix: true ancestor relation only (D-037).
+                # DAG-path prefix: true ancestor relation only.
                 is_pc = path_b.startswith(path_a + "|") or path_a.startswith(path_b + "|")
                 is_grp = any(
                     name_a.startswith(p) or name_b.startswith(p) for p in ("GRP_", "OUT_", "ALL")

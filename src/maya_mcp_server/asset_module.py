@@ -1,4 +1,4 @@
-"""_mcp_asset - Maya-side asset import (D-074/D-075).
+"""_mcp_asset - Maya-side asset import.
 
 Injected lazily via write_module on the first asset_import call (same
 pattern as _mcp_visual). Receives a validated asset_descriptor of
@@ -65,7 +65,7 @@ def _short(name: str) -> str:
 def _delete_if_exists(node: str) -> None:
     """Delete a node iff it still exists; failures are swallowed.
 
-    D-090: the single objExists->delete primitive shared by the batch
+    The single objExists->delete primitive shared by the batch
     stale-DG loop and the half-wired bump2d/displacement rollback paths.
     Zero-condition, one parameter, constant semantics — a future
     different cleanup need (e.g. recursive shape deletion) inlines back
@@ -192,7 +192,7 @@ def _match_material(part: str, mats: list[str]) -> list[str]:
 def _new_material(asset_id: str, part: str) -> tuple[str, str]:
     """Dedicated standardSurface + shadingEngine for an unmatched part.
 
-    D-082e: standardSurface (not blinn) — Maya's VP2/Arnold-default PBR
+    standardSurface (not blinn) — Maya's VP2/Arnold-default PBR
     shader since 2020; the wiring table below is attribute-aware, so
     legacy imported materials still get their own channel names.
     """
@@ -297,7 +297,7 @@ def _wire_map(file_node: str, role: str, mat: str, sg: str | None) -> bool:
             return False
         # Canonical network per fbxmaya itself (live-verified on Maya 2024;
         # probe artifact pending docs/evidence intake at the next
-        # real-Maya window — D-109):
+        # real-Maya window):
         # file.outAlpha -> bump2d.bumpValue; bump2d.outNormal -> mat.normalCamera;
         # bumpInterp=1 selects tangent-space normals. outColor -> bumpValue is
         # rejected by real Maya (color -> float is not connectable).
@@ -309,7 +309,7 @@ def _wire_map(file_node: str, role: str, mat: str, sg: str | None) -> bool:
             cmds.connectAttr(bump + ".outNormal", mat + ".normalCamera", force=True)
             return True
         except Exception:
-            # D-083: a half-wired bump2d node must not be left
+            # A half-wired bump2d node must not be left
             # orphaned in the scene on failure.
             if bump is not None:
                 _delete_if_exists(bump)
@@ -339,7 +339,7 @@ def _wire_map(file_node: str, role: str, mat: str, sg: str | None) -> bool:
             cmds.connectAttr(disp + ".displacement", sg + ".displacementShader", force=True)
             return True
         except Exception:
-            # D-082b: a half-wired displacement node must not be left
+            # A half-wired displacement node must not be left
             # orphaned in the scene on failure.
             if disp is not None:
                 _delete_if_exists(disp)
