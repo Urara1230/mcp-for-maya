@@ -1,4 +1,4 @@
-"""MCP export tool (D-091/D-092): scene_export.
+"""MCP export tool: scene_export.
 
 scene_export writes Maya scene content to a host-local file (FBX/OBJ/
 USD) through the lazily injected _mcp_export module. It is
@@ -31,8 +31,8 @@ _export_injected: set[str] = set()
 async def _ensure_export_injected(client: Any, session_key: str | None) -> None:
     """Inject _mcp_export once per session (mirrors _mcp_asset).
 
-    Delegates to client.ensure_module_injected (D-083) — the channel
-    contract (framed write_module vs native mkstemp fallback, D-013)
+    Delegates to client.ensure_module_injected — the channel
+    contract (framed write_module vs native mkstemp fallback)
     lives there.
     """
     await ensure_module_injected(
@@ -46,7 +46,7 @@ async def _ensure_export_injected(client: Any, session_key: str | None) -> None:
 
 
 def register_export_tools(mcp: Any) -> None:
-    """Register the export tool on the FastMCP instance (D-091/D-092).
+    """Register the export tool on the FastMCP instance.
 
     Args:
         mcp: FastMCP server instance.

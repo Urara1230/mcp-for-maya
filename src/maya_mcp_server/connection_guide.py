@@ -5,12 +5,12 @@ the Maya command port connection. Handles platform differences
 (Windows/Linux/macOS) and Maya version detection.
 
 Key responsibilities:
-1. Managed marker-block install/uninstall of userSetup.py (D-017 A')
+1. Managed marker-block install/uninstall of userSetup.py
 2. Detect Maya installation paths per platform
 3. Provide human-readable fallback instructions when auto-setup fails
 4. Diagnose connection issues and suggest fixes
 
-Marker-block semantics (D-017; only the marker region is rewritten, the rest
+Marker-block semantics (only the marker region is rewritten, the rest
 of userSetup.py is preserved):
 - The block lives between "# >>> mcp-for-maya >>>" / "# <<< mcp-for-maya <<<".
 - Missing file        -> create it directly.
@@ -163,7 +163,7 @@ def find_maya_installations() -> list[MayaInstallInfo]:
 
 
 # ---------------------------------------------------------------------------
-# Marker-block install/uninstall (D-017 A')
+# Marker-block install/uninstall
 # ---------------------------------------------------------------------------
 
 
@@ -228,7 +228,7 @@ def install_user_setup(
     dry_run: bool = False,
     confirm: bool = False,
 ) -> dict[str, Any]:
-    """Merge the managed marker block into userSetup.py (D-017 A').
+    """Merge the managed marker block into userSetup.py.
 
     Args:
         port: Command port number.
@@ -425,7 +425,7 @@ def uninstall_user_setup(
     target_version: str | None = None,
     remove_empty_file: bool = False,
 ) -> dict[str, Any]:
-    """Strip the managed marker block from userSetup.py (D-017).
+    """Strip the managed marker block from userSetup.py.
 
     Args:
         target_version: Specific Maya version; None targets all.

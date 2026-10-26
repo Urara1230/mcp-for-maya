@@ -1,4 +1,4 @@
-"""MCP asset tools (D-074/D-075): Poly Haven search + import.
+"""MCP asset tools: Poly Haven search + import.
 
 asset_search is host-side read-only - no Maya session needed.
 asset_import chains the host-side downloader (whitelist + md5 + size
@@ -43,8 +43,8 @@ _ASSET_TYPE_RE = re.compile(r"^[a-z]+$")
 async def _ensure_asset_injected(client: Any, session_key: str | None) -> None:
     """Inject _mcp_asset once per session (mirrors _mcp_scene/_mcp_visual).
 
-    Delegates to client.ensure_module_injected (D-083) — the channel
-    contract (framed write_module vs native mkstemp fallback, D-013)
+    Delegates to client.ensure_module_injected — the channel
+    contract (framed write_module vs native mkstemp fallback)
     lives there.
     """
     await ensure_module_injected(
@@ -64,7 +64,7 @@ def _audit_asset_download(
     import_result: dict[str, Any],
     duration_ms: float,
 ) -> None:
-    """Record the download+import halves as a supplementary event (D-075).
+    """Record the download+import halves as a supplementary event.
 
     URL / size / files_hash live result-side, so the generic per-call
     event cannot see them; this writes a second JSONL row through the
@@ -99,7 +99,7 @@ def _audit_asset_download(
 
 
 def register_asset_tools(mcp: Any, audit: AuditLogger | None = None) -> None:
-    """Register asset tools on the FastMCP instance (D-074/D-075).
+    """Register asset tools on the FastMCP instance.
 
     Args:
         mcp: FastMCP server instance.
@@ -213,7 +213,7 @@ def register_asset_tools(mcp: Any, audit: AuditLogger | None = None) -> None:
                 force=bool(force),
             ),
         )
-        # D-082⑥: real download+import wall time — duration_ms=0.0 was
+        # Real download+import wall time — duration_ms=0.0 was
         # a placeholder that lied in every supplementary audit row.
         _audit_asset_download(
             audit, session_key, descriptor, result, (time.monotonic() - t0) * 1000.0

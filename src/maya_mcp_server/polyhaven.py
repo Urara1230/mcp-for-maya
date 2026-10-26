@@ -1,4 +1,4 @@
-"""Poly Haven asset client - host-side search/download/cache (D-074/D-075).
+"""Poly Haven asset client - host-side search/download/cache.
 
 Maya has zero network surface: this module is the HOST half of the
 asset pipeline. It queries api.polyhaven.com, downloads FBX + texture
@@ -37,7 +37,7 @@ API_BASE = "https://api.polyhaven.com"
 ALLOWED_HOSTS = frozenset(
     {
         "api.polyhaven.com",
-        # Observed CDN host (D-075 wording listed dl.polyhaven.com; the
+        # Observed CDN host (the design listed dl.polyhaven.com; the
         # API actually returns dl.polyhaven.org URLs - both whitelisted).
         "dl.polyhaven.org",
         "dl.polyhaven.com",
@@ -48,8 +48,8 @@ USER_AGENT = "mcp-for-maya (+https://github.com/Xxx91n/mcp-for-maya)"
 DEFAULT_TIMEOUT_S = 30.0
 MAX_FILE_BYTES = 256 * 1024 * 1024
 MAX_TOTAL_BYTES = 512 * 1024 * 1024
-SEARCH_LIMIT_MAX = 20  # D-075: result list capped, total_count preserved
-SEARCH_INDEX_TTL_S = 300.0  # /assets index is multi-MB; TTL-bound reuse (D-082f)
+SEARCH_LIMIT_MAX = 20  # result list capped, total_count preserved
+SEARCH_INDEX_TTL_S = 300.0  # /assets index is multi-MB; TTL-bound reuse
 
 RESOLUTIONS = ("1k", "2k", "4k", "8k")
 DEFAULT_RESOLUTION = "1k"
@@ -93,7 +93,7 @@ class AssetError(Exception):
     """Domain failure inside the asset pipeline.
 
     Tools surface it as {"error": {code, message, suggestion}} - a
-    domain result, never an MCP isError (D-075: explicit
+    domain result, never an MCP isError (explicit
     network_unavailable, no silent stale cache).
     """
 
@@ -121,8 +121,8 @@ def validate_asset_id(asset_id: str) -> str:
 
 
 def _as_int(value: Any, what: str) -> int:
-    """API-supplied integer fields: dirty values are domain errors
-    (D-082f), never bare ValueError escaping the AssetError contract."""
+    """API-supplied integer fields: dirty values are domain errors,
+    never bare ValueError escaping the AssetError contract."""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -130,7 +130,7 @@ def _as_int(value: Any, what: str) -> int:
 
 
 # TTL cache for the multi-MB /assets index — bounds call rate against
-# the CC0 API (D-082f). Per asset_type; payload dicts only.
+# the CC0 API. Per asset_type; payload dicts only.
 _index_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
@@ -232,7 +232,7 @@ def search_assets(
     """Search the Poly Haven asset index. Read-only; needs no Maya session.
 
     The /assets index payload is multi-MB, so the raw index is cached
-    for SEARCH_INDEX_TTL_S (5 min) per asset_type (D-082f) — this is a
+    for SEARCH_INDEX_TTL_S (5 min) per asset_type — this is a
     listing cache, unrelated to the download path's fresh-metadata
     revalidation rule. Filtering/scoring always re-runs on the cached
     payload, so `query`/`limit` vary freely within the TTL.
