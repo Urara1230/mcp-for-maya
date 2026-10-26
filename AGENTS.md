@@ -19,7 +19,7 @@ A "governance gate" is any check a job runs in `.github/workflows/ci.yml`; `.git
 ## Known quirks
 - Large module writes (>10K chars) stale the Maya command port; Qt sessions use the framed channel, temp-file fallback is headless-only.
 - `execute_code` with `result_type="JSON"` may return `dict`; handle both. `import X; X.func()` can fail under result capture — pre-import, then call expressions only.
-- Git Bash on Windows: never `2> nul`; use `2>/dev/null`. `D-xxx` refs cite the retired decision ledger — read it with `git show '1c5befe^:docs/decision-ledger.md'`.
+- Git Bash on Windows: never `2> nul`; use `2>/dev/null`. `D-xxx` refs cite the retired decision ledger — read it with `git show '1c5befe^:docs/decision-ledger.md'`; `docs/agents/domain.md` keys its row format and the sub-id notation.
 
 ## Agent skills
 
