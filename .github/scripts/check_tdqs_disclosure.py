@@ -16,10 +16,10 @@ Elements opt in via 'polarity_aware: true'; during the legislated
 observation period a match occurring only inside a negation scope is
 reported as a warning, not an error.
 
-Hardening the mechanism behind that requirement (execution-window product, deliberately not
-legislated here): the negation scope is the enclosing CLAUSE instead of a fixed
-80-char window, and an element may list the legitimate negation-form phrases
-that forgive a cue in 'positive_exemptions'.
+Hardening the mechanism behind that requirement (execution-window product,
+deliberately not legislated here): the negation scope is the enclosing CLAUSE
+instead of a fixed 80-char window, and an element may list the legitimate
+negation-form phrases that forgive a cue in 'positive_exemptions'.
 Direction limit: polarity_aware belongs only on mutation-class
 existence assertions whose pattern set is purely positive \u2014 negation-form
 pattern elements stay unguarded and rely on the exemption list instead.
