@@ -347,6 +347,57 @@ class TestErrorIsolation:
         assert "raised in __str__" in result["message"]
         json.dumps(env.module.custom_validator_results(), allow_nan=False)
 
+    def test_reading_the_result_is_part_of_the_isolation(self, env):
+        """len() and [] on what a predicate returned are caller code too. A
+        sequence free to lie about its shape used to escape the except block
+        and break every later review, registry left intact."""
+
+        class LyingLen(tuple):
+            __len__ = lambda self: 2  # noqa: E731 - the lie is the point
+
+        class RaisingGet(tuple):
+            def __getitem__(self, i):
+                if i == 0:
+                    return True
+                raise RuntimeError("no second half")
+
+        class RaisingLen(tuple):
+            def __len__(self):
+                raise RuntimeError("no length")
+
+        env.scene.add_mesh("GEO_box")
+        env.module.register_validator("empty_pair", lambda: LyingLen(()))
+        env.module.register_validator("no_second", lambda: RaisingGet((True, "note")))
+        env.module.register_validator("no_length", lambda: RaisingLen((True, "note")))
+        env.module.register_validator("sibling", lambda: True)
+
+        res = env.module.scene_review_with_validators()
+        by_name = {v["name"]: v for v in res["custom"]["validators"]}
+        assert [by_name[n]["status"] for n in ("empty_pair", "no_second", "no_length")] == [
+            "check_error"
+        ] * 3
+        assert by_name["sibling"]["status"] == "passed"
+        assert res["checks"], "the built-in audit was not lost"
+        json.dumps(res, allow_nan=False)
+
+    def test_a_refusal_needs_no_cooperation_from_the_value_it_refuses(self, env):
+        """The envelope message names what was rejected, so the formatting of
+        that object cannot be allowed to raise out of the rejection."""
+
+        class NoRepr:
+            def __repr__(self):
+                raise RuntimeError("no repr")
+
+            def __str__(self):
+                raise RuntimeError("no str")
+
+        for field in ("severity", "family"):
+            res = env.module.register_validator("n", lambda: True, **{field: NoRepr()})
+            assert res["error"]["code"] == f"invalid_{field}", field
+        res = env.module.register_validator("n", lambda: True, weight=NoRepr())
+        assert res["error"]["code"] == "invalid_weight"
+        assert env.module.list_validators()["count"] == 0
+
 
 class TestScoreSeparation:
     def test_custom_section_shape_and_own_score(self, env):
