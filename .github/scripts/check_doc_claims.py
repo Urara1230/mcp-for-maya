@@ -77,9 +77,18 @@ CITED_PATH = re.compile(
 )
 NODE_ID = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)+)")
 SYMBOL_REF = re.compile(r"([\w.\-/]+\.(?:py|yaml|yml|json|md|txt)::[\w.\-]+)")
-BARE_PATH_LINE = re.compile(r"([\w.\-/]+\.(?:py|md|yaml|yml|json|txt):[0-9]+)")
-SHA_PREFIXED = re.compile(r"[0-9a-f]{7,}:\s*$")
+# Group 1 is the sha anchor, OPTIONAL and adjacent -- a bare `path:line` is drift
+# bait, a `sha:path:line` names an immutable blob. Anchoring is decided by the
+# character right before the path, not by a lookback window: the first version
+# scanned 24 preceding chars, so any sha mentioned earlier in the sentence
+# quietly excused a bare citation that followed it.
+PATH_LINE = re.compile(
+    r"([0-9a-f]{7,}\^?:)?([\w.\-/]+\.(?:py|md|yaml|yml|json|txt):[0-9]+(?:-[0-9]+)?)"
+)
 RECOVERY_CMD = re.compile(r"[0-9a-f]{7,}\^?:[\w./\-]+")
+
+# What pytest can collect as a test function, sync or async.
+TEST_DEFS = (ast.FunctionDef, ast.AsyncFunctionDef)
 
 # An evidence form is a handle a reader can pull, not a sentence about a file.
 PYTEST_NODE = re.compile(r"tests/[\w.\-/]+\.py::[\w.\-]+")
@@ -108,12 +117,6 @@ def _unwrap_code(text: str) -> str:
     for part in re.split(r"(`[^`]*`)", text):
         out.append(re.sub(r"\n\s*", "", part) if part.startswith("`") else part)
     return "".join(out)
-
-
-def _evidence_clause(text: str) -> str:
-    """Return the part of a bullet that starts at its evidence claim."""
-    m = re.search(r"[Ee]vidence", text)
-    return text[m.start() :] if m else ""
 
 
 def _iter_bullets(lines: list[str], start: int, stop: int):
@@ -191,22 +194,25 @@ def _ast_test_count(path: Path, parts: list[str]) -> int | None:
     except (OSError, ValueError, SyntaxError):
         return None
 
+    def is_test(node: ast.AST) -> bool:
+        # pytest collects coroutines too, and this suite has async tests in 12
+        # files: counting only def-test_x under-reports the real collected size.
+        return isinstance(node, TEST_DEFS) and node.name.startswith("test_")
+
     def methods(class_node: ast.ClassDef) -> int:
-        return sum(
-            1
-            for sub in class_node.body
-            if isinstance(sub, ast.FunctionDef) and sub.name.startswith("test_")
-        )
+        return sum(1 for sub in class_node.body if is_test(sub))
 
     if parts and parts[-1].startswith("test_"):
         return 1
     # A DECORATOR, not the word: the first version tested the whole source as a
     # string, and this very file's own test docstrings mention parametrize -- so
     # the count rule silently stopped applying to the gate's own evidence.
+    # ClassDef is included because a marker on the class parametrises every
+    # method in it, which no per-function scan can see.
     if any(
         "parametrize" in ast.unparse(dec)
         for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        if isinstance(node, (TEST_DEFS[0], TEST_DEFS[1], ast.ClassDef))
         for dec in node.decorator_list
     ):
         return None
@@ -219,7 +225,7 @@ def _ast_test_count(path: Path, parts: list[str]) -> int | None:
 
     total = 0
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+        if is_test(node):
             total += 1
         elif isinstance(node, ast.ClassDef):
             total += methods(node)
@@ -308,14 +314,16 @@ def check_changelog(root: Path) -> list[str]:
         findings.extend(_check_pointers(root, flat, where))
         findings.extend(_check_counts(root, text, where))
 
-        clause = _evidence_clause(flat)
-        for m in BARE_PATH_LINE.finditer(clause):
-            before = clause[: m.start()]
-            if SHA_PREFIXED.search(before[-24:]):
-                continue
+        # Whole bullet, not just the clause: a bare `path:line` is a drifting
+        # pointer wherever it is cited, and scoping to the Evidence sentence left
+        # the docstring promising more coverage than the code delivered.
+        for m in PATH_LINE.finditer(flat):
+            anchor, citation = m.group(1), m.group(2)
+            if anchor:
+                continue  # sha-anchored: names an immutable blob, cannot drift
             findings.append(
-                f"{where}: evidence clause cites {m.group(1)!r}, a bare path:line "
-                "that drifts on every edit"
+                f"{where}: cites {citation!r} as a bare path:line, which drifts on "
+                "every edit -- anchor it to a commit or name a symbol"
             )
     return findings
 

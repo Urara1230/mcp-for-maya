@@ -233,6 +233,78 @@ def test_a_suite_level_count_next_to_a_node_counts_the_suite(tmp_path):
     assert M.check_changelog(root) == []
 
 
+def test_a_bare_path_line_anywhere_in_the_bullet_fails_the_gate(tmp_path):
+    """Counterfactual: scoping the scan to the Evidence clause let a drifting
+    citation through the body prose, while the docstring promised coverage of
+    the whole bullet."""
+    root = _repo(
+        tmp_path,
+        "- **A record drifted** — it first cited `probe_helper.py:20-21` in the "
+        "prose and only then gave a node. Evidence: `tests/test_real.py::test_real`.\n",
+    )
+    _add_test_file(root, "test_real.py", ["test_real"])
+    (root / "probe_helper.py").write_text("x = 1\n", encoding="utf-8")
+    findings = M.check_changelog(root)
+    assert any("probe_helper.py:20-21" in f for f in findings), findings
+
+
+def test_a_sha_anchor_must_be_adjacent(tmp_path):
+    """Counterfactual: excusing a bare citation because a sha appeared somewhere
+    in the previous 24 characters makes the exemption an accident of spacing."""
+    root = _repo(
+        tmp_path,
+        "- **A record drifted** — see commit 819e929, and note that "
+        "`probe_helper.py:20-21` was the broken form. "
+        "Evidence: `819e929:probe_helper.py:20-21`.\n",
+    )
+    findings = M.check_changelog(root)
+    bare = [f for f in findings if "probe_helper.py:20-21" in f]
+    assert bare, "a sha mentioned earlier excused a bare citation"
+
+
+def test_an_async_test_counts_toward_the_suite(tmp_path):
+    """Counterfactual: pytest collects coroutines. Counting only `def test_x`
+    reported this repo's async suites as holding a fraction of their tests --
+    test_asset_tools.py counted 0 of 11 before the node kinds were shared."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `819e929:CHANGELOG.md:1`, "
+        "`tests/test_async.py` (2 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_async.py").write_text(
+        "import pytest\n\n"
+        "class TestThing:\n"
+        "    async def test_one(self): assert True\n"
+        "    def test_two(self): assert True\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_class_level_parametrize_marker_declines_the_count(tmp_path):
+    """Admitted limit pinned: a marker on the class parametrises every method in
+    it, so the def-site count is unknowable and the rule must decline, not guess
+    -- and a per-function scan alone would miss it entirely."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `819e929:CHANGELOG.md:1`, "
+        "`tests/test_cls.py` (9 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_cls.py").write_text(
+        "import pytest\n\n\n"
+        '@pytest.mark.parametrize("n", [1, 2, 3])\n'
+        "class TestCls:\n"
+        "    def test_a(self, n): assert n\n"
+        "    def test_b(self, n): assert n\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
 def test_the_real_repo_is_clean():
     """Live green control: the shipped tree passes every rule above."""
     assert M.check(REPO) == []

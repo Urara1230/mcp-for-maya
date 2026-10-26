@@ -72,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   point-in-time records, and a gate that "corrected" them would be a rewriting
   machine.
   Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`;
-  `tests/test_check_doc_claims.py` (16 tests);
+  `tests/test_check_doc_claims.py` (20 tests);
   `python .github/scripts/check_doc_claims.py` → doc-claims OK.
 
 - **Sample-size floor counts verdict-bearing labels only (D-203)** —
@@ -160,7 +160,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The S2 review record pointed at a bare `path:line` for its central claim** —
   the correction notice cites where the promotion record lives using
-  `polarity_corpus_probe.py:206-215`, a form that drifts on every edit. It also
+  lines 206 to 215 of that script — a bare `path:line` that drifts on every
+  edit. It also
   cited a line range that the same record's own derivation pin makes redundant.
   Now `path::symbol`.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
