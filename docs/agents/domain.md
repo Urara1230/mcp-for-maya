@@ -38,56 +38,72 @@ Open decisions are GitHub issues labelled `needs-triage`, not new documents. A d
 
 ## Checks a ledger migration owes
 
-Retiring ids from comments and docstrings is invisible to the whole gate set — ruff, monolith, TDQS, `llms.txt`, mypy, `pre-commit` and pytest all pass on a migration that silently broke a sentence or moved code. Run these two against the ticket's baseline before the suite; both take seconds.
+Retiring ids from comments and docstrings is invisible to the whole gate set — ruff, monolith, TDQS, `llms.txt`, mypy, `pre-commit` and pytest all pass on a migration that silently broke a sentence or moved code. Set the two revisions, then run each block; both take seconds, and both exit loudly on a bad revision rather than validating nothing.
 
 ```bash
-# 1. no executable token moved: blank every docstring, compare the AST per file
-python - <<'EOF'
-import ast, subprocess
-BASE, TIP = "<baseline>", "<tip>"
-paths = [p for p in subprocess.run(["git", "diff", "--name-only", f"{BASE}...{TIP}"],
-           capture_output=True, text=True).stdout.split() if p.endswith(".py")]
+BASE=$(git rev-parse origin/main) TIP=$(git rev-parse HEAD)
+
+# 1. no executable token moved: drop every docstring, compare the AST per file
+python - "$BASE" "$TIP" <<'EOF'
+import ast, subprocess, sys
+if len(sys.argv) < 3:
+    sys.exit("usage: python - <base> <tip>")
+BASE, TIP = sys.argv[1], sys.argv[2]
+def git(*args, **kw):
+    return subprocess.run(["git", *args], capture_output=True, check=True, **kw)
+# Modified files only: a migration adds and deletes none, and a blob that does not
+# exist on both sides has nothing to compare.
+paths = [p for p in git("diff", "--name-only", "--diff-filter=M", f"{BASE}...{TIP}",
+                        text=True).stdout.split() if p.endswith(".py")]
 def shape(rev, p):
-    t = ast.parse(subprocess.run(["git", "show", f"{rev}:{p}"], capture_output=True).stdout.decode())
+    t = ast.parse(git("show", f"{rev}:{p}").stdout.decode())
     for n in ast.walk(t):
         if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             b = n.body
             if b and isinstance(b[0], ast.Expr) and isinstance(getattr(b[0].value, "value", None), str):
-                b[0].value.value = ""
+                b.pop(0)          # removed, not blanked: a migration may delete one outright
     return ast.dump(t)
-for p in paths:
-    if shape(BASE, p) != shape(TIP, p):
-        print("CODE MOVED:", p)
+moved = [p for p in paths if shape(BASE, p) != shape(TIP, p)]
+for p in moved:
+    print("CODE MOVED:", p)
+sys.exit(1 if moved else 0)
 EOF
 
-# 2. every comment/docstring block that was balanced still is
-python - <<'EOF'
-import io, subprocess, tokenize
+# 2. no comment/docstring block gained an unmatched delimiter
+python - "$BASE" "$TIP" <<'EOF'
+import io, subprocess, sys, tokenize
+if len(sys.argv) < 3:
+    sys.exit("usage: python - <base> <tip>")
 OPEN = {"(": ")", "[": "]", "{": "}"}
-BASE, TIP = "<baseline>", "<tip>"
-paths = [p for p in subprocess.run(["git", "diff", "--name-only", f"{BASE}...{TIP}"],
-           capture_output=True, text=True).stdout.split() if p.endswith(".py")]
-def balanced(rev, p):
-    src = subprocess.run(["git", "show", f"{rev}:{p}"], capture_output=True).stdout.decode()
-    n = 0
-    for t in tokenize.generate_tokens(io.StringIO(src).readline):
-        if t.type not in (tokenize.COMMENT, tokenize.STRING):
-            continue
-        if t.type == tokenize.STRING and "\n" not in t.string:
-            continue                      # only a multi-line block can straddle an edit
-        s = t.string
-        if sum(map(s.count, OPEN)) == sum(map(s.count, OPEN.values())):
-            n += 1
-    return n
-for p in paths:
-    b, a = balanced(BASE, p), balanced(TIP, p)
-    if a < b:
-        print(f"UNBALANCED: {p} {b} -> {a}")
+BASE, TIP = sys.argv[1], sys.argv[2]
+def git(*args, **kw):
+    return subprocess.run(["git", *args], capture_output=True, check=True, **kw)
+paths = [p for p in git("diff", "--name-only", "--diff-filter=M", f"{BASE}...{TIP}",
+                        text=True).stdout.split() if p.endswith(".py")]
+def unbalanced(rev, p):
+    src = git("show", f"{rev}:{p}").stdout.decode()
+    return sum(
+        1
+        for t in tokenize.generate_tokens(io.StringIO(src).readline)
+        if t.type in (tokenize.COMMENT, tokenize.STRING)
+        and (t.type == tokenize.COMMENT or "\n" in t.string)  # only a multi-line block straddles
+        and sum(map(t.string.count, OPEN)) != sum(map(t.string.count, OPEN.values()))
+    )
+broken = [(p, unbalanced(BASE, p), unbalanced(TIP, p)) for p in paths]
+broken = [(p, b, a) for p, b, a in broken if a > b]
+for p, b, a in broken:
+    print(f"UNBALANCED: {p} {b} -> {a}")
+sys.exit(1 if broken else 0)
 EOF
 ```
 
 Check 2 exists because a per-line scan cannot find the defect it catches: deleting `(D-018: ` from
-the first line of a docstring strands the `)` on the second, and that line was never edited. It
-flagged `src/maya_mcp_server/pipeline.py` (`48 -> 47`) on the commit that did exactly that, and
-stayed silent on every tip after it was repaired. A deletion that leaves a block *balanced* —
-swapping which pair closes — is invisible to it and to any check: read the changed sentences.
+the first line of a docstring strands the `)` on the second, and that second line is never edited.
+It counts blocks whose delimiters do **not** balance and flags only an *increase* — the opposite
+test, "balanced blocks must not fall", fires on every migration because removing a parenthetical is
+how the migration works. Measured on `pipeline.py`: `2 -> 3` unbalanced blocks on the commit that
+stranded the `)`, back to `2` on every tip after it was repaired. A deletion that leaves a block
+*balanced* — swapping which pair closes — is invisible to it, as to any check: read the changed
+sentences. Both blocks exit 1 on a finding, and compare files **modified** in the range: a
+migration adds and deletes no file (that is a ticket's own acceptance criterion), and a blob that
+exists on only one side has nothing to compare against — a crash, not a verdict.
