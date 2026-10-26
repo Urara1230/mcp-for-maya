@@ -141,7 +141,10 @@ def register_validator(
         "name": name,
         "predicate": predicate,
         "severity": severity,
-        "weight": float(weight),
+        # The float the guard checked, converted once. Converting again here
+        # would store whatever a __float__ returns the second time, so the
+        # registry could hold a weight the total was never verified against.
+        "weight": new_weight,
         "family": family,
         "message": message,
     }

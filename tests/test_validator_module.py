@@ -121,6 +121,23 @@ class TestRegistration:
             assert res["error"]["code"] == "invalid_weight", repr(bad)
         assert env.module.list_validators()["count"] == 0
 
+    def test_the_stored_weight_is_the_one_the_guard_checked(self, env):
+        """float() runs once and that value is what the registry holds. A
+        weight object free to return a different number per call would let the
+        size guard approve one value and the section print another."""
+
+        class Flipping(int):
+            turns = 0
+
+            def __float__(self):
+                Flipping.turns += 1
+                return 1.0 if Flipping.turns == 1 else 1e308
+
+        res = env.module.register_validator("f", lambda: True, weight=Flipping(1))
+        assert "registered" in res
+        assert env.module.list_validators()["validators"][0]["weight"] == 1.0
+        assert Flipping.turns == 1, "converted once - the checked value is stored"
+
     @pytest.mark.parametrize(
         "order",
         [
