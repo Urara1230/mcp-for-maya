@@ -117,8 +117,9 @@ def register_validator(
             design range).
         family: label carried on the result so a studio can group its own
             rules (e.g. "rigid", "lighting") when it reads `custom`.
-        message: report text for the rule, used whenever the predicate
-            returns none of its own - on a failure and on a pass alike.
+        message: report text for the rule, used when the predicate hands
+            back none of its own - on a failure and on a pass alike. A
+            check_error row reports the failure's own text instead.
 
     Returns:
         {"registered": name, "overwritten": bool, "count": int}, or an error
