@@ -130,6 +130,14 @@ authoritative and this table must match it row for row:
 | readOnly=T, destructive=F, idempotent=T, openWorld=T | `asset_search` |
 | readOnly=F, destructive=F, idempotent=T, openWorld=T | `asset_import` |
 
+- scene_review keeps readOnly=T: reading the scene is what it does, and a
+  custom validator (#79) inherits no privilege it did not already have —
+  registering one goes through `execute_code`, which is already
+  destructive=T. What does change is repeatability of its **output**: the
+  `custom` section reflects the session registry at call time, so a rule
+  that unregisters itself, or a re-registration between two calls, moves
+  the section while the scene stays untouched. The hints describe the tool's
+  own effect on the scene, not the determinism of user-registered code.
 - openWorldHint=false everywhere EXCEPT the two asset tools (D-075):
   asset_search (host-side Poly Haven index query) and asset_import
   (host downloads -> Maya imports local paths). Both are restricted

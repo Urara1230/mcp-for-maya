@@ -45,7 +45,7 @@ Per-check weights are defined in the review engine — see the audit table in RE
 
 ## Studio validators
 
-Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `score`/`max_score` in weight points plus its own `issues`; the built-in 0-100 never moves and the section is absent when nothing is registered.
+Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `validators` (per-rule `status`, `severity`, `weight`, `message`), `score`/`max_score` in weight points from one denominator, and `issues` for whatever did not pass. The built-in 0-100 never moves and the section is absent when nothing is registered.
 
 ```python
 import _mcp_scene
@@ -60,7 +60,7 @@ _mcp_scene.register_validator(
 _mcp_scene.list_validators()  # _mcp_scene.unregister_validator("roots_named") drops it
 ```
 
-A predicate returns `bool` or `(bool, message)`; anything else, like an exception, is recorded as `check_error` rather than guessed at. Same name overwrites, so re-registering after a reconnect is safe — and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". The review always finishes, whatever one rule does. Pre-1.0 API: it may break before 1.0, with a changelog note.
+A predicate returns `bool` or `(bool, message)`; anything else, like an exception, is recorded as `check_error` rather than guessed at — and `check_error` counts as failed, so it costs its weight and lands in `issues` like any other violation. Same name overwrites, so re-registering after a reconnect is safe — and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". The review always finishes, whatever one rule does. Pre-1.0 API: it may break before 1.0, with a changelog note.
 
 ## Done means
 
