@@ -70,21 +70,25 @@ UNRELEASED_HEADING = "## [Unreleased]"
 RULED_SECTIONS = ("Added", "Changed", "Fixed")
 STEERING_FILES = ("AGENTS.md", "CONTRIBUTING.md")
 
+# ONE extension list, interpolated everywhere. The first version carried three
+# copies, and they diverged: `scripts/setup.sh:12` was existence-checked as a
+# cited path yet never scanned as a bare path:line, so the drifting form passed
+# precisely for the files whose line numbers move most.
+DOC_EXT = r"py|md|yaml|yml|json|txt|sh|toml|cfg"
+
 # Paths long enough to be a citation rather than a word about a directory.
 CITED_PATH = re.compile(
-    r"(?<![\w/.\-])((?:\.github|docs|src|tests|skills|scripts)/[\w./\-]*?"
-    r"\.(?:py|md|yaml|yml|json|txt|sh|toml|cfg))"
+    rf"(?<![\w/.\-])((?:\.github|docs|src|tests|skills|scripts)/[\w./\-]*?"
+    rf"\.(?:{DOC_EXT}))"
 )
 NODE_ID = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)+)")
-SYMBOL_REF = re.compile(r"([\w.\-/]+\.(?:py|yaml|yml|json|md|txt)::[\w.\-]+)")
+SYMBOL_REF = re.compile(rf"([\w.\-/]+\.(?:{DOC_EXT})::[\w.\-]+)")
 # Group 1 is the sha anchor, OPTIONAL and adjacent -- a bare `path:line` is drift
 # bait, a `sha:path:line` names an immutable blob. Anchoring is decided by the
 # character right before the path, not by a lookback window: the first version
 # scanned 24 preceding chars, so any sha mentioned earlier in the sentence
 # quietly excused a bare citation that followed it.
-PATH_LINE = re.compile(
-    r"([0-9a-f]{7,}\^?:)?([\w.\-/]+\.(?:py|md|yaml|yml|json|txt):[0-9]+(?:-[0-9]+)?)"
-)
+PATH_LINE = re.compile(rf"([0-9a-f]{{7,}}\^?:)?([\w.\-/]+\.(?:{DOC_EXT}):[0-9]+(?:-[0-9]+)?)")
 RECOVERY_CMD = re.compile(r"[0-9a-f]{7,}\^?:[\w./\-]+")
 
 # What pytest can collect as a test function, sync or async.

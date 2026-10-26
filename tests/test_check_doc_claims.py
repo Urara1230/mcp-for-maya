@@ -305,6 +305,26 @@ def test_a_class_level_parametrize_marker_declines_the_count(tmp_path):
     assert M.check_changelog(root) == []
 
 
+def test_a_bare_line_citation_is_caught_for_every_cited_extension(tmp_path):
+    """Counterfactual: the scan and the existence check must share one
+    extension list. When they diverged, `scripts/setup.sh:12` was verified as a
+    path and never scanned as a drifting line citation."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_real.py::test_real`; the "
+        "old form lived at `scripts/setup.sh:12` and `.github/conf.toml:3`.\n",
+    )
+    _add_test_file(root, "test_real.py", ["test_real"])
+    scripts = root / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    (scripts / "setup.sh").write_text("echo x\n", encoding="utf-8")
+    (root / ".github").mkdir(parents=True, exist_ok=True)
+    (root / ".github" / "conf.toml").write_text("x = 1\n", encoding="utf-8")
+    findings = " ".join(M.check_changelog(root))
+    assert "scripts/setup.sh:12" in findings, findings
+    assert ".github/conf.toml:3" in findings, findings
+
+
 def test_the_real_repo_is_clean():
     """Live green control: the shipped tree passes every rule above."""
     assert M.check(REPO) == []
