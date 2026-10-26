@@ -1,4 +1,4 @@
-"""Append-only guard for published README/asset dirs (D-113, D-081).
+"""Append-only guard for published README/asset dirs.
 
 .github/assets/ is referenced by absolute URLs pinned to main — old
 PyPI release descriptions embed them permanently, so a delete, modify,
@@ -15,7 +15,7 @@ Invocation: check_assets_append_only.py (no args needed in CI)
                          workflow step (push events only)
   Local/manual default: origin/main...HEAD (three-dot merge-base).
 
-Base resolution (D-113): PR events use merge-base..HEAD three-dot
+Base resolution: PR events use merge-base..HEAD three-dot
 semantics — checkout needs fetch-depth: 0. push(main) uses
 event.before..event.after two-dot (correct for merges and squashes);
 an all-zero before (first push of a branch) skips the check.
@@ -39,7 +39,7 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
-# D-214: GUARDED is a GOVERNANCE constant (D-082 6-5, append-only), so its
+# GUARDED is a GOVERNANCE constant (append-only), so its
 # single source is the per-domain spec file -- derived here at runtime, never
 # restated inline.
 GUARDED = json.loads(

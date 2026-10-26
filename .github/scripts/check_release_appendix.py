@@ -1,11 +1,11 @@
-"""D-142beta release-body disclosure-appendix assertion.
+"""Release-body disclosure-appendix assertion.
 
 Release-window preflight item 6 (release-body disclosure appendix) — run
 manually during the release window, after ``gh release create``. This
 script is deliberately NOT part of push CI.
 
 Weak assertions (deliberately NOT checkbox counting — issue #7's body is
-an operational copy of the gate list per D-130, and hardcoding a count
+an operational copy of the gate list, and hardcoding a count
 like ``0/10`` would freeze a snapshot into an assertion):
 
 1. the release body contains a disclosure-appendix section heading
@@ -45,7 +45,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 Runner = Callable[[list[str]], str]
-# D-214: ISSUE is a GOVERNANCE constant (D-142b), so its single source is the
+# ISSUE is a GOVERNANCE constant, so its single source is the
 # per-domain spec file -- derived here at runtime, never restated inline. The
 # ISSUE env var still overrides it per run; this is only the default.
 ISSUE = json.loads((REPO / ".github" / "release-appendix-spec.yaml").read_text(encoding="utf-8"))[
@@ -90,7 +90,7 @@ def appendix_section(body: str) -> tuple[int, str] | None:
     """(heading_line, section_text) of the disclosure appendix, or None.
 
     The section runs from the appendix heading to the next heading of
-    any level (or EOF) — position-free per D-142beta.
+    any level (or EOF) — position-free.
     """
     m = _APPENDIX_HEADING.search(body)
     if m is None:
