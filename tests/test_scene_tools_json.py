@@ -270,3 +270,51 @@ class TestErrorPassthrough:
         execute_fn = getattr(server.execute_code, "fn", server.execute_code)
         out = await execute_fn(code='{"a":1}', result_type="JSON")
         assert out == {"ok": 1}
+
+
+# ------------------------------------------------------------
+# Issue #79: a registered validator reaches the scene_review MCP tool
+# ------------------------------------------------------------
+
+
+class TestSceneReviewCustomValidators:
+    async def test_builtin_shape_and_score_when_nothing_registered(self, tools):
+        tools.env.scene.add_mesh("GEO_box")
+        res = json.loads(await tools.fns["scene_review"](format="json"))
+
+        assert "custom" not in res, "the section is omitted, not empty"
+        assert set(res) == {
+            "checks",
+            "issues",
+            "score",
+            "total_issues",
+            "errors",
+            "warnings",
+            "standards",
+        }
+        assert res == json.loads(json.dumps(tools.env.module.scene_review()))
+
+    async def test_registered_validator_reaches_the_tool_answer(self, tools):
+        tools.env.scene.add_mesh("GEO_box")
+        before = json.loads(await tools.fns["scene_review"](format="json"))
+
+        tools.env.module.register_validator(
+            "no_free_roots",
+            lambda: (False, "GEO_box sits at the scene root"),
+            severity="warning",
+            family="studio",
+        )
+        res = json.loads(await tools.fns["scene_review"](format="json"))
+
+        assert res["custom"]["issues"][0]["name"] == "no_free_roots"
+        assert res["custom"]["score"] == 0.0
+        for key in ("score", "errors", "warnings", "total_issues", "checks"):
+            assert res[key] == before[key], f"built-in {key} moved with a validator registered"
+        assert "scene_review_with_validators" in tools.client.calls[-1]
+
+    async def test_cos_view_keeps_its_own_line(self, tools):
+        tools.env.module.register_validator("harsh", lambda: False, message="rule broken")
+        out = await tools.fns["scene_review"](format="cos")
+
+        assert "CUSTOM: score=0.0/100 | validators=1 | failing=1" in out
+        assert "[ERROR] harsh: rule broken" in out
