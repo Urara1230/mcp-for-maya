@@ -114,7 +114,8 @@ def load_scene_module():
     fails here exactly like it would inside Maya.
     """
     sys.modules.pop("maya_mcp_server.maya_scene_module", None)
-    sys.modules.pop("maya_mcp_server.introspect_module", None)
+    for _frag in ("introspect_module", "validator_module"):
+        sys.modules.pop(f"maya_mcp_server.{_frag}", None)
     src_dir = Path(__file__).resolve().parents[2] / "src" / "maya_mcp_server"
     source = (src_dir / "maya_scene_module.py").read_text(encoding="utf-8")
     # No exists() guard: the host reads these unconditionally, so a missing or

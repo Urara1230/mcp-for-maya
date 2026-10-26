@@ -95,6 +95,24 @@ class TestRegistration:
         assert env.module.register_validator("x", lambda: False)["overwritten"] is True
         assert env.module.unregister_validator("  x  ")["count"] == 0
 
+    def test_a_registry_that_would_overflow_is_refused(self, env):
+        """Two finite 1e308 weights sum to inf, and an Infinity score costs
+        the caller the whole JSON answer - so the sum is checked, not just
+        each input."""
+        env.module.register_validator("huge", lambda: True, weight=1e308)
+        res = env.module.register_validator("more", lambda: True, weight=1e308)
+        assert res["error"]["code"] == "weight_overflow"
+        assert env.module.list_validators()["count"] == 1
+        section = json.loads(json.dumps(env.module.custom_validator_results()))
+        assert section["max_score"] == 1e308
+
+    def test_unregister_demands_the_same_name_contract_as_register(self, env):
+        """A non-string must return the envelope, not raise TypeError out of
+        a dict lookup."""
+        for bad in (["x"], 42, "", None):
+            res = env.module.unregister_validator(bad)
+            assert res["error"]["code"] == "invalid_validator_name", repr(bad)
+
 
 class TestPredicateResults:
     def test_bool_result(self, env):

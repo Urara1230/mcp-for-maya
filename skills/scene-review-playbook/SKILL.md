@@ -1,6 +1,6 @@
 ---
 name: scene-review-playbook
-description: "Run and act on the mcp-for-maya scene_review audit: pick the right checks, interpret the 0-100 score and per-check results, and map common findings (orphans, naming violations, overlaps, weak aesthetics, lighting gaps) to concrete fixes. Use after structural scene changes, before reporting a scene as done, or when a scene feels disorganized."
+description: "Run and act on the mcp-for-maya scene_review audit: pick the right checks, interpret the 0-100 score and per-check results, register studio validators into the review, and map common findings (orphans, naming violations, overlaps, weak aesthetics, lighting gaps) to concrete fixes. Use after structural scene changes, before reporting a scene as done, or when a scene feels disorganized."
 compatibility: "Tested on Claude Code only; requires mcp-for-maya MCP server"
 ---
 
@@ -47,9 +47,11 @@ Per-check weights are defined in the review engine — see the audit table in RE
 
 Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `validators` (per-rule `status`, `severity`, `weight`, `message`), `score`/`max_score` in weight points from one denominator, and `issues` for whatever did not pass. The built-in 0-100 never moves and the section is absent when nothing is registered.
 
-```python
-import _mcp_scene
+Pre-import the module in its own `execute_code` call, then send call expressions — `import _mcp_scene; _mcp_scene.register_validator(...)` in one payload is the shape that fails under result capture.
 
+```python
+# execute_code 1: _mcp_scene
+# execute_code 2, expression only:
 _mcp_scene.register_validator(
     "roots_named",
     lambda: (False, "3 root objects are unnamed"),  # or just True/False

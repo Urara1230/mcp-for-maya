@@ -93,12 +93,19 @@ def register_validator(
         or not math.isfinite(weight)
         or weight <= 0
     ):
-        # isfinite, not just > 0: a nan or inf weight would make the section
-        # score NaN/Infinity, which is not valid JSON and costs the whole
-        # scene_review answer to the caller's parser.
         return _val_err(
             "invalid_weight",
             f"weight must be a finite number > 0 (got {weight!r})",
+        )
+    # The sum has to be finite too: two finite weights of 1e308 add to inf,
+    # and an Infinity score would cost the caller the whole JSON answer.
+    # Checking here keeps the invariant at the boundary, so the run-time sums
+    # are finite by construction.
+    if not math.isfinite(sum((reg["weight"] for reg in _VALIDATORS.values()), float(weight))):
+        return _val_err(
+            "weight_overflow",
+            f"registering {weight!r} would overflow the registry weight total",
+            "use weights in the same order of magnitude (1-100 is the design range)",
         )
     if not isinstance(family, str) or not family.strip():
         return _val_err("invalid_family", f"family must be a non-empty string (got {family!r})")
@@ -120,7 +127,11 @@ def register_validator(
 
 def unregister_validator(name: str) -> dict[str, Any]:
     """Remove one validator. Unknown names are an error, not a silent no-op."""
-    name = name.strip() if isinstance(name, str) else name
+    # Same name contract as register_validator, so a non-string cannot raise
+    # TypeError out of a dict lookup instead of returning the envelope.
+    if not isinstance(name, str) or not name.strip():
+        return _val_err("invalid_validator_name", "name must be a non-empty string")
+    name = name.strip()
     if name not in _VALIDATORS:
         return _val_err(
             "validator_not_found",
@@ -194,6 +205,9 @@ def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
         "family": reg["family"],
         "severity": reg["severity"],
         "weight": reg["weight"],
+        # passed is the fact the score filters on; status is the same fact
+        # with the reason attached - a failure and a crash both fail here,
+        # only one of them says the rule itself broke.
         "passed": passed,
         "status": "passed" if passed else status,
         "message": message,
