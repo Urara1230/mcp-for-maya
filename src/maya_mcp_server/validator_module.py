@@ -60,7 +60,10 @@ def register_validator(
             recorded as check_error, exactly like a raising predicate.
         severity: "error", "warning" or "info" - the severity its failure is
             reported with, same vocabulary as the built-in issues.
-        weight: points this validator is worth in the custom score; must be > 0.
+        weight: points this validator is worth in the custom score; a finite
+            number > 0, and the registry total has to stay finite too, so
+            weights belong in the same order of magnitude (1-100 is the
+            design range).
         family: label carried on the result so a studio can group its own
             rules (e.g. "rigid", "lighting") when it reads `custom`.
         message: report text for the rule, used whenever the predicate
@@ -87,21 +90,26 @@ def register_validator(
             "invalid_severity",
             f"severity {severity!r} not in {list(_VALIDATOR_SEVERITIES)}",
         )
-    if (
-        isinstance(weight, bool)
-        or not isinstance(weight, (int, float))
-        or not math.isfinite(weight)
-        or weight <= 0
-    ):
-        return _val_err(
-            "invalid_weight",
-            f"weight must be a finite number > 0 (got {weight!r})",
-        )
-    # The sum has to be finite too: two finite weights of 1e308 add to inf,
-    # and an Infinity score would cost the caller the whole JSON answer.
-    # Checking here keeps the invariant at the boundary, so the run-time sums
-    # are finite by construction.
-    if not math.isfinite(sum((reg["weight"] for reg in _VALIDATORS.values()), float(weight))):
+    if isinstance(weight, bool) or not isinstance(weight, (int, float)) or weight <= 0:
+        return _val_err("invalid_weight", f"weight must be a number > 0 (got {weight!r})")
+    try:
+        # An int past the float range raises here rather than comparing
+        # anything, and nan slips past weight <= 0 - both are the caller's
+        # mistake, not a registry-size problem.
+        new_weight = float(weight)
+    except OverflowError:
+        return _val_err("invalid_weight", f"weight is past the float range (got {weight!r})")
+    if not math.isfinite(new_weight):
+        return _val_err("invalid_weight", f"weight must be finite (got {weight!r})")
+    # The total this registration lands at, not the one before it: an
+    # overwrite replaces its own weight, so charging the old copy too would
+    # refuse a re-registration whose result is finite. Infinity is not valid
+    # JSON, and an Infinity score costs the caller the whole scene_review.
+    replaced = _VALIDATORS.get(name)
+    total = new_weight + sum(
+        (reg["weight"] for reg in _VALIDATORS.values() if reg is not replaced), 0.0
+    )
+    if not math.isfinite(total):
         return _val_err(
             "weight_overflow",
             f"registering {weight!r} would overflow the registry weight total",
