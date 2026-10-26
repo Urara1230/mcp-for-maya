@@ -74,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Evidence — environment: Python 3.13.13 on Windows;
   `python -m pytest tests/test_validator_module.py tests/test_scene_tools_json.py -q`
   -> exit 0, 62 passed;
-  `tests/test_scene_tools_json.py::TestSceneReviewCustomValidators`,
+  `tests/test_scene_tools_json.py::TestSceneReviewCustomValidators::test_registered_validator_reaches_the_tool_answer`,
   `src/maya_mcp_server/validator_module.py::scene_review_with_validators`.
 
 ### Changed
