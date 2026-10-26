@@ -54,13 +54,15 @@ def register_validator(
     Args:
         name: unique id; re-registering the same name replaces the old rule.
         predicate: zero-arg callable returning bool, or (passed, message).
-            It runs inside Maya against live scene data.
+            It runs inside Maya against live scene data. Any other return is
+            recorded as check_error, exactly like a raising predicate.
         severity: "error" or "warning" - the severity its failure is
             reported with.
         weight: points this validator is worth in the custom score; must be > 0.
         family: label carried on the result so a studio can group its own
             rules (e.g. "rigid", "lighting") when it reads `custom`.
-        message: fallback text when the predicate returns no message of its own.
+        message: report text for the rule, used whenever the predicate
+            returns none of its own - on a failure and on a pass alike.
 
     Returns:
         {"registered": name, "overwritten": bool, "count": int}, or an error
@@ -194,11 +196,14 @@ def custom_validator_results() -> dict[str, Any] | None:
     if not _VALIDATORS:
         return None
 
-    validators = [_run_validator(reg) for reg in _VALIDATORS.values()]
+    # Snapshot, not a live view: a predicate may unregister itself (a one-shot
+    # rule is the obvious shape), and mutating the dict mid-iteration raises
+    # outside _run_validator's try - which would abort the whole review, the
+    # exact failure issue #79 exists to prevent.
+    validators = [_run_validator(reg) for reg in list(_VALIDATORS.values())]
     issues = [
         {
-            # A rule that crashed is an error whatever severity it asked for.
-            "severity": "error" if v["status"] == "check_error" else v["severity"],
+            "severity": v["severity"],
             "check": "custom",
             "name": v["name"],
             "family": v["family"],
@@ -231,14 +236,10 @@ def scene_review_with_validators(checks: list[str] | None = None) -> dict[str, A
     The built-in `score` never sees a custom weight, so a report from before
     this feature keeps its exact shape.
     """
-    review = globals().get("scene_review")
-    if not callable(review):
-        return _val_err(
-            "scene_review_unavailable",
-            "the monolith's scene_review is not in this injection unit",
-            "re-inject _mcp_scene; this fragment is only valid as part of the assembly",
-        )
-    result: dict[str, Any] = review(checks)
+    # Indirect on purpose: the monolith's scene_review is a name this file
+    # only has once the payload is assembled, and a bare reference would be
+    # an undefined-name error in the standalone lint pass over this file.
+    result: dict[str, Any] = globals()["scene_review"](checks)
     custom = custom_validator_results()
     if custom is not None:
         result["custom"] = custom

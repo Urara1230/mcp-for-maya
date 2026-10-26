@@ -115,13 +115,12 @@ def load_scene_module():
     """
     sys.modules.pop("maya_mcp_server.maya_scene_module", None)
     sys.modules.pop("maya_mcp_server.introspect_module", None)
-    sys.modules.pop("maya_mcp_server.validator_module", None)
     src_dir = Path(__file__).resolve().parents[2] / "src" / "maya_mcp_server"
     source = (src_dir / "maya_scene_module.py").read_text(encoding="utf-8")
+    # No exists() guard: the host reads these unconditionally, so a missing or
+    # renamed fragment must fail here, not silently shrink the payload.
     for frag_name in ("introspect_module.py", "validator_module.py"):
-        frag = src_dir / frag_name
-        if frag.exists():
-            source += "\n\n" + frag.read_text(encoding="utf-8")
+        source += "\n\n" + (src_dir / frag_name).read_text(encoding="utf-8")
     mod = types.ModuleType("maya_mcp_server.maya_scene_module")
     mod.__file__ = str(src_dir / "maya_scene_module.py")
     mod.__package__ = "maya_mcp_server"

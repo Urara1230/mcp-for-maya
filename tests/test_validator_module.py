@@ -127,14 +127,33 @@ class TestErrorIsolation:
         assert "RuntimeError: kaboom in maya" in by_name["boom"]["message"]
         assert by_name["ok"]["status"] == "passed", "the run continued past the raiser"
 
-        # A crash is reported as an error whatever severity was asked for.
+        # The severity a rule asked for is the severity it reports with, crash
+        # included - status is what says it broke rather than merely failed.
         issue = next(i for i in custom["issues"] if i["name"] == "boom")
-        assert issue["severity"] == "error"
+        assert issue["severity"] == "warning"
         assert issue["check"] == "custom"
 
         # The built-in audit ran to completion regardless.
         assert "spatial" in res["checks"]
         assert res["score"] > 0
+
+    def test_a_predicate_that_unregisters_itself_does_not_abort_the_run(self, env):
+        """The registry is snapshotted before the run. Iterating the live dict
+        let a one-shot rule raise RuntimeError mid-iteration - outside the
+        per-validator isolation - and lose the whole audit."""
+
+        def one_shot():
+            env.module.unregister_validator("one_shot")
+            return True
+
+        env.module.register_validator("one_shot", one_shot)
+        env.module.register_validator("later", lambda: True)
+
+        res = env.module.scene_review_with_validators()
+        assert [v["name"] for v in res["custom"]["validators"]] == ["one_shot", "later"]
+        assert res["custom"]["score"] == res["custom"]["max_score"] == 2.0
+        assert res["checks"], "the built-in audit survived the mutation"
+        assert env.module.list_validators()["count"] == 1, "the one-shot rule is gone"
 
 
 class TestScoreSeparation:
