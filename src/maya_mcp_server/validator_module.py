@@ -106,17 +106,21 @@ def register_validator(
             "invalid_severity",
             f"severity {severity!r} not in {list(_VALIDATOR_SEVERITIES)}",
         )
-    if isinstance(weight, bool) or not isinstance(weight, (int, float)) or weight <= 0:
+    if isinstance(weight, bool) or not isinstance(weight, (int, float)):
         return _val_err("invalid_weight", f"weight must be a number > 0 (got {weight!r})")
     try:
-        # An int past the float range raises here rather than comparing
-        # anything, and nan slips past weight <= 0 - both are the caller's
-        # mistake, not a registry-size problem.
         new_weight = float(weight)
-    except OverflowError:
-        return _val_err("invalid_weight", f"weight is past the float range (got {weight!r})")
-    if not math.isfinite(new_weight):
-        return _val_err("invalid_weight", f"weight must be finite (got {weight!r})")
+    except (TypeError, ValueError, OverflowError):
+        # An int past the float range raises OverflowError; a float or int
+        # subclass is free to make __float__ raise or return something else
+        # entirely. All of them are the caller's mistake, and all of them get
+        # the envelope rather than escaping as a raw exception.
+        return _val_err("invalid_weight", f"weight is not a usable number (got {weight!r})")
+    # Checked on the converted value, never on the caller's object: comparing
+    # `weight` here would let a subclass whose __float__ disagrees with its
+    # __le__ store a weight the registry was never sized or signed against.
+    if not math.isfinite(new_weight) or new_weight <= 0:
+        return _val_err("invalid_weight", f"weight must be a finite number > 0 (got {weight!r})")
     # The total this registration lands at, not the one before it: an
     # overwrite replaces its own weight, so charging the old copy too would
     # refuse a re-registration whose result is finite. Infinity is not valid

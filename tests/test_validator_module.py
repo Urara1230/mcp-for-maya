@@ -138,6 +138,29 @@ class TestRegistration:
         assert env.module.list_validators()["validators"][0]["weight"] == 1.0
         assert Flipping.turns == 1, "converted once - the checked value is stored"
 
+    def test_the_sign_check_runs_on_the_stored_value(self, env):
+        """A float subclass can compare positive and convert negative. The
+        registry holds floats, so every rule - sign, finiteness, size - is
+        decided on the converted number, not on whatever the caller passed."""
+
+        class Neg(float):
+            def __float__(self):
+                return -1.7e308
+
+        res = env.module.register_validator("n", lambda: False, weight=Neg(1.7e308))
+        assert res["error"]["code"] == "invalid_weight"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_a_weight_that_refuses_to_convert_returns_the_envelope(self, env):
+        class Loud(float):
+            def __float__(self):
+                raise TypeError("no number here")
+
+        for bad in (Loud(1.0),):
+            res = env.module.register_validator("l", lambda: True, weight=bad)
+            assert res["error"]["code"] == "invalid_weight"
+        assert env.module.list_validators()["count"] == 0
+
     @pytest.mark.parametrize(
         "order",
         [
