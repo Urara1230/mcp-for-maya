@@ -6,7 +6,8 @@ repository, and the repository can be asked whether it is still true.
 D1 -- CHANGELOG ``[Unreleased]``, ``Added``/``Changed``/``Fixed`` bullets, per
 the Changelog evidence rule in CONTRIBUTING.md:
 
-  D1a  the bullet carries at least one allowed evidence form
+  D1a  the bullet carries at least one allowed evidence form: a pytest node ID,
+       ``path::symbol``, or ``sha:path:line`` -- the three CONTRIBUTING names
   D1b  every pointer it carries resolves (pytest node, ``path::symbol``, path)
   D1c  no bare ``path:line`` is cited anywhere in the bullet
   D1d  a test count next to a suite citation matches the tests that suite defines
@@ -26,12 +27,19 @@ SCOPE LIMITS, stated so nobody reads more into this than it does:
   Added/Fixed/Changed only.
 * D1b proves a pointer LANDS, not that what it lands on proves the claim. A
   pointer to a real test that asserts nothing relevant passes every rule here.
-  The same limit falls on the command form: a ``git grep`` whose only match is
-  the very line citing it satisfies D1a and D1b and means nothing. Relevance is
-  a reviewer's judgement, so it is disclosed here rather than approximated by a
-  regex that would red honest measurement output to catch one dishonest shape.
   That residual is the same one the pin registry discloses, and it is
   disclosed rather than papered over.
+* ``sha:path:line`` is accepted as a form and NOT resolved: it names an
+  immutable blob, so the checker would have to read git objects to confirm it,
+  and that is a different gate. Its merit is exactly that immutability -- a
+  claim about a config asset or a workflow step has no symbol to name, and a
+  commit-anchored line cannot drift the way a worktree line does.
+* "Run this command, here is what it printed" is deliberately NOT a form, even
+  though the lane used it. It cannot be resolved by anything, so accepting it
+  means the assertion is unfalsifiable at check time; and its weakest instance
+  is a ``git grep`` whose only match is the very line citing it. The four
+  bullets that relied on it now cite a node, a registry key, or a
+  commit-anchored line instead.
 * D1d polices a count only in the two shapes it can read -- ``(29 tests)`` and
   ``collects 29 tests``. An arrow result like ``-> exit 0, 17 passed`` is a
   dated measurement of a suite that has since grown; asserting against it
@@ -77,16 +85,6 @@ RECOVERY_CMD = re.compile(r"[0-9a-f]{7,}\^?:[\w./\-]+")
 PYTEST_NODE = re.compile(r"tests/[\w.\-/]+\.py::[\w.\-]+")
 PATH_SYMBOL = re.compile(r"[\w.\-/]+\.(?:py|yaml|yml|json|md|txt)::[\w.\-]+")
 SHA_PATH_LINE = re.compile(r"\b[0-9a-f]{7,}:[\w./\-]+:[0-9]+")
-# The result must follow the command, and an arrow is the only separator the
-# lane uses: `polarity_corpus_probe.py -> TRACK2 (labelled)` is a real verdict.
-# What no form rule can see is whether the output PROVES the claim -- a `git
-# grep` whose only match is the line citing it passes every rule here. That is
-# disclosed below, not legislated.
-EXEC_LINE = re.compile(
-    r"(?:uv run |uvx |python3? |pre-commit |but |git )"
-    r"\S.*(→|->).+\S"
-)
-
 # D1d: a count beside a suite citation is a claim about that suite. Only these
 # two shapes are policed: an arrow-prefixed result ("-> exit 0, 17 passed") is a
 # dated measurement of a suite that has since grown, and asserting against it
@@ -245,6 +243,16 @@ def _check_counts(root: Path, text: str, where: str) -> list[str]:
             if not path.is_file():
                 continue  # D1b already reports the missing file.
             parts = [p for p in tail.split("::") if p]
+            # The claim names its own subject. "the suite collects 29 tests"
+            # counts the file even when one node was cited just before it,
+            # because reading that as "this node holds 29" invents a claim the
+            # prose never made -- and it reds honest entries into the bargain.
+            # Only a trailing TEST FUNCTION is dropped: "the class collects 11"
+            # still means that class, not the whole file.
+            context = flat[max(0, m.start() - 40) : m.end()]
+            suite_level = "collect" in context.lower() or "suite" in context.lower()
+            if suite_level and parts and parts[-1].startswith("test_"):
+                parts = parts[:-1]
             actual = _ast_test_count(path, parts)
             if actual is None:
                 continue
@@ -288,15 +296,13 @@ def check_changelog(root: Path) -> list[str]:
                 ("pytest node", PYTEST_NODE),
                 ("path::symbol", PATH_SYMBOL),
                 ("sha:path:line", SHA_PATH_LINE),
-                ("executed command", EXEC_LINE),
             )
             if rx.search(flat)
         ]
         if not forms:
             findings.append(
                 f"{where}: carries no allowed evidence form "
-                "(pytest node, path::symbol, sha:path:line, or an executed "
-                "command with its observed result)"
+                "(pytest node, path::symbol, or sha:path:line)"
             )
 
         findings.extend(_check_pointers(root, flat, where))

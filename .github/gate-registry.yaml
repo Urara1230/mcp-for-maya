@@ -32,7 +32,7 @@
         "tests/test_check_doc_claims.py::test_a_dead_pytest_node_fails_the_gate",
         "tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate",
         "tests/test_check_doc_claims.py::test_a_dead_path_in_the_agents_file_fails_the_gate",
-        "tests/test_check_doc_claims.py::test_an_executed_command_with_a_result_is_an_evidence_form",
+        "tests/test_check_doc_claims.py::test_an_executed_command_is_not_an_evidence_form",
         "tests/test_check_doc_claims.py::test_the_real_repo_is_clean"
       ],
       "exemption": null,

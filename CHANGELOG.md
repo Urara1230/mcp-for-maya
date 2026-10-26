@@ -37,8 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   What is machine-checked is **registration discipline, not pin effectiveness** —
   a hollow pin passes every rule, and that residual is disclosed rather than
   papered over.
-  Evidence: `tests/test_check_gate_registry.py` (29 tests),
-  `python .github/scripts/check_gate_registry.py` → registry OK.
+  Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
+  `.github/gate-registry.yaml::entries` (the suite collects 29 tests).
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the
@@ -62,12 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lane as it stood before that repair (`def69db`) 14 findings across 9 bullets,
   including the three that described gates the governance teardown had already
   deleted. Reproduce either number by pointing this script at that revision's
-  changelog. `CONTRIBUTING.md`'s Changelog evidence rule gained the fourth
-  allowed form the checker accepts — an executed command with its observed
-  result —
-  because a claim about a config asset has no symbol to name, and two
-  `[Unreleased]` entries (the pre-commit line-endings move and the TDQS ratchet
-  gate) now carry one. Released sections are never re-checked: they are
+  changelog. Four `[Unreleased]` bullets were then carrying only "run this
+  command, here is what it printed" — which resolves to nothing after the fact,
+  and whose weakest instance is a `git grep` whose only match is the line
+  citing it. They now cite a pytest node, a registry key, or a commit-anchored
+  `sha:path:line` (the pre-commit hook at `91ef7d5`, the CI step at `819e929`),
+  so the standard stayed as written instead of widening to cover the drift.
+  Released sections are never re-checked: they are
   point-in-time records, and a gate that "corrected" them would be a rewriting
   machine.
   Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`;
@@ -84,8 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (3 TN, 2 F) covering the `cannot`/`without` cue prefixes and the mirror-image
   clause position. Measured: 14 samples, adjudicable 12 == the floor,
   per-element TN 7 ≥ 3, 0 disagreements with the hand labels.
-  Evidence: `tests/test_polarity_corpus_probe.py` (15 collected),
-  `python .github/scripts/polarity_corpus_probe.py` → `TRACK2 (labelled)`.
+  Evidence: `tests/test_polarity_corpus_probe.py::TestD203FloorCaliber::test_per_element_counting_unit_is_the_sample_not_the_element_pair`,
+  `tests/test_polarity_corpus_probe.py` (15 collected).
 
 - **Line endings land in pre-commit, not CI (D-205 ③)** — `mixed-line-ending`
   with `--fix=lf` added to `.pre-commit-config.yaml`. The justification is measured,
@@ -94,9 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   So `.gitattributes` already normalises at commit, and a CI line-ending scan
   would be a permanently green dead check. The pre-commit layer is where worktree
   bytes actually get fixed — and having now fixed them, the same scan returns 0
-  for this worktree. Evidence: `uv run pre-commit run mixed-line-ending
-  --all-files` → Passed; the hook is the `mixed-line-ending` entry in
-  `.pre-commit-config.yaml`.
+  for this worktree. Evidence: `91ef7d5:.pre-commit-config.yaml:18` — the hook as
+  landed, cited at the commit that added it, so the line it names cannot drift.
 
 - **TDQS disclosure ratchet CI gate (D-175)** — static AST and JSON
   validation script `.github/scripts/check_tdqs_disclosure.py` hard-gated in
@@ -104,9 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`.github/workflows/ci.yml`), enforcing the required
   disclosure elements across the gated tool set against single-source
   specification `.github/tdqs-elements.yaml`.
-  Evidence: `python .github/scripts/check_tdqs_disclosure.py` → exit 0,
-  39 elements across 13 tools; `uv run python -m pytest
-  tests/test_check_tdqs_disclosure.py -q` → 43 passed.
+  Evidence: `819e929:.github/workflows/ci.yml:51` — the step as wired when the
+  gate landed; `tests/test_check_tdqs_disclosure.py` (43 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in

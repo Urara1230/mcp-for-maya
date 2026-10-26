@@ -111,14 +111,16 @@ def test_a_recovery_pointer_is_not_a_dead_path(tmp_path):
     assert M.check_steering(root) == []
 
 
-def test_an_executed_command_with_a_result_is_an_evidence_form(tmp_path):
-    """Green control: the command form counts, so config assets stay honest."""
+def test_an_executed_command_is_not_an_evidence_form(tmp_path):
+    """Counterfactual: "run this, here is what it printed" resolves to nothing
+    after the fact, so it is refused even when the result looks observed."""
     root = _repo(
         tmp_path,
         "- **A hook landed** — Evidence: `uv run pre-commit run trailing-whitespace "
         "--all-files` → Passed.\n",
     )
-    assert M.check_changelog(root) == []
+    findings = M.check_changelog(root)
+    assert any("no allowed evidence form" in f for f in findings), findings
 
 
 def test_a_removed_bullet_may_name_a_deleted_artifact(tmp_path):
@@ -169,8 +171,8 @@ def test_a_parametrised_suite_is_left_to_pytest(tmp_path):
     parametrize, so the gate declines the assertion instead of guessing."""
     root = _repo(
         tmp_path,
-        "- **A gate landed** — Evidence: `uv run python -m pytest "
-        "tests/test_param.py -q` → 99 passed.\n",
+        "- **A gate landed** — Evidence: `tests/test_param.py::test_multi`, "
+        "`tests/test_param.py` (99 tests).\n",
     )
     tests = root / "tests"
     tests.mkdir(parents=True, exist_ok=True)
@@ -200,11 +202,9 @@ def test_a_recovery_command_is_not_a_dead_path(tmp_path):
     reviewer a way to read it. Without this the gate reds the honest record."""
     root = _repo(
         tmp_path,
-        "- **Old gate retired** — see `git show '716ba79^:.github/scripts/gone.py'`;\n"
-        "  Evidence: `python .github/scripts/check_doc_claims.py` → doc-claims OK.\n",
+        "- **Old gate retired** — Evidence: `716ba79:.github/scripts/gone.py:1`,\n"
+        "  recovered with `git show '716ba79^:.github/scripts/gone.py'`.\n",
     )
-    (root / ".github" / "scripts").mkdir(parents=True, exist_ok=True)
-    (root / ".github" / "scripts" / "check_doc_claims.py").write_text("x = 1\n")
     assert M.check_changelog(root) == []
 
 
@@ -220,16 +220,17 @@ def test_a_wrapped_node_id_still_resolves(tmp_path):
     assert M.check_changelog(root) == []
 
 
-def test_a_command_without_a_result_is_not_an_evidence_form(tmp_path):
-    """Counterfactual: naming a command is not the same as reporting what it
-    did -- the lane is full of 'run this' claims that never say the verdict."""
+def test_a_suite_level_count_next_to_a_node_counts_the_suite(tmp_path):
+    """Green control: "the suite collects N" is about the suite, even when the
+    citation just before it names one test. Reading it as the node's own count
+    reds an honest entry -- the mistake the first version of this rule made."""
     root = _repo(
         tmp_path,
-        "- **A gate landed** — Evidence: run `python .github/scripts/probe.py` "
-        "and look at the output.\n",
+        "- **A gate landed** — Evidence: `tests/test_scope.py::test_one`,\n"
+        "  `tests/test_scope.py` (the suite collects 2 tests).\n",
     )
-    findings = M.check_changelog(root)
-    assert any("no allowed evidence form" in f for f in findings), findings
+    _add_test_file(root, "test_scope.py", ["test_one", "test_two"])
+    assert M.check_changelog(root) == []
 
 
 def test_the_real_repo_is_clean():
