@@ -76,9 +76,9 @@ _ATTR_FACET_FLAGS = (
 # limit=50/cap=100). Truncation is disclosed via *_truncated flags plus
 # totals - never silent. The caps bound RESPONSE SIZE only: the ~10
 # attributeQuery calls per attribute are a separate main-thread cost axis
-# inside Maya - if real-Maya timing proves problematic that is a distinct
-# profiling/batched-query debt, to be opened when something is measured,
-# not a reason to widen these caps. The two caps are constants on purpose:
+# inside Maya - that axis has its own profiling/batched-query debt, recorded
+# here: it is opened by a real-Maya measurement, never pre-optimized, and it
+# is not a reason to widen these caps. The two caps are constants on purpose:
 # no env or config knob, and raising one is a decision - they are inferred,
 # not measured.
 _DESCRIBE_SOFT_CAP = 200

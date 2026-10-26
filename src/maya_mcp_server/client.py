@@ -68,8 +68,8 @@ class MayaUnavailableError(PipelineError):
     code = "maya_unavailable"
 
 
-# Backwards-compatible name: the two-layer error contract fixes the code,
-# existing code the class name.
+# Backwards-compatible alias: the wire code is maya_unavailable per the
+# two-layer error contract; this name serves imports of the old class.
 MayaConnectionError = MayaUnavailableError
 
 
