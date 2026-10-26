@@ -26,10 +26,11 @@ The rules:
   R6 zero_pin_guard              a gate/manual_preflight entry with no pin at
                                  all (fail-on-empty, OPA precedent)
 
-On the rule count: R1 and R3 are ONE set difference read in two directions --
-bound but unregistered, registered but gone. Adding a rule for either direction
-would lengthen the list without buying coverage: a rule that re-asserts a fact
-already reported reads as coverage it does not have.
+On the rule count: "a bound object nobody registered" and "a new gate nobody
+registered" are one fact, so R1 reports it once rather than the list carrying
+two rules for it. R1 and R3 could look like that same pair, but they are the
+two directions of the difference -- bound but unregistered, registered but gone
+-- and each has its own fix, so they stay two rules.
 
 Posture: hard gate. Findings are reported as ``::error`` and the process exits
 1; the observation period ended with a clean registry, and warnings must not
