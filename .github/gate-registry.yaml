@@ -70,6 +70,18 @@
       "exemption": null
     },
     {
+      "gate_id": "check_migration_shape",
+      "bound_class": "gate",
+      "expected_sources": [
+        "docs/agents/domain.md::Checks a ledger migration owes"
+      ],
+      "pin_node_ids": [
+        "tests/test_check_migration_shape.py::test_stranded_closer_in_docstring_fails",
+        "tests/test_check_migration_shape.py::test_string_literal_change_is_code_moved"
+      ],
+      "exemption": null
+    },
+    {
       "gate_id": "check_monolith_budget",
       "bound_class": "gate",
       "expected_sources": [
