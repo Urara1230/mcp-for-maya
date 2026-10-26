@@ -79,6 +79,7 @@ resolves and a test count that no longer matches the suite it cites. Every
 ### Assertion & evidence discipline
 
 - Enumeration/count assertions declare their domain; recompute before restating a count.
+- A PR body and a changelog bullet are assertion surfaces too: recompute their counts and capability claims against the tip before posting.
 - Anything not reproducible is recorded "unverified" — never guess a cause.
 
 ### Asset directory discipline
