@@ -22,7 +22,7 @@ Domain vocabulary. Each entry is a term and a definition of at most two sentence
 
 **scene_review**: 确定性场景审计；每个检查是自注册 validator，单条异常记 check_error 不中断整轮。
 
-**自定义 validator**: 经 register(name, fn, severity, family) 注入的受信扩展机制，不是插件生态；当前尚无公开注册 API（见 issue #79）。
+**自定义 validator**: 会话内经 `register_validator(name, predicate, severity, weight, family, message)` 注册的受信扩展机制，不是插件生态；结果单列于 `custom` 段并自带分数，不动内置 0–100。同名覆盖，模块重注入或 Maya 重启即清空，重连后必须重新注册。
 
 **checkpoint（真快照）**: 对导出时刻内存态的自包含序列化快照（exportAll，references 默认展平），落 checkpoints/，不含 undo 历史。
 

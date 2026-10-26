@@ -8,7 +8,7 @@ compatibility: "Tested on Claude Code only; requires mcp-for-maya MCP server"
 
 > **Experimental.** Evaluated on Claude Code only; untested on Codex/Gemini CLI/Cursor. Tracked in issue #3.
 
-`scene_review()` runs up to 11 deterministic checks and returns `{checks, issues, score}` — score is 0-100 (weighted per-check, normalized).
+`scene_review()` runs up to 11 deterministic checks and returns `{checks, issues, score}` — score is 0-100 (weighted per-check, normalized). Studio validators registered in the session add a `custom` section with its own score.
 
 ## Checks
 
@@ -43,9 +43,28 @@ Per-check weights are defined in the review engine — see the audit table in RE
 - `aesthetics` / `lighting` weak: `scene_aesthetics()` for the 5-dimension breakdown; lighting fixes follow three-point discipline (key/fill/rim).
 - `constraints` violations: read the rule type in the issue, then satisfy it or re-validate via `scene_validate`.
 
+## Studio validators
+
+Register your own rules in the Maya session (via `execute_code`, against live scene data) and `scene_review()` reports them in a separate `custom` section with their own 0-100 score — the built-in score never moves, and the section is absent when nothing is registered.
+
+```python
+import _mcp_scene
+
+_mcp_scene.register_validator(
+    "roots_named",
+    lambda: (False, "3 root objects are unnamed"),  # or just True/False
+    severity="warning",
+    weight=2,
+    family="studio",
+)
+_mcp_scene.list_validators()
+_mcp_scene.unregister_validator("roots_named")
+```
+
+Same name overwrites, so re-registering after a reconnect is safe. The registry is session-scoped: replacing the module or restarting Maya clears it and re-registration is required. A predicate that raises is recorded as `check_error` and the review continues. Pre-1.0 API — it may break before 1.0, with a changelog note.
+
 ## Done means
 
 - errors: 0; warnings reviewed (not necessarily zero — judgment).
 - after fixes, re-run the affected checks; never re-report a stale score.
-
-> Custom validator registration is designed but not yet implemented — there is no `register` API to call today.
+- a registered validator that vanished means the session was re-injected: re-register, don't trust the missing section.
