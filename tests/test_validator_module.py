@@ -97,7 +97,15 @@ class TestPredicateResults:
         result = env.module.custom_validator_results()["validators"][0]
         assert result["status"] == "check_error"
         assert result["passed"] is False
-        assert "expected bool or (passed, message)" in result["message"]
+        assert "expected bool or (bool, message)" in result["message"]
+
+    def test_a_pair_flag_must_be_a_bool_too(self, env):
+        """(1, msg) must not pass where a bare 1 is refused - one rule, both
+        shapes."""
+        env.module.register_validator("truthy_pair", lambda: (1, "not a bool"))
+        result = env.module.custom_validator_results()["validators"][0]
+        assert result["status"] == "check_error"
+        assert result["passed"] is False
 
 
 class TestErrorIsolation:
@@ -136,8 +144,16 @@ class TestScoreSeparation:
 
         custom = env.module.custom_validator_results()
         assert custom["max_score"] == 4.0
-        assert custom["score"] == 75.0, "3 of 4 weight points earned"
+        assert custom["score"] == 3.0, "3 of the 4 registered weight points earned"
+        assert custom["score"] <= custom["max_score"], "one denominator, readable as 3/4"
         assert set(custom) == {"validators", "score", "max_score", "issues"}
+
+    def test_all_pass_scores_at_the_ceiling(self, env):
+        env.module.register_validator("a", lambda: True, weight=2.5)
+        env.module.register_validator("b", lambda: (True, None))
+        custom = env.module.custom_validator_results()
+        assert custom["score"] == custom["max_score"] == 3.5
+        assert custom["issues"] == []
 
     def test_builtin_score_is_unchanged(self, env):
         env.scene.add_mesh("GEO_box")
@@ -161,7 +177,7 @@ class TestScoreSeparation:
         env.module.register_validator("v", lambda: True)
         res = env.module.scene_review_with_validators(["spatial"])
         assert list(res["checks"]) == ["spatial"]
-        assert res["custom"]["score"] == 100.0
+        assert res["custom"]["score"] == res["custom"]["max_score"] == 1.0
 
 
 class TestSessionScope:

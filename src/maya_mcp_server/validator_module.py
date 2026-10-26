@@ -58,7 +58,8 @@ def register_validator(
         severity: "error" or "warning" - the severity its failure is
             reported with.
         weight: points this validator is worth in the custom score; must be > 0.
-        family: groups results (e.g. "rigid", "lighting") for filtering downstream.
+        family: label carried on the result so a studio can group its own
+            rules (e.g. "rigid", "lighting") when it reads `custom`.
         message: fallback text when the predicate returns no message of its own.
 
     Returns:
@@ -132,7 +133,7 @@ def list_validators() -> dict[str, Any]:
 
 
 def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
-    """Evaluate one predicate; never raises, whatever it does."""
+    """Evaluate one predicate; never raises over its own failure."""
     name = reg["name"]
     status = "failed"
     message = reg["message"]
@@ -140,22 +141,29 @@ def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
         outcome = reg["predicate"]()
     except Exception as e:
         # One broken rule must not hide the rest of the audit (issue #79).
+        # Exception, not BaseException: a predicate's own failure is isolated,
+        # a KeyboardInterrupt from the human holding the machine is not.
         status = "check_error"
         message = f"validator {name!r} raised {type(e).__name__}: {e}"
         passed = False
     else:
+        # Strict on both shapes: (1, "note") must not pass where 1 alone fails.
         if isinstance(outcome, bool):
             passed = outcome
-        elif isinstance(outcome, (tuple, list)) and len(outcome) == 2:
-            passed = bool(outcome[0])
+        elif (
+            isinstance(outcome, (tuple, list))
+            and len(outcome) == 2
+            and isinstance(outcome[0], bool)
+        ):
+            passed = outcome[0]
             if outcome[1] is not None:
                 message = str(outcome[1])
         else:
             status = "check_error"
             passed = False
             message = (
-                f"validator {name!r} returned {type(outcome).__name__}, "
-                "expected bool or (passed, message)"
+                f"validator {name!r} returned {type(outcome).__name__}; "
+                "expected bool or (bool, message)"
             )
         if passed and message is None:
             message = f"{name} passed"
@@ -173,9 +181,15 @@ def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
 def custom_validator_results() -> dict[str, Any] | None:
     """Run every registered validator and return the `custom` section.
 
+    `score` and `max_score` are weight points from the same denominator -
+    weight is what a validator is worth, so 3.0/4.0 says three of four
+    registered points passed and all-pass means score == max_score. Keeping
+    both in one unit is what stops the built-in 0-100 and this score from
+    being mistaken for each other.
+
     Returns None when no validator is registered, so the section is omitted
-    rather than reported as an empty 100/100 - a studio that registered
-    nothing sees exactly the pre-#79 shape.
+    rather than reported as a full-mark pass - a studio that registered
+    nothing sees exactly the shape it saw before issue #79.
     """
     if not _VALIDATORS:
         return None
@@ -193,13 +207,16 @@ def custom_validator_results() -> dict[str, Any] | None:
         for v in validators
         if not v["passed"]
     ]
-    max_score = sum(v["weight"] for v in validators)
-    earned = sum(v["weight"] for v in validators if v["passed"])
+
+    # 0.0 seed: with nothing passed, sum() would return int 0 and the section
+    # would read "score": 0 against a float "max_score".
+    earned = sum((v["weight"] for v in validators if v["passed"]), 0.0)
+    available = sum((v["weight"] for v in validators), 0.0)
 
     return {
         "validators": validators,
-        "score": round(earned / max_score * 100, 1) if max_score > 0 else 0.0,
-        "max_score": max_score,
+        "score": round(earned, 3),
+        "max_score": round(available, 3),
         "issues": issues,
     }
 
@@ -209,10 +226,10 @@ def scene_review_with_validators(checks: list[str] | None = None) -> dict[str, A
 
     Same argument and result shape as scene_review, plus `custom` when at
     least one validator is registered:
-        custom = {"validators": [...], "score": 0-100, "max_score": weights sum,
-                  "issues": [...]}
-    The built-in `score` never sees a custom weight, so 0.7.0 reports stay
-    comparable with pre-0.7.0 ones.
+        custom = {"validators": [...], "score": points earned,
+                  "max_score": points available, "issues": [...]}
+    The built-in `score` never sees a custom weight, so a report from before
+    this feature keeps its exact shape.
     """
     review = globals().get("scene_review")
     if not callable(review):

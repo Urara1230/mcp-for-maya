@@ -316,5 +316,5 @@ class TestSceneReviewCustomValidators:
         tools.env.module.register_validator("harsh", lambda: False, message="rule broken")
         out = await tools.fns["scene_review"](format="cos")
 
-        assert "CUSTOM: score=0.0/100 | validators=1 | failing=1" in out
+        assert "CUSTOM: score=0.0/1.0 | validators=1 | failing=1" in out
         assert "[ERROR] harsh: rule broken" in out

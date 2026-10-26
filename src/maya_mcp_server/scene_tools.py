@@ -881,10 +881,11 @@ result
         constraint validation, orphan detection, naming, componentization, conflicts, lighting quality, and scene organization. Returns a score (0-100)
         and detailed issue list.
 
-        Validators registered in the Maya session by register_validator are
-        reported in a separate "custom" section with their own score; the
-        built-in score is unchanged and the section is absent when nothing is
-        registered.
+        Rules registered in the Maya session with
+        `_mcp_scene.register_validator(...)` (call it through execute_code) are
+        reported in a separate "custom" section carrying its own
+        `score`/`max_score` in weight points; the built-in score is unchanged
+        and the section is absent when nothing is registered.
 
         Boundary: Disambiguated from scene_validate (narrow rule-based
         spatial constraint checking) and scene_aesthetics (in-depth
@@ -918,23 +919,26 @@ result
             errors = result.get("errors", 0)
             warnings = result.get("warnings", 0)
             issues = result.get("issues", [])
+
+            def rows(items: list[dict[str, Any]], label_key: str) -> list[str]:
+                """[SEVERITY] label: msg — the row shape every issue list shares."""
+                return [
+                    f"  [{i.get('severity', '?').upper()}] {i.get(label_key)}: {i.get('msg')}"
+                    for i in items[:10]
+                ]
+
             lines = [f"REVIEW: score={score}/100 | errors={errors} | warnings={warnings}"]
-            for issue in issues[:10]:
-                sev = issue.get("severity", "?").upper()
-                lines.append(f"  [{sev}] {issue.get('check')}: {issue.get('msg')}")
+            lines += rows(issues, "check")
             # Studio validators keep their own score line: a compact view that
             # dropped them would read as "the studio rules passed".
             custom = result.get("custom")
             if custom:
-                c_issues = custom.get("issues", [])
-                c_count = len(custom.get("validators", []))
+                failing = custom["issues"]
                 lines.append(
-                    f"CUSTOM: score={custom.get('score')}/100 | validators={c_count}"
-                    f" | failing={len(c_issues)}"
+                    f"CUSTOM: score={custom['score']}/{custom['max_score']}"
+                    f" | validators={len(custom['validators'])} | failing={len(failing)}"
                 )
-                for issue in c_issues[:10]:
-                    sev = issue.get("severity", "?").upper()
-                    lines.append(f"  [{sev}] {issue.get('name')}: {issue.get('msg')}")
+                lines += rows(failing, "name")
             return "\n".join(lines)
 
     @mcp.tool(annotations=TOOL_ANNOTATIONS["scene_plan"])

@@ -45,7 +45,7 @@ Per-check weights are defined in the review engine — see the audit table in RE
 
 ## Studio validators
 
-Register your own rules in the Maya session (via `execute_code`, against live scene data) and `scene_review()` reports them in a separate `custom` section with their own 0-100 score — the built-in score never moves, and the section is absent when nothing is registered.
+Register rules in the Maya session via `execute_code` and `scene_review()` reports them in a separate `custom` section — `score`/`max_score` in weight points plus its own `issues`; the built-in 0-100 never moves and the section is absent when nothing is registered.
 
 ```python
 import _mcp_scene
@@ -61,10 +61,9 @@ _mcp_scene.list_validators()
 _mcp_scene.unregister_validator("roots_named")
 ```
 
-Same name overwrites, so re-registering after a reconnect is safe. The registry is session-scoped: replacing the module or restarting Maya clears it and re-registration is required. A predicate that raises is recorded as `check_error` and the review continues. Pre-1.0 API — it may break before 1.0, with a changelog note.
+Same name overwrites, so re-registering after a reconnect is safe — and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". A predicate that raises is recorded as `check_error` and the review continues. Pre-1.0 API: it may break before 1.0, with a changelog note.
 
 ## Done means
 
 - errors: 0; warnings reviewed (not necessarily zero — judgment).
 - after fixes, re-run the affected checks; never re-report a stale score.
-- a registered validator that vanished means the session was re-injected: re-register, don't trust the missing section.

@@ -55,20 +55,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `register_validator(name, predicate, severity="error", weight=1, family="custom", message=None)`
   (with `list_validators()` and `unregister_validator(name)` alongside), and
   the `scene_review` tool reports the run in a separate `custom` section —
-  `validators`, `score`, `max_score`, `issues` — with its own 0-100. A
+  `validators`, `score`, `max_score`, `issues` — with `score` and `max_score`
+  in weight points from one denominator. A
   predicate returns `bool` or `(passed, message)`; one that raises is
   recorded as `check_error` and the rest of the review still runs. Same name
   overwrites, so re-registering after a reconnect is the contract: replacing
   the module or restarting Maya clears the registry. The built-in score
   cannot move because the composition lives in the new `validator_module.py`
   fragment as `scene_review_with_validators`, not in the line-capped
-  monolith, and `custom` is omitted when nothing is registered, so a
-  pre-0.7.0 report keeps its exact shape. Public, documented and tested, but
-  explicitly pre-1.0: it may break before 1.0, with a changelog note. No
-  registration MCP tool and no host-side persistence.
+  monolith, and `custom` is omitted when nothing is registered, so a report
+  from before this feature keeps its exact shape. Public, documented and
+  tested, but explicitly pre-1.0: it may break before 1.0, with a changelog
+  note. No registration MCP tool and no host-side persistence.
   Evidence — environment: Python 3.13.13 on Windows;
   `python -m pytest tests/test_validator_module.py tests/test_scene_tools_json.py -q`
-  -> exit 0, 35 passed;
+  -> exit 0, 37 passed;
   `tests/test_scene_tools_json.py::TestSceneReviewCustomValidators`,
   `src/maya_mcp_server/validator_module.py::scene_review_with_validators`.
 
