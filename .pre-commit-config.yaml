@@ -27,3 +27,15 @@ repos:
         # in .github/ruff-baseline.json. Drop entries as each file reaches zero.
         exclude: ^(src/maya_mcp_server/(maya_scene_module|scene_tools)\.py|tests/(test_scene_tools|test_pipeline|test_security|test_connection_guide|test_cos_formatter|test_mayapy_smoke|test_scene_cache)\.py)$
       - id: ruff-format
+  # Local-only: the repo's own gates are stdlib scripts, so language: system reuses
+  # the interpreter already running pre-commit rather than provisioning a new env.
+  - repo: local
+    hooks:
+      - id: doc-claims
+        name: doc-claims gate (unreleased lane claims only what exists)
+        entry: python .github/scripts/check_doc_claims.py
+        language: system
+        # The gate reads these five surfaces; pass_filenames is off because it
+        # audits the whole lane, not just the staged file.
+        files: ^(CHANGELOG|AGENTS|CONTRIBUTING|GLOSSARY|README)\.md$
+        pass_filenames: false
