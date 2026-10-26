@@ -360,8 +360,8 @@ def labelled_track(checker, tools):
     )
     # The floor verdict is reported INDEPENDENTLY of the label-agreement verdict.
     # Chaining them with elif let a label disagreement swallow a floor
-    # violation, which is the same silence this floor's caliber exists to
-    # prevent: two independent questions, two independent answers.
+    # violation, which would answer one question with the other's verdict: two
+    # independent questions, two independent answers.
     if adjudicated < MIN_ADJUDICABLE:
         print(
             f"  NOT YET ADJUDICABLE: {adjudicated} adjudicable "
@@ -382,9 +382,9 @@ def labelled_track(checker, tools):
     # Hard admission is a TWO-precondition gate, not one: (a) the PRIMARY
     # track reports zero false rejections AND
     # (b) this track-2 floor is met. Printing only the floor verdict let a
-    # reader take "floor met" as the whole promotion decision, which is the
-    # single-condition reading this caveat exists to block. Restated here (not
-    # only in the spec file) because this line IS the promotion report.
+    # reader take "floor met" as the whole promotion decision. That is the
+    # single-condition reading the spec's precondition caveat forbids. Restated
+    # here (not only in the spec file) because this line IS the promotion report.
     print(
         "  NOTE (D-198 5): this floor is ONE of two preconditions for warn->hard "
         "promotion of the TDQS gate. The other is the PRIMARY track's "

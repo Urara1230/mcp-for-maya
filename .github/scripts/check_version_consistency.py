@@ -17,12 +17,12 @@ the tree; this checks the tree against itself.
 THE SERVER.JSON TRIPLE
 ----------------------
 server.json sits at the repo root, which is mcp-publisher's own default read
-path rather than a placement we chose; its top-level "version" field must equal
-pyproject EXACTLY - it is an in-repo manifest, so asserting it is a legal
-push-CI check. What we deliberately do NOT assert is registry-active state or
-that PyPI actually has the version (the empty-spin prohibition): those
-are external facts no push-CI gate may claim. The assertion object is the
-manifest text in the tree, nothing beyond it.
+path; its top-level "version" field must equal pyproject EXACTLY - it is an
+in-repo manifest, so asserting it is a legal push-CI check. What we
+deliberately do NOT assert is registry-active state or that PyPI actually has
+the version (the empty-spin prohibition): those are external facts no push-CI
+gate may claim. The assertion object is the manifest text in the tree, nothing
+beyond it.
 
 THE UNRELEASED TOLERANCE (why this is not a naive equality check)
 ----------------------------------------------------------------

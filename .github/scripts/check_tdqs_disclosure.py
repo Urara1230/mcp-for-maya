@@ -299,7 +299,7 @@ SIBLING_FAMILIES: tuple[frozenset[str], ...] = (
     frozenset({"asset_search", "asset_import"}),
     frozenset({"list_sessions", "add_session", "maya_setup_guide"}),
 )
-# Frozen legacy derivation violations. This is the ONLY ledger for
+# Frozen legacy derivation violations. This is the ONLY record for
 # derivation debt, and it is deliberately NOT coverage_exemptions: these 8 pairs
 # are tools that DO carry a full 'tools' entry but miss an element derivable
 # from their own signature, so by the coverage rule they cannot be exempted
@@ -485,7 +485,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
                 f"overdue exemption would pass unnoticed on a tree without pyproject.toml"
             )
         elif current == due:
-            # Tiering: at the deadline the exemption is merely ripe —
+            # Exemption tiering: at the deadline the exemption is merely ripe —
             # warn. Past it, the waiver has expired and the gate must bite.
             warnings.append(
                 f"::warning file={ELEMENTS_FILE}::exemption for '{tool}' is DUE {due_raw} "
@@ -494,7 +494,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
                 f"into an error"
             )
         elif current > due:
-            # Tiering: past the deadline. A warning here would be a
+            # Exemption tiering: past the deadline. A warning here would be a
             # dead check — "overdue passes unnoticed" was closed only for
             # the un-readable-version branch, not for a real overdue waiver.
             errors.append(

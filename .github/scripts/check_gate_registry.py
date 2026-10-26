@@ -27,9 +27,9 @@ The rules:
                                  all (fail-on-empty, OPA precedent)
 
 On the rule count: R1 and R3 are ONE set difference read in two directions --
-bound but unregistered, registered but gone. Splitting either of them into a
-second rule would lengthen the list without buying coverage, and a rule that
-re-asserts a fact already reported reads as coverage it does not have.
+bound but unregistered, registered but gone. Adding a rule for either direction
+would lengthen the list without buying coverage: a rule that re-asserts a fact
+already reported reads as coverage it does not have.
 
 Posture: hard gate. Findings are reported as ``::error`` and the process exits
 1; the observation period ended with a clean registry, and warnings must not
