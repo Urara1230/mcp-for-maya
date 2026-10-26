@@ -66,10 +66,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   monolith, and `custom` is omitted when nothing is registered, so a report
   from before this feature keeps its exact shape. Public, documented and
   tested, but explicitly pre-1.0: it may break before 1.0, with a changelog
-  note. No registration MCP tool and no host-side persistence.
+  note. No registration MCP tool and no host-side persistence. The compact
+  `cos` view carries its own `CUSTOM:` line for the same reason dropping it
+  would give the opposite answer: a summary that omits the studio rules reads
+  as those rules having passed.
   Evidence — environment: Python 3.13.13 on Windows;
   `python -m pytest tests/test_validator_module.py tests/test_scene_tools_json.py -q`
-  -> exit 0, 37 passed;
+  -> exit 0, 38 passed;
   `tests/test_scene_tools_json.py::TestSceneReviewCustomValidators`,
   `src/maya_mcp_server/validator_module.py::scene_review_with_validators`.
 

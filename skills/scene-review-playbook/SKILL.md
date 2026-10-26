@@ -57,11 +57,10 @@ _mcp_scene.register_validator(
     weight=2,
     family="studio",
 )
-_mcp_scene.list_validators()
-_mcp_scene.unregister_validator("roots_named")
+_mcp_scene.list_validators()  # _mcp_scene.unregister_validator("roots_named") drops it
 ```
 
-Same name overwrites, so re-registering after a reconnect is safe — and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". A predicate that raises is recorded as `check_error` and the review continues. Pre-1.0 API: it may break before 1.0, with a changelog note.
+A predicate returns `bool` or `(bool, message)`; anything else, like an exception, is recorded as `check_error` rather than guessed at. Same name overwrites, so re-registering after a reconnect is safe — and it is required: replacing the module or restarting Maya clears the registry, so a `custom` section that vanished means re-register, not "passed". The review always finishes, whatever one rule does. Pre-1.0 API: it may break before 1.0, with a changelog note.
 
 ## Done means
 
