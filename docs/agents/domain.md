@@ -38,111 +38,13 @@ Open decisions are GitHub issues labelled `needs-triage`, not new documents. A d
 
 ## Checks a ledger migration owes
 
-Retiring ids from comments and docstrings is invisible to the whole gate set — ruff, monolith, TDQS, `llms.txt`, mypy, `pre-commit` and pytest all pass on a migration that silently broke a sentence or moved code. Set the two revisions, then run each block; both take seconds, and both exit loudly on a bad revision rather than validating nothing.
+Retiring ids from comments and docstrings is invisible to the rest of the gate set. On the commit where `(D-018: ` was deleted from a docstring's first line, stranding its `)` on a second line the edit never touched, ruff budget, the monolith line budget, TDQS, `llms.txt`, version consistency, gate-registry, mypy, `pre-commit` and the whole stub suite were green.
 
-```bash
-BASE=$(git rev-parse origin/main) TIP=$(git rev-parse HEAD)
+`.github/scripts/check_migration_shape.py <base-rev> <tip-rev>` enforces two rules per Python file modified in the range, and runs in the `lint` job:
 
-# 1. no executable token moved: drop every docstring, compare the AST per file
-python - "$BASE" "$TIP" <<'EOF'
-import ast, subprocess, sys
-if len(sys.argv) < 3:
-    sys.exit("usage: python - <base> <tip>")
-BASE, TIP = sys.argv[1], sys.argv[2]
-def git(*args, **kw):
-    return subprocess.run(["git", *args], capture_output=True, check=True, **kw)
-# Modified files only: a migration adds and deletes none, and a blob that does not
-# exist on both sides has nothing to compare.
-paths = [p for p in git("diff", "--name-only", "--diff-filter=M", f"{BASE}...{TIP}",
-                        text=True).stdout.split() if p.endswith(".py")]
-def git_text(rev, p):
-    return git("show", f"{rev}:{p}").stdout.decode()
-def shape(src):
-    t = ast.parse(src)
-    for n in ast.walk(t):
-        if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            b = n.body
-            if b and isinstance(b[0], ast.Expr) and isinstance(getattr(b[0].value, "value", None), str):
-                b.pop(0)          # removed, not blanked: a migration may delete one outright
-    return ast.dump(t)
-def code_moved(p):
-    try:
-        return shape(git_text(BASE, p)) != shape(git_text(TIP, p))
-    except SyntaxError:
-        return None               # an unparseable side is reported, not guessed at
-flagged = {p: code_moved(p) for p in paths}
-bad = [p for p, v in flagged.items() if v is None]
-moved = [p for p, v in flagged.items() if v is True]
-for p in sorted(bad):
-    print("UNPARSEABLE:", p)
-for p in sorted(moved):
-    print("CODE MOVED:", p)
-sys.exit(1 if bad or moved else 0)
-EOF
+- **CODE MOVED** — the AST differs once every docstring is *removed* (not blanked: a migration may delete one outright). String literals stay inside the comparison, which is right — an injected-module template is payload, not prose.
+- **UNBALANCED** — the file gained a docstring or comment block whose delimiters are unmatched or mis-nested. A stack decides, so `([)]` is a finding, and only an *increase* counts: the opposite test, "balanced blocks must not fall", fires on every migration because removing a parenthetical is how the migration works.
 
-# 2. no comment/docstring block gained an unmatched or mis-nested delimiter
-python - "$BASE" "$TIP" <<'EOF'
-import ast, io, subprocess, sys, tokenize
-if len(sys.argv) < 3:
-    sys.exit("usage: python - <base> <tip>")
-PAIRS = {"(": ")", "[": "]", "{": "}"}
-BASE, TIP = sys.argv[1], sys.argv[2]
-def git(*args, **kw):
-    return subprocess.run(["git", *args], capture_output=True, check=True, **kw)
-paths = [p for p in git("diff", "--name-only", "--diff-filter=M", f"{BASE}...{TIP}",
-                        text=True).stdout.split() if p.endswith(".py")]
-def broken(text):
-    """True when delimiters are unmatched or mis-nested -- `([)]` counts, counts alone miss it."""
-    stack = []
-    for ch in text:
-        if ch in PAIRS:
-            stack.append(PAIRS[ch])
-        elif ch in PAIRS.values():
-            if not stack or ch != stack.pop():
-                return True
-    return bool(stack)
-def blocks(src):
-    """Docstrings (from the AST, any length) and comment lines. Not string literals:
-    an injected-module template is code, not prose, and belongs to check 1."""
-    tree = ast.parse(src)
-    found = [d for n in ast.walk(tree)
-             if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
-             and (d := ast.get_docstring(n))]
-    for t in tokenize.generate_tokens(io.StringIO(src).readline):
-        if t.type == tokenize.COMMENT:
-            found.append(t.string)
-    return found
-def unbalanced(rev, p):
-    src = git("show", f"{rev}:{p}").stdout.decode()
-    return sum(1 for b in blocks(src) if broken(b))
-scored, bad = [], []
-for p in paths:
-    try:
-        scored.append((p, unbalanced(BASE, p), unbalanced(TIP, p)))
-    except SyntaxError:
-        bad.append(p)
-for p in sorted(bad):
-    print("UNPARSEABLE:", p)
-broken_files = [(p, b, a) for p, b, a in scored if a > b]
-for p, b, a in broken_files:
-    print(f"UNBALANCED: {p} {b} -> {a}")
-sys.exit(1 if broken_files or bad else 0)
-EOF
-```
+Revisions are arguments and both git calls check their return code; pasted with placeholders unfilled, the earlier form reported success on zero files. The numbers are pinned in `tests/test_check_migration_shape.py` against the real commits, not carried here as prose to rot.
 
-Check 2 exists because a per-line scan cannot find the defect it catches: deleting `(D-018: ` from
-the first line of a docstring strands the `)` on the second, and that second line is never edited.
-It counts docstrings and comment lines whose delimiters are **unmatched or mis-nested** — a stack,
-so `([)]` is a finding rather than a balance — and flags only an *increase*: the opposite test,
-"balanced blocks must not fall", fires on every migration because removing a parenthetical is
-how the migration works. Measured on `pipeline.py`: `2 -> 3` bad blocks on the commit that
-stranded the `)`, back to `2` on every tip after it was repaired. `ast.walk` yields the root node,
-so seeding the list with the tree itself counted the module docstring twice — both sides doubled,
-which is why that bug hid behind a passing run rather than a wrong one.
-
-What it cannot see: it compares counts, not identities, so one block fixed while another breaks
-nets nothing; a parenthetical legitimately spanning two comment lines reads as two bad blocks, so
-every hit is read, not obeyed; and delimiters inside string literals are check 1's territory, since
-those are code. Both blocks exit 1 on a finding, and compare files **modified** in the range: a
-migration adds and deletes no file (that is a ticket's own acceptance criterion), and a blob that
-exists on only one side has nothing to compare against — a crash, not a verdict.
+Residual limits, stated so a green run is not over-read: it compares counts, not identities, so one block fixed while another breaks nets nothing; a parenthetical legitimately spanning two comment lines reads as two bad blocks, so each finding is read rather than obeyed blindly; and shape is not sense — whether the surviving sentence still states the decision it inherited is a reader's call.
