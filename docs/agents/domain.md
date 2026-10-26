@@ -105,7 +105,7 @@ def blocks(src):
     """Docstrings (from the AST, any length) and comment lines. Not string literals:
     an injected-module template is code, not prose, and belongs to check 1."""
     tree = ast.parse(src)
-    found = [d for n in [tree, *ast.walk(tree)]
+    found = [d for n in ast.walk(tree)
              if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
              and (d := ast.get_docstring(n))]
     for t in tokenize.generate_tokens(io.StringIO(src).readline):
@@ -135,8 +135,10 @@ the first line of a docstring strands the `)` on the second, and that second lin
 It counts docstrings and comment lines whose delimiters are **unmatched or mis-nested** — a stack,
 so `([)]` is a finding rather than a balance — and flags only an *increase*: the opposite test,
 "balanced blocks must not fall", fires on every migration because removing a parenthetical is
-how the migration works. Measured on `pipeline.py`: `2 -> 4` bad blocks on the commit that
-stranded the `)`, back to `2` on every tip after it was repaired.
+how the migration works. Measured on `pipeline.py`: `2 -> 3` bad blocks on the commit that
+stranded the `)`, back to `2` on every tip after it was repaired. `ast.walk` yields the root node,
+so seeding the list with the tree itself counted the module docstring twice — both sides doubled,
+which is why that bug hid behind a passing run rather than a wrong one.
 
 What it cannot see: it compares counts, not identities, so one block fixed while another breaks
 nets nothing; a parenthetical legitimately spanning two comment lines reads as two bad blocks, so
