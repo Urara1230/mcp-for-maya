@@ -55,55 +55,92 @@ def git(*args, **kw):
 # exist on both sides has nothing to compare.
 paths = [p for p in git("diff", "--name-only", "--diff-filter=M", f"{BASE}...{TIP}",
                         text=True).stdout.split() if p.endswith(".py")]
-def shape(rev, p):
-    t = ast.parse(git("show", f"{rev}:{p}").stdout.decode())
+def git_text(rev, p):
+    return git("show", f"{rev}:{p}").stdout.decode()
+def shape(src):
+    t = ast.parse(src)
     for n in ast.walk(t):
         if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             b = n.body
             if b and isinstance(b[0], ast.Expr) and isinstance(getattr(b[0].value, "value", None), str):
                 b.pop(0)          # removed, not blanked: a migration may delete one outright
     return ast.dump(t)
-moved = [p for p in paths if shape(BASE, p) != shape(TIP, p)]
-for p in moved:
+def code_moved(p):
+    try:
+        return shape(git_text(BASE, p)) != shape(git_text(TIP, p))
+    except SyntaxError:
+        return None               # an unparseable side is reported, not guessed at
+flagged = {p: code_moved(p) for p in paths}
+bad = [p for p, v in flagged.items() if v is None]
+moved = [p for p, v in flagged.items() if v is True]
+for p in sorted(bad):
+    print("UNPARSEABLE:", p)
+for p in sorted(moved):
     print("CODE MOVED:", p)
-sys.exit(1 if moved else 0)
+sys.exit(1 if bad or moved else 0)
 EOF
 
-# 2. no comment/docstring block gained an unmatched delimiter
+# 2. no comment/docstring block gained an unmatched or mis-nested delimiter
 python - "$BASE" "$TIP" <<'EOF'
-import io, subprocess, sys, tokenize
+import ast, io, subprocess, sys, tokenize
 if len(sys.argv) < 3:
     sys.exit("usage: python - <base> <tip>")
-OPEN = {"(": ")", "[": "]", "{": "}"}
+PAIRS = {"(": ")", "[": "]", "{": "}"}
 BASE, TIP = sys.argv[1], sys.argv[2]
 def git(*args, **kw):
     return subprocess.run(["git", *args], capture_output=True, check=True, **kw)
 paths = [p for p in git("diff", "--name-only", "--diff-filter=M", f"{BASE}...{TIP}",
                         text=True).stdout.split() if p.endswith(".py")]
+def broken(text):
+    """True when delimiters are unmatched or mis-nested -- `([)]` counts, counts alone miss it."""
+    stack = []
+    for ch in text:
+        if ch in PAIRS:
+            stack.append(PAIRS[ch])
+        elif ch in PAIRS.values():
+            if not stack or ch != stack.pop():
+                return True
+    return bool(stack)
+def blocks(src):
+    """Docstrings (from the AST, any length) and comment lines. Not string literals:
+    an injected-module template is code, not prose, and belongs to check 1."""
+    tree = ast.parse(src)
+    found = [d for n in [tree, *ast.walk(tree)]
+             if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+             and (d := ast.get_docstring(n))]
+    for t in tokenize.generate_tokens(io.StringIO(src).readline):
+        if t.type == tokenize.COMMENT:
+            found.append(t.string)
+    return found
 def unbalanced(rev, p):
     src = git("show", f"{rev}:{p}").stdout.decode()
-    return sum(
-        1
-        for t in tokenize.generate_tokens(io.StringIO(src).readline)
-        if t.type in (tokenize.COMMENT, tokenize.STRING)
-        and (t.type == tokenize.COMMENT or "\n" in t.string)  # only a multi-line block straddles
-        and sum(map(t.string.count, OPEN)) != sum(map(t.string.count, OPEN.values()))
-    )
-broken = [(p, unbalanced(BASE, p), unbalanced(TIP, p)) for p in paths]
-broken = [(p, b, a) for p, b, a in broken if a > b]
-for p, b, a in broken:
+    return sum(1 for b in blocks(src) if broken(b))
+scored, bad = [], []
+for p in paths:
+    try:
+        scored.append((p, unbalanced(BASE, p), unbalanced(TIP, p)))
+    except SyntaxError:
+        bad.append(p)
+for p in sorted(bad):
+    print("UNPARSEABLE:", p)
+broken_files = [(p, b, a) for p, b, a in scored if a > b]
+for p, b, a in broken_files:
     print(f"UNBALANCED: {p} {b} -> {a}")
-sys.exit(1 if broken else 0)
+sys.exit(1 if broken_files or bad else 0)
 EOF
 ```
 
 Check 2 exists because a per-line scan cannot find the defect it catches: deleting `(D-018: ` from
 the first line of a docstring strands the `)` on the second, and that second line is never edited.
-It counts blocks whose delimiters do **not** balance and flags only an *increase* — the opposite
-test, "balanced blocks must not fall", fires on every migration because removing a parenthetical is
-how the migration works. Measured on `pipeline.py`: `2 -> 3` unbalanced blocks on the commit that
-stranded the `)`, back to `2` on every tip after it was repaired. A deletion that leaves a block
-*balanced* — swapping which pair closes — is invisible to it, as to any check: read the changed
-sentences. Both blocks exit 1 on a finding, and compare files **modified** in the range: a
+It counts docstrings and comment lines whose delimiters are **unmatched or mis-nested** — a stack,
+so `([)]` is a finding rather than a balance — and flags only an *increase*: the opposite test,
+"balanced blocks must not fall", fires on every migration because removing a parenthetical is
+how the migration works. Measured on `pipeline.py`: `2 -> 4` bad blocks on the commit that
+stranded the `)`, back to `2` on every tip after it was repaired.
+
+What it cannot see: it compares counts, not identities, so one block fixed while another breaks
+nets nothing; a parenthetical legitimately spanning two comment lines reads as two bad blocks, so
+every hit is read, not obeyed; and delimiters inside string literals are check 1's territory, since
+those are code. Both blocks exit 1 on a finding, and compare files **modified** in the range: a
 migration adds and deletes no file (that is a ticket's own acceptance criterion), and a blob that
 exists on only one side has nothing to compare against — a crash, not a verdict.
