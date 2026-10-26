@@ -43,6 +43,21 @@ def _val_err(code: str, message: str, suggestion: str | None = None) -> dict[str
     return {"error": err}
 
 
+def _safe_text(value: Any) -> str:
+    """str() that cannot fail and always returns a str.
+
+    Used on anything a predicate produced. Formatting the message inside
+    _run_validator's except block is outside that block's own protection, so
+    one object with a hostile __str__ would otherwise abort the review it is
+    being reported in - and a non-str return would reach json.dumps.
+    """
+    try:
+        text = str(value)
+    except Exception:
+        return f"<{type(value).__name__} raised in __str__>"
+    return text if isinstance(text, str) else f"<{type(value).__name__} returned non-str>"
+
+
 def _has_finite_total(weights: list[float]) -> bool:
     """Whether the exact sum of weights is a representable float.
 
@@ -93,15 +108,23 @@ def register_validator(
     if not isinstance(name, str) or not name.strip():
         return _val_err("invalid_validator_name", "name must be a non-empty string")
     # Stored stripped: the name is the overwrite key, so " x " and "x" must
-    # land on one registration rather than two that both run.
-    name = name.strip()
+    # land on one registration rather than two that both run. A str subclass
+    # free to return something else from strip() is refused here rather than
+    # raising TypeError out of the dict key later.
+    stripped = name.strip()
+    if not isinstance(stripped, str) or not stripped:
+        return _val_err("invalid_validator_name", "name must be a non-empty string")
+    name = stripped
     if not callable(predicate):
         return _val_err(
             "invalid_predicate",
             f"predicate for {name!r} is not callable (got {type(predicate).__name__})",
             "pass a zero-arg callable, e.g. lambda: cmds.objExists('GRP_root')",
         )
-    if severity not in _VALIDATOR_SEVERITIES:
+    # isinstance first: membership alone asks __eq__'s permission, and an
+    # object that claims to be "error" would be stored verbatim and then make
+    # json.dumps of the whole report fail.
+    if not isinstance(severity, str) or severity not in _VALIDATOR_SEVERITIES:
         return _val_err(
             "invalid_severity",
             f"severity {severity!r} not in {list(_VALIDATOR_SEVERITIES)}",
@@ -136,7 +159,10 @@ def register_validator(
         )
     if not isinstance(family, str) or not family.strip():
         return _val_err("invalid_family", f"family must be a non-empty string (got {family!r})")
-    family = family.strip()
+    stripped_family = family.strip()
+    if not isinstance(stripped_family, str):
+        return _val_err("invalid_family", f"family must be a non-empty string (got {family!r})")
+    family = stripped_family
     if message is not None and not isinstance(message, str):
         return _val_err("invalid_message", "message must be a string or None")
 
@@ -204,8 +230,11 @@ def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
         # One broken rule must not hide the rest of the audit (issue #79).
         # Exception, not BaseException: a predicate's own failure is isolated,
         # a KeyboardInterrupt from the human holding the machine is not.
+        # _safe_text because this line is being built inside the except: an
+        # exception whose __str__ raises would otherwise escape the very
+        # isolation that caught it and cost the caller the whole audit.
         status = "check_error"
-        message = f"validator {name!r} raised {type(e).__name__}: {e}"
+        message = f"validator {_safe_text(name)!r} raised {type(e).__name__}: {_safe_text(e)}"
         passed = False
     else:
         # Strict on both shapes: (1, "note") must not pass where 1 alone fails.
@@ -218,12 +247,12 @@ def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
         ):
             passed = outcome[0]
             if outcome[1] is not None:
-                message = str(outcome[1])
+                message = _safe_text(outcome[1])
         else:
             status = "check_error"
             passed = False
             message = (
-                f"validator {name!r} returned {type(outcome).__name__}; "
+                f"validator {_safe_text(name)!r} returned {type(outcome).__name__}; "
                 "expected bool or (bool, message)"
             )
         if message is None:

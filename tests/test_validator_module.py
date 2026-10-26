@@ -161,6 +161,31 @@ class TestRegistration:
             assert res["error"]["code"] == "invalid_weight"
         assert env.module.list_validators()["count"] == 0
 
+    def test_severity_membership_does_not_ask_its_own_permission(self, env):
+        """`severity in _VALIDATOR_SEVERITIES` alone calls the object's
+        __eq__, so anything claiming to be "error" would be stored verbatim and
+        then make json.dumps of the whole report fail."""
+
+        class EqError:
+            def __eq__(self, other):
+                return other in ("error", "warning", "info")
+
+            def __hash__(self):
+                return 1
+
+        res = env.module.register_validator("evil", lambda: False, severity=EqError())
+        assert res["error"]["code"] == "invalid_severity"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_a_lying_strip_cannot_poison_the_registry_key(self, env):
+        class BadStrip(str):
+            def strip(self, *_args):
+                return ["not a string"]
+
+        res = env.module.register_validator(BadStrip("x"), lambda: True)
+        assert res["error"]["code"] == "invalid_validator_name"
+        assert env.module.list_validators()["count"] == 0
+
     @pytest.mark.parametrize(
         "order",
         [
@@ -286,6 +311,41 @@ class TestErrorIsolation:
         assert res["custom"]["score"] == res["custom"]["max_score"] == 2.0
         assert res["checks"], "the built-in audit survived the mutation"
         assert env.module.list_validators()["count"] == 1, "the one-shot rule is gone"
+
+    def test_an_exception_that_cannot_be_stringified_stays_isolated(self, env):
+        """Building the check_error line calls str() on the exception inside
+        the except block - outside that block's own protection. An exception
+        with a hostile __str__ used to escape and cost the caller the whole
+        audit, which is the one thing criterion 4 promises cannot happen."""
+
+        class Unstringable:
+            def __str__(self):
+                raise ValueError("cannot stringify")
+
+        def loud():
+            raise RuntimeError(Unstringable())
+
+        env.scene.add_mesh("GEO_box")
+        env.module.register_validator("loud", loud)
+        env.module.register_validator("sibling", lambda: True)
+
+        res = env.module.scene_review_with_validators()
+        by_name = {v["name"]: v for v in res["custom"]["validators"]}
+        assert by_name["loud"]["status"] == "check_error"
+        assert by_name["sibling"]["status"] == "passed", "the run continued"
+        assert res["checks"], "the built-in audit was not lost"
+        json.dumps(res, allow_nan=False)
+
+    def test_a_message_that_cannot_be_stringified_stays_isolated(self, env):
+        class Unstringable:
+            def __str__(self):
+                raise TypeError("no")
+
+        env.module.register_validator("odd", lambda: (False, Unstringable()))
+        result = env.module.custom_validator_results()["validators"][0]
+        assert result["status"] == "failed"
+        assert "raised in __str__" in result["message"]
+        json.dumps(env.module.custom_validator_results(), allow_nan=False)
 
 
 class TestScoreSeparation:
