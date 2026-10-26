@@ -77,10 +77,10 @@ _ATTR_FACET_FLAGS = (
 # totals - never silent. The caps bound RESPONSE SIZE only: the ~10
 # attributeQuery calls per attribute are a separate main-thread cost axis
 # inside Maya - that axis has its own profiling/batched-query debt, recorded
-# here: it is opened by a real-Maya measurement, never pre-optimized, and it
-# is not a reason to widen these caps. The two caps are constants on purpose:
-# no env or config knob, and raising one is a decision - they are inferred,
-# not measured.
+# here: it opens only when a real-Maya measurement finds the per-node
+# describe cost problematic, never before that. It is not a reason to widen
+# these caps. The two caps are constants on purpose: no env or config knob,
+# and raising one is a decision - they are inferred, not measured.
 _DESCRIBE_SOFT_CAP = 200
 _DESCRIBE_HARD_CAP = 1000
 
