@@ -883,9 +883,10 @@ result
 
         Rules registered in the Maya session with
         `_mcp_scene.register_validator(...)` (call it through execute_code) are
-        reported in a separate "custom" section carrying its own
-        `score`/`max_score` in weight points; the built-in score is unchanged
-        and the section is absent when nothing is registered.
+        reported in a separate "custom" section - `validators` per rule,
+        `score`/`max_score` in weight points, `issues` for what did not pass.
+        The built-in score is unchanged and the section is absent when nothing
+        is registered.
 
         Boundary: Disambiguated from scene_validate (narrow rule-based
         spatial constraint checking) and scene_aesthetics (in-depth
@@ -934,9 +935,14 @@ result
             custom = result.get("custom")
             if custom:
                 failing = custom["issues"]
+                validators = custom["validators"]
+                # check_error split out: a broken rule is not a rule the
+                # scene violated, and one summary number would mix them.
+                broken = sum(1 for v in validators if v["status"] == "check_error")
                 lines.append(
                     f"CUSTOM: score={custom['score']}/{custom['max_score']}"
-                    f" | validators={len(custom['validators'])} | failing={len(failing)}"
+                    f" | validators={len(validators)} | failing={len(failing) - broken}"
+                    f" | check_error={broken}"
                 )
                 lines += rows(failing, "name")
             return "\n".join(lines)

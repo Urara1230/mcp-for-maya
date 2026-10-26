@@ -9,6 +9,8 @@ must hold in real Maya, where the predicate runs against a live DG.
 
 from __future__ import annotations
 
+import json
+
 import maya_stub
 import pytest
 
@@ -60,6 +62,8 @@ class TestRegistration:
             ({"name": "x", "predicate": 42}, "invalid_predicate"),
             ({"name": "x", "predicate": lambda: True, "severity": "fatal"}, "invalid_severity"),
             ({"name": "x", "predicate": lambda: True, "weight": 0}, "invalid_weight"),
+            ({"name": "x", "predicate": lambda: True, "weight": float("nan")}, "invalid_weight"),
+            ({"name": "x", "predicate": lambda: True, "weight": float("inf")}, "invalid_weight"),
             ({"name": "x", "predicate": lambda: True, "family": " "}, "invalid_family"),
         ],
     )
@@ -67,6 +71,29 @@ class TestRegistration:
         res = env.module.register_validator(**kwargs)
         assert res["error"]["code"] == code
         assert env.module.list_validators()["count"] == 0
+
+    def test_a_non_finite_weight_cannot_poison_the_json(self, env):
+        """NaN is not valid JSON: one bad registration must not cost the whole
+        scene_review answer to the caller's parser."""
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("bad", lambda: True, weight=float("nan"))
+
+        custom = env.module.custom_validator_results()
+        assert json.dumps(custom)  # the section the tool would return
+        assert custom["max_score"] == 1.0
+
+    def test_info_is_a_severity_the_builtin_already_uses(self, env):
+        env.module.register_validator("note", lambda: False, severity="info")
+        issue = env.module.custom_validator_results()["issues"][0]
+        assert issue["severity"] == "info"
+
+    def test_the_name_is_stripped_to_one_identity(self, env):
+        """ "x" and " x " are the same overwrite key, not two rules that both
+        run and then cannot be unregistered by the name they display."""
+        env.module.register_validator("  x  ", lambda: True)
+        assert [v["name"] for v in env.module.list_validators()["validators"]] == ["x"]
+        assert env.module.register_validator("x", lambda: False)["overwritten"] is True
+        assert env.module.unregister_validator("  x  ")["count"] == 0
 
 
 class TestPredicateResults:
@@ -79,6 +106,14 @@ class TestPredicateResults:
         assert by_name["passing"]["status"] == "passed"
         assert by_name["failing"]["status"] == "failed"
         assert [i["name"] for i in custom["issues"]] == ["failing"]
+
+    def test_a_failing_rule_with_no_message_still_reports_one(self, env):
+        """The registered message applies to failures too; a None msg would
+        reach JSON as null and print "None" in the compact view."""
+        env.module.register_validator("silent", lambda: False)
+        custom = env.module.custom_validator_results()
+        assert custom["validators"][0]["message"] == "silent failed"
+        assert custom["issues"][0]["msg"] == "silent failed"
 
     def test_tuple_result_carries_its_own_message(self, env):
         env.module.register_validator(

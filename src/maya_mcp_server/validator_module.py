@@ -17,13 +17,15 @@
 # py3.9-safe ONLY because the monolith's `from __future__ import annotations`
 # governs the assembled unit. Do NOT exec/import this file standalone on py3.9.
 
+import math
 from collections.abc import Callable
 from typing import Any
 
 
-# The built-in issue vocabulary: custom issues sit in their own section, but
-# reusing these two spellings keeps one severity word meaning one thing.
-_VALIDATOR_SEVERITIES = ("error", "warning")
+# The severity vocabulary of the built-in audit (maya_scene_module.py emits
+# error, warning and info), so one severity word means one thing across both
+# sections of a report.
+_VALIDATOR_SEVERITIES = ("error", "warning", "info")
 
 # name -> registration. Session-scoped by construction: this dict lives in the
 # injected module namespace, so replacing the module or restarting Maya clears
@@ -56,8 +58,8 @@ def register_validator(
         predicate: zero-arg callable returning bool, or (passed, message).
             It runs inside Maya against live scene data. Any other return is
             recorded as check_error, exactly like a raising predicate.
-        severity: "error" or "warning" - the severity its failure is
-            reported with.
+        severity: "error", "warning" or "info" - the severity its failure is
+            reported with, same vocabulary as the built-in issues.
         weight: points this validator is worth in the custom score; must be > 0.
         family: label carried on the result so a studio can group its own
             rules (e.g. "rigid", "lighting") when it reads `custom`.
@@ -71,6 +73,9 @@ def register_validator(
     """
     if not isinstance(name, str) or not name.strip():
         return _val_err("invalid_validator_name", "name must be a non-empty string")
+    # Stored stripped: the name is the overwrite key, so " x " and "x" must
+    # land on one registration rather than two that both run.
+    name = name.strip()
     if not callable(predicate):
         return _val_err(
             "invalid_predicate",
@@ -82,10 +87,22 @@ def register_validator(
             "invalid_severity",
             f"severity {severity!r} not in {list(_VALIDATOR_SEVERITIES)}",
         )
-    if isinstance(weight, bool) or not isinstance(weight, (int, float)) or weight <= 0:
-        return _val_err("invalid_weight", f"weight must be a number > 0 (got {weight!r})")
+    if (
+        isinstance(weight, bool)
+        or not isinstance(weight, (int, float))
+        or not math.isfinite(weight)
+        or weight <= 0
+    ):
+        # isfinite, not just > 0: a nan or inf weight would make the section
+        # score NaN/Infinity, which is not valid JSON and costs the whole
+        # scene_review answer to the caller's parser.
+        return _val_err(
+            "invalid_weight",
+            f"weight must be a finite number > 0 (got {weight!r})",
+        )
     if not isinstance(family, str) or not family.strip():
         return _val_err("invalid_family", f"family must be a non-empty string (got {family!r})")
+    family = family.strip()
     if message is not None and not isinstance(message, str):
         return _val_err("invalid_message", "message must be a string or None")
 
@@ -103,6 +120,7 @@ def register_validator(
 
 def unregister_validator(name: str) -> dict[str, Any]:
     """Remove one validator. Unknown names are an error, not a silent no-op."""
+    name = name.strip() if isinstance(name, str) else name
     if name not in _VALIDATORS:
         return _val_err(
             "validator_not_found",
@@ -167,8 +185,10 @@ def _run_validator(reg: dict[str, Any]) -> dict[str, Any]:
                 f"validator {name!r} returned {type(outcome).__name__}; "
                 "expected bool or (bool, message)"
             )
-        if passed and message is None:
-            message = f"{name} passed"
+        if message is None:
+            # Both branches: a failing rule with nothing registered would
+            # otherwise report msg as null and print "None" in the cos view.
+            message = f"{name} passed" if passed else f"{name} failed"
     return {
         "name": name,
         "family": reg["family"],

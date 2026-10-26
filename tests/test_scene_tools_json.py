@@ -316,5 +316,19 @@ class TestSceneReviewCustomValidators:
         tools.env.module.register_validator("harsh", lambda: False, message="rule broken")
         out = await tools.fns["scene_review"](format="cos")
 
-        assert "CUSTOM: score=0.0/1.0 | validators=1 | failing=1" in out
+        assert "CUSTOM: score=0.0/1.0 | validators=1 | failing=1 | check_error=0" in out
         assert "[ERROR] harsh: rule broken" in out
+
+    async def test_cos_separates_a_broken_rule_from_a_violated_one(self, tools):
+        tools.env.module.register_validator("broken", lambda: 1 / 0)
+        tools.env.module.register_validator("violated", lambda: False)
+        out = await tools.fns["scene_review"](format="cos")
+
+        assert "failing=1 | check_error=1" in out, "one number must not mix the two"
+
+    async def test_no_issue_row_prints_none(self, tools):
+        tools.env.module.register_validator("silent", lambda: False)
+        out = await tools.fns["scene_review"](format="cos")
+
+        assert "silent: None" not in out
+        assert "[ERROR] silent: silent failed" in out
