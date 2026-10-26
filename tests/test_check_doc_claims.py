@@ -1,0 +1,366 @@
+"""Pins for .github/scripts/check_doc_claims.py.
+
+The rule being pinned is a prose rule in CONTRIBUTING.md that had no checker:
+every Added/Fixed/Changed bullet in the unreleased lane must carry an
+executable evidence pointer. A prose rule with no enforcement drifts, and it
+drifted -- three `[Unreleased]` entries cited counts that their suites no
+longer collected, and one proved its claim with a `git grep` whose only match
+was that grep command printed inside the changelog.
+
+Every counterfactual pin here asserts a NON-EMPTY red result. Each is paired
+with the green control that shows the same rule leaves the real repo alone, so
+a rule that fires on everything is as visible as one that fires on nothing.
+
+The gate's admitted termination layer, stated rather than stacked: a CHANGELOG
+with no `[Unreleased]` heading governs nothing and returns clean, because the
+checker cannot tell "nothing is claimed yet" from "the heading was renamed".
+`test_an_absent_unreleased_heading_governs_nothing` pins that decision.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+
+
+REPO = Path(__file__).resolve().parents[1]
+SCRIPT = REPO / ".github" / "scripts" / "check_doc_claims.py"
+
+_HEADER = "# Changelog\n\nAll notable changes.\n\n## [Unreleased]\n\n### Added\n\n"
+_FROZEN = "\n## [0.6.0] - 2026-10-05\n\n- **A frozen entry** — cites nothing at all.\n"
+
+
+def _load():
+    spec = importlib.util.spec_from_file_location("check_doc_claims", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
+
+
+M = _load()
+
+
+def _repo(tmp_path: Path, added: str, *, section: str = "Added", agents: str = "") -> Path:
+    """A miniature repo: one changelog bullet plus the files D2 reads."""
+    (tmp_path / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## [Unreleased]\n\n### " + section + "\n\n" + added + _FROZEN,
+        encoding="utf-8",
+    )
+    (tmp_path / "AGENTS.md").write_text(agents or "# Agent notes\n", encoding="utf-8")
+    (tmp_path / "CONTRIBUTING.md").write_text("# Contributing\n", encoding="utf-8")
+    return tmp_path
+
+
+def _add_test_file(root: Path, name: str, funcs: list[str]) -> None:
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    body = "\n".join(f"def {f}():\n    assert True" for f in funcs)
+    (tests / name).write_text(f"{body}\n", encoding="utf-8")
+
+
+def test_a_bullet_without_evidence_fails_the_gate(tmp_path):
+    """Counterfactual: a claim with no handle a reader can pull is red."""
+    root = _repo(tmp_path, "- **A gate landed** — it checks a thing.\n")
+    findings = M.check_changelog(root)
+    assert any("no allowed evidence form" in f for f in findings), findings
+
+
+def test_a_dead_pytest_node_fails_the_gate(tmp_path):
+    """Counterfactual: a pointer must land on a collectible test."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_real.py::test_ghost`.\n",
+    )
+    _add_test_file(root, "test_real.py", ["test_real"])
+    findings = M.check_changelog(root)
+    assert any("test_ghost" in f for f in findings), findings
+
+
+def test_a_bare_path_line_in_an_evidence_clause_fails_the_gate(tmp_path):
+    """Counterfactual: the form that drifts on every edit stays red."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `src/maya_mcp_server/server.py:345-360`.\n",
+    )
+    src = root / "src" / "maya_mcp_server"
+    src.mkdir(parents=True)
+    (src / "server.py").write_text("x = 1\n", encoding="utf-8")
+    findings = M.check_changelog(root)
+    assert any("bare path:line" in f for f in findings), findings
+
+
+def test_a_dead_path_in_the_agents_file_fails_the_gate(tmp_path):
+    """Counterfactual: a rule file may not send a reader to a gone path."""
+    root = _repo(tmp_path, "- **A gate landed** — `tests/test_real.py::test_real`.\n")
+    _add_test_file(root, "test_real.py", ["test_real"])
+    root_agents = root / "AGENTS.md"
+    root_agents.write_text("# Notes\n\nRead docs/guide/gone.md before editing.\n", encoding="utf-8")
+    findings = M.check_steering(root)
+    assert any("docs/guide/gone.md" in f for f in findings), findings
+
+
+def test_a_recovery_pointer_is_not_a_dead_path(tmp_path):
+    """Green control: annotating a retired file is legal, citing it is not."""
+    root = _repo(tmp_path, "- **A gate landed** — `tests/test_real.py::test_real`.\n")
+    _add_test_file(root, "test_real.py", ["test_real"])
+    (root / "AGENTS.md").write_text(
+        "# Notes\n\nThe retired ledger: `git show '1c5befe^:docs/guide/gone.md'`.\n",
+        encoding="utf-8",
+    )
+    assert M.check_steering(root) == []
+
+
+def test_an_executed_command_is_not_an_evidence_form(tmp_path):
+    """Counterfactual: "run this, here is what it printed" resolves to nothing
+    after the fact, so it is refused even when the result looks observed."""
+    root = _repo(
+        tmp_path,
+        "- **A hook landed** — Evidence: `uv run pre-commit run trailing-whitespace "
+        "--all-files` → Passed.\n",
+    )
+    findings = M.check_changelog(root)
+    assert any("no allowed evidence form" in f for f in findings), findings
+
+
+def test_a_removed_bullet_may_name_a_deleted_artifact(tmp_path):
+    """Green control: the exemption for Removed is the bullet's whole subject."""
+    root = _repo(
+        tmp_path,
+        "- **Governance teardown** — `docs/guide/gone.md` was retired in `1c5befe`.\n",
+        section="Removed",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_frozen_release_section_is_not_checked(tmp_path):
+    """Green control: released sections are point-in-time records, not claims."""
+    root = _repo(tmp_path, "- **A gate landed** — `tests/test_real.py::test_real`.\n")
+    _add_test_file(root, "test_real.py", ["test_real"])
+    body = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "A frozen entry" in body
+    assert M.check_changelog(root) == []
+
+
+def test_an_absent_unreleased_heading_governs_nothing(tmp_path):
+    """Admitted termination: no unreleased lane means nothing to check."""
+    root = _repo(tmp_path, "- **A gate landed** — it checks a thing.\n")
+    (root / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## [0.6.0] - 2026-10-05\n\n- **Old** — fine.\n", encoding="utf-8"
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_stale_count_claim_fails_the_gate(tmp_path):
+    """Counterfactual: the count beside a suite is a claim about that suite.
+
+    This is the rule that would have caught the three drifts found by hand
+    while landing #87 -- a bullet asserting 24 tests in a suite collecting 29.
+    """
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_counted.py` (7 tests).\n",
+    )
+    _add_test_file(root, "test_counted.py", ["test_one"])
+    findings = M.check_changelog(root)
+    assert any("it defines 1" in f for f in findings), findings
+
+
+def test_a_parametrised_suite_is_left_to_pytest(tmp_path):
+    """Admitted limit: a def-site count is not a collected count under
+    parametrize, so the gate declines the assertion instead of guessing."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_param.py::test_multi`, "
+        "`tests/test_param.py` (99 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_param.py").write_text(
+        "import pytest\n\n\n"
+        "@pytest.mark.parametrize('n', [1, 2, 3])\n"
+        "def test_multi(n):\n    assert n\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_dead_cited_path_in_a_bullet_fails_the_gate(tmp_path):
+    """Counterfactual: the lane may name a retired file only with a recovery
+    command; a bare dead path is still a dead path."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `python .github/scripts/gone.py` → ok, "
+        "and `.github/scripts/deeper.py` is referenced too.\n",
+    )
+    findings = M.check_changelog(root)
+    assert any(".github/scripts/deeper.py" in f for f in findings), findings
+
+
+def test_a_recovery_command_is_not_a_dead_path(tmp_path):
+    """Green control: a Changed bullet may name what it retired, given the
+    reviewer a way to read it. Without this the gate reds the honest record."""
+    root = _repo(
+        tmp_path,
+        "- **Old gate retired** — Evidence: `716ba79:.github/scripts/gone.py:1`,\n"
+        "  recovered with `git show '716ba79^:.github/scripts/gone.py'`.\n",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_wrapped_node_id_still_resolves(tmp_path):
+    """Green control: a long node ID breaks across lines at the column cap, and
+    reading it as two tokens would report a good pointer as dead."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_wrap.py::test_a_long_\n"
+        "  node_name_is_kept`.\n",
+    )
+    _add_test_file(root, "test_wrap.py", ["test_a_long_node_name_is_kept"])
+    assert M.check_changelog(root) == []
+
+
+def test_a_suite_level_count_next_to_a_node_counts_the_suite(tmp_path):
+    """Green control: "the suite collects N" is about the suite, even when the
+    citation just before it names one test. Reading it as the node's own count
+    reds an honest entry -- the mistake the first version of this rule made."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_scope.py::test_one`,\n"
+        "  `tests/test_scope.py` (the suite collects 2 tests).\n",
+    )
+    _add_test_file(root, "test_scope.py", ["test_one", "test_two"])
+    assert M.check_changelog(root) == []
+
+
+def test_a_bare_path_line_anywhere_in_the_bullet_fails_the_gate(tmp_path):
+    """Counterfactual: scoping the scan to the Evidence clause let a drifting
+    citation through the body prose, while the docstring promised coverage of
+    the whole bullet."""
+    root = _repo(
+        tmp_path,
+        "- **A record drifted** — it first cited `probe_helper.py:20-21` in the "
+        "prose and only then gave a node. Evidence: `tests/test_real.py::test_real`.\n",
+    )
+    _add_test_file(root, "test_real.py", ["test_real"])
+    (root / "probe_helper.py").write_text("x = 1\n", encoding="utf-8")
+    findings = M.check_changelog(root)
+    assert any("probe_helper.py:20-21" in f for f in findings), findings
+
+
+def test_a_sha_anchor_must_be_adjacent(tmp_path):
+    """Counterfactual: excusing a bare citation because a sha appeared somewhere
+    in the previous 24 characters makes the exemption an accident of spacing."""
+    root = _repo(
+        tmp_path,
+        "- **A record drifted** — see commit 819e929, and note that "
+        "`probe_helper.py:20-21` was the broken form. "
+        "Evidence: `819e929:probe_helper.py:20-21`.\n",
+    )
+    findings = M.check_changelog(root)
+    bare = [f for f in findings if "probe_helper.py:20-21" in f]
+    assert bare, "a sha mentioned earlier excused a bare citation"
+
+
+def test_an_async_test_counts_toward_the_suite(tmp_path):
+    """Counterfactual: pytest collects coroutines. Counting only `def test_x`
+    reported this repo's async suites as holding a fraction of their tests --
+    test_asset_tools.py counted 0 of 11 before the node kinds were shared."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `819e929:CHANGELOG.md:1`, "
+        "`tests/test_async.py` (2 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_async.py").write_text(
+        "import pytest\n\n"
+        "class TestThing:\n"
+        "    async def test_one(self): assert True\n"
+        "    def test_two(self): assert True\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_class_level_parametrize_marker_declines_the_count(tmp_path):
+    """Admitted limit pinned: a marker on the class parametrises every method in
+    it, so the def-site count is unknowable and the rule must decline, not guess
+    -- and a per-function scan alone would miss it entirely."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `819e929:CHANGELOG.md:1`, "
+        "`tests/test_cls.py` (9 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_cls.py").write_text(
+        "import pytest\n\n\n"
+        '@pytest.mark.parametrize("n", [1, 2, 3])\n'
+        "class TestCls:\n"
+        "    def test_a(self, n): assert n\n"
+        "    def test_b(self, n): assert n\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_a_bare_line_citation_is_caught_for_every_cited_extension(tmp_path):
+    """Counterfactual: the scan and the existence check must share one
+    extension list. When they diverged, `scripts/setup.sh:12` was verified as a
+    path and never scanned as a drifting line citation."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_real.py::test_real`; the "
+        "old form lived at `scripts/setup.sh:12` and `.github/conf.toml:3`.\n",
+    )
+    _add_test_file(root, "test_real.py", ["test_real"])
+    scripts = root / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    (scripts / "setup.sh").write_text("echo x\n", encoding="utf-8")
+    (root / ".github").mkdir(parents=True, exist_ok=True)
+    (root / ".github" / "conf.toml").write_text("x = 1\n", encoding="utf-8")
+    findings = " ".join(M.check_changelog(root))
+    assert "scripts/setup.sh:12" in findings, findings
+    assert ".github/conf.toml:3" in findings, findings
+
+
+def test_a_count_next_to_a_full_node_counts_that_node(tmp_path):
+    """Counterfactual: the citation's ``::`` tail must be read whole. Stopping
+    at the class made a '(2 tests)' claim beside a single test pass, because the
+    count was checked against the wrong subject."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_two.py::TGroup::test_one` (2 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_two.py").write_text(
+        "class TGroup:\n    def test_one(self): pass\n    def test_two(self): pass\n",
+        encoding="utf-8",
+    )
+    findings = M.check_changelog(root)
+    assert any("it defines 1" in f for f in findings), findings
+
+
+def test_a_parametrized_cited_test_declines_the_count(tmp_path):
+    """Counterfactual on the wrong direction: the decline must be decided BEFORE
+    the single-test shortcut, or a correct '3 tests' claim about a parametrized
+    test is redded as holding 1."""
+    root = _repo(
+        tmp_path,
+        "- **A gate landed** — Evidence: `tests/test_three.py::test_multi` (3 tests).\n",
+    )
+    tests = root / "tests"
+    tests.mkdir(parents=True, exist_ok=True)
+    (tests / "test_three.py").write_text(
+        'import pytest\n\n\n@pytest.mark.parametrize("n", [1, 2, 3])\n'
+        "def test_multi(n):\n    assert n\n",
+        encoding="utf-8",
+    )
+    assert M.check_changelog(root) == []
+
+
+def test_the_real_repo_is_clean():
+    """Live green control: the shipped tree passes every rule above."""
+    assert M.check(REPO) == []

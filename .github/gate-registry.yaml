@@ -22,6 +22,28 @@
       "exemption": null
     },
     {
+      "gate_id": "check_doc_claims",
+      "bound_class": "gate",
+      "expected_sources": [
+        "CONTRIBUTING.md::Changelog evidence rule"
+      ],
+      "pin_node_ids": [
+        "tests/test_check_doc_claims.py::test_a_bullet_without_evidence_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_a_dead_pytest_node_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_a_bare_path_line_anywhere_in_the_bullet_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_an_async_test_counts_toward_the_suite",
+        "tests/test_check_doc_claims.py::test_a_bare_line_citation_is_caught_for_every_cited_extension",
+        "tests/test_check_doc_claims.py::test_a_count_next_to_a_full_node_counts_that_node",
+        "tests/test_check_doc_claims.py::test_a_parametrized_cited_test_declines_the_count",
+        "tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_a_dead_path_in_the_agents_file_fails_the_gate",
+        "tests/test_check_doc_claims.py::test_an_executed_command_is_not_an_evidence_form",
+        "tests/test_check_doc_claims.py::test_the_real_repo_is_clean"
+      ],
+      "exemption": null,
+      "note": "Checks that the unreleased lane CLAIMS only what the tree still holds: an allowed evidence form per bullet, pointers that resolve by AST, no bare path:line, and counts that match the suite cited. Released sections are point-in-time records and are never re-checked. Scope limits live in the script docstring, not copied here."
+    },
+    {
       "gate_id": "check_gate_registry",
       "bound_class": "gate",
       "expected_sources": [

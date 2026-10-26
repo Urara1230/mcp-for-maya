@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deliberately TOLERATES pyproject running ahead of the CHANGELOG while real
   work sits under `[Unreleased]` — a gate that is always red during development
   gets deleted, and a deleted gate is worse than none.
-  Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency` (11 tests).
+  Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency::test_all_four_surfaces_agree_today`
+  (the class collects 11 tests).
 
 - **Pin registry + consistency gate (D-215)** —
   `.github/gate-registry.yaml` records, for every governance surface in
@@ -36,8 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   What is machine-checked is **registration discipline, not pin effectiveness** —
   a hollow pin passes every rule, and that residual is disclosed rather than
   papered over.
-  Evidence: `tests/test_check_gate_registry.py` (29 tests),
-  `python .github/scripts/check_gate_registry.py` → registry OK.
+  Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
+  `.github/gate-registry.yaml::entries` (the suite collects 29 tests).
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the
@@ -78,6 +79,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Documented claims are checked against the tree** —
+  `.github/scripts/check_doc_claims.py` reads the `[Unreleased]` lane plus the
+  two rule files and fails a bullet that carries no allowed evidence form, a
+  pointer that no longer resolves, a bare `path:line` cited anywhere in the
+  bullet, or a test count that no longer matches the suite it cites. Run against
+  the `[Unreleased]` lane as merged in #96 it reports 3 findings; against the
+  lane as it stood before that repair (`def69db`) 14 findings across 9 bullets,
+  including the three that described gates the governance teardown had already
+  deleted. Reproduce either number by pointing this script at that revision's
+  changelog. Four `[Unreleased]` bullets were then carrying only "run this
+  command, here is what it printed" — which resolves to nothing after the fact,
+  and whose weakest instance is a `git grep` whose only match is the line
+  citing it. They now cite a pytest node, a registry key, or a commit-anchored
+  `sha:path:line` (the pre-commit hook at `91ef7d5`, the CI step at `819e929`),
+  so the standard stayed as written instead of widening to cover the drift.
+  Released sections are never re-checked: they are
+  point-in-time records, and a gate that "corrected" them would be a rewriting
+  machine.
+  Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`;
+  `tests/test_check_doc_claims.py` (23 tests);
+  `python .github/scripts/check_doc_claims.py` → doc-claims OK.
+
 - **Sample-size floor counts verdict-bearing labels only (D-203)** —
   `MIN_ADJUDICABLE` in the polarity corpus probe measured `len(LABELLED_CORPUS)`,
   so `known_limitation` samples — which record a clause-scope trade the design
@@ -88,26 +111,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (3 TN, 2 F) covering the `cannot`/`without` cue prefixes and the mirror-image
   clause position. Measured: 14 samples, adjudicable 12 == the floor,
   per-element TN 7 ≥ 3, 0 disagreements with the hand labels.
-  Evidence: `tests/test_polarity_corpus_probe.py` (15 collected),
-  `python .github/scripts/polarity_corpus_probe.py` → `TRACK2 (labelled)`.
+  Evidence: `tests/test_polarity_corpus_probe.py::TestD203FloorCaliber::test_per_element_counting_unit_is_the_sample_not_the_element_pair`,
+  `tests/test_polarity_corpus_probe.py` (15 collected).
 
-- **Line endings land in pre-commit, not CI (D-205 ③)** — `mixed-line-ending
---fix=lf` added to `.pre-commit-config.yaml`. The justification is measured,
+- **Line endings land in pre-commit, not CI (D-205 ③)** — `mixed-line-ending`
+  with `--fix=lf` added to `.pre-commit-config.yaml`. The justification is measured,
   not asserted: before this hook landed, on this Windows host, 29 tracked files
   carried CRLF in the worktree while 0 of those carried CRLF in their HEAD blob.
   So `.gitattributes` already normalises at commit, and a CI line-ending scan
   would be a permanently green dead check. The pre-commit layer is where worktree
   bytes actually get fixed — and having now fixed them, the same scan returns 0
-  for this worktree. Evidence: the `mixed-line-ending` hook in
-  `.pre-commit-config.yaml`.
+  for this worktree. Evidence: `91ef7d5:.pre-commit-config.yaml:18` — the hook as
+  landed, cited at the commit that added it, so the line it names cannot drift.
 
 - **TDQS disclosure ratchet CI gate (D-175)** — static AST and JSON
   validation script `.github/scripts/check_tdqs_disclosure.py` hard-gated in
   the CI lint workflow's `tdqs disclosure elements gate` step
   (`.github/workflows/ci.yml`), enforcing the required
   disclosure elements across the gated tool set against single-source
-  specification `.github/tdqs-elements.yaml`, backed by unit test suite
-  `tests/test_check_tdqs_disclosure.py` (43 passed).
+  specification `.github/tdqs-elements.yaml`.
+  Evidence: `819e929:.github/workflows/ci.yml:51` — the step as wired when the
+  gate landed; `tests/test_check_tdqs_disclosure.py` (43 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in
@@ -162,7 +186,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The S2 review record pointed at a bare `path:line` for its central claim** —
   the correction notice cites where the promotion record lives using
-  `polarity_corpus_probe.py:206-215`, a form that drifts on every edit. It also
+  lines 206 to 215 of that script — a bare `path:line` that drifts on every
+  edit. It also
   cited a line range that the same record's own derivation pin makes redundant.
   Now `path::symbol`.
   Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
