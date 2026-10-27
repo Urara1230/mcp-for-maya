@@ -41,7 +41,11 @@ def _count(text, chars):
 
 
 def _repo(tmp_path, commits):
-    """A throwaway git repo: one commit per ``{path: source}`` dict, newest last."""
+    """A throwaway git repo: one commit per ``{path: source}`` dict, newest last.
+
+    A value may be bytes, which is how a file with a BOM or a non-UTF-8 coding
+    cookie reaches the gate intact.
+    """
 
     def git(*args):
         return subprocess.run(
@@ -53,7 +57,7 @@ def _repo(tmp_path, commits):
     git("config", "user.name", "gate")
     for files in commits:
         for name, src in files.items():
-            (tmp_path / name).write_bytes(src.encode())
+            (tmp_path / name).write_bytes(src if isinstance(src, bytes) else src.encode())
         git("add", "-A")
         git("commit", "-q", "-m", "step")
     return git("rev-parse", "HEAD").strip()
@@ -356,6 +360,31 @@ def test_a_quoted_path_reaches_the_check(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "咖啡.py" in out and "UNBALANCED" in out
     assert "file=clean.py::UNBALANCED" not in out
+
+
+def test_a_bom_and_a_coding_cookie_are_not_findings(tmp_path, capsys):
+    """Two inputs Python accepts, both of which the strict UTF-8 decode rejected.
+
+    A BOM decodes fine and then dies in `ast.parse` on U+FEFF, which the gate
+    would report as UNPARSEABLE; a PEP 263 cookie with non-UTF-8 bytes raised
+    UnicodeDecodeError straight out of `main`. Either file can be edited by a
+    migration that touches no delimiter at all.
+    """
+    mod = _load()
+    cookie = b"# -*- coding: latin-1 -*-\nX = 'caf\xe9'"
+    head = _repo(
+        tmp_path,
+        [
+            {"bom.py": "\ufeff" + BALANCED_DOC + "X = 1\n", "latin.py": cookie + b"\n"},
+            {
+                "bom.py": "\ufeff" + BALANCED_DOC + "X = 2\n",
+                "latin.py": cookie + b"\nY = 2\n",
+            },
+        ],
+    )
+    assert mod.main([f"{head}~1", head], tmp_path) == 0
+    out = capsys.readouterr().out
+    assert "UNPARSEABLE" not in out and "::error" not in out
 
 
 def test_blobs_come_from_the_merge_base():

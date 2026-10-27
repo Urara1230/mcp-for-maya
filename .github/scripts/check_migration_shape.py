@@ -229,12 +229,20 @@ def merge_base(runner: Callable[..., object], base: str, tip: str, root: Path) -
 
 
 def blob(runner: Callable[..., object], root: Path, rev: str, path: str) -> str:
-    return runner(
+    """The file as Python reads it, not as the runner's locale happens to decode.
+
+    Strict UTF-8 would reject two inputs the interpreter accepts: a BOM survives
+    decoding only to make `ast.parse` raise on U+FEFF (reported as UNPARSEABLE),
+    and a PEP 263 coding cookie raises UnicodeDecodeError out of `main`.
+    """
+    raw: bytes = runner(  # type: ignore[assignment]
         ["git", "show", f"{rev}:{path}"],
         capture_output=True,
         check=True,
         cwd=root,
-    ).stdout.decode("utf-8")
+    ).stdout
+    encoding, _ = tokenize.detect_encoding(io.BytesIO(raw).readline)
+    return raw.decode(encoding)
 
 
 def is_shallow(runner: Callable[..., object], root: Path) -> bool:
