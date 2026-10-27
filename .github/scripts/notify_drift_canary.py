@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -94,6 +95,18 @@ def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> in
     return None
 
 
+# Workflow job and step names still carry ledger ids (they are edited in
+# .github/workflows, which is outside this script's surface), and this body
+# forwards them verbatim into a public issue. Strip the parenthetical that
+# carries an id so the issue never republishes one; the rest of the name is
+# the useful half and is kept.
+_LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
+
+
+def _strip_ledger_ids(name: str) -> str:
+    return _LEDGER_TAG.sub("", name).strip()
+
+
 def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
     """Best-effort attribution: ``job: step`` names with conclusion=failure.
 
@@ -113,7 +126,9 @@ def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
         for job in jobs:
             for step in job.get("steps", []):
                 if step.get("conclusion") == "failure":
-                    bad.append(f"{job.get('name', '?')}: {step.get('name', '?')}")
+                    job_name = _strip_ledger_ids(str(job.get("name", "?")))
+                    step_name = _strip_ledger_ids(str(step.get("name", "?")))
+                    bad.append(f"{job_name}: {step_name}")
         return bad
     except Exception:
         return []
