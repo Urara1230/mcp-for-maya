@@ -1,10 +1,12 @@
 """Issue #79 Maya-side contract tests: custom scene_review validators.
 
-Runs against the stub-bound _mcp_scene injection unit (monolith + both
+Most run against the stub-bound _mcp_scene injection unit (monolith + both
 fragments assembled - maya_env.module), the same seam
-tests/test_introspect_module.py uses. These are CONTRACT tests: the
-registration surface, the score separation and the check_error isolation
-must hold in real Maya, where the predicate runs against a live DG.
+tests/test_introspect_module.py uses. Those are CONTRACT tests: the
+registration surface, the score separation and the check_error isolation must
+hold in real Maya, where the predicate runs against a live DG. The last class
+reads files instead - it pins the scene-review skill card against this
+fragment, and needs no Maya at all.
 """
 
 from __future__ import annotations
@@ -458,20 +460,17 @@ class TestSessionScope:
 
 
 class TestCardPinsTheShippedApi:
-    """The scene-review card promises the API is usable without opening this
-    fragment, and `skills/` sits outside check_doc_claims.py's surfaces - so
-    this is the only thing that goes red when card and code drift apart.
+    """The scene-review card carries the validator recipe so nobody has to open
+    this fragment to use it, and `skills/` sits outside check_doc_claims.py's
+    surfaces - so these are the only assertions that go red when card and code
+    drift apart.
 
-    Codes are checked in both directions: the card names every code the
-    fragment can emit, and no code it cannot. Return keys and the severity and
-    status vocabularies are checked from the shipped behavior toward the card,
-    because that is the direction the card's own promise runs.
-
-    The vocabulary assertions demand an *enumeration* - a `|`-separated run
-    whose membership equals the shipped set - because a bare mention test passes
-    while the line that lists the vocabulary goes stale. It pins that the card
-    enumerates the set correctly somewhere, not that every passing mention of
-    one of these words agrees with it.
+    Two bounds, stated because a pin that cannot fail is worse than none: codes
+    are compared inside the shapes this API names refusals with
+    (`invalid_*`, `weight_overflow`, `validator_not_found`), so a code named
+    otherwise slips past; and the two vocabularies demand an *enumeration* - a
+    `|`-separated run whose membership equals the shipped set - so a stale line
+    fails even while the words still appear in prose somewhere else.
     """
 
     ROOT = Path(__file__).resolve().parents[1]
@@ -480,14 +479,28 @@ class TestCardPinsTheShippedApi:
     CODE_SHAPE = re.compile(r"\b(invalid_[a-z_]+|weight_overflow|validator_not_found)\b")
     QUOTED_RUN = re.compile(r"(?:[\"'`][\w_]+[\"'`]\s*\|\s*)+[\"'`][\w_]+[\"'`]")
     QUOTED_WORD = re.compile(r"[\"'`]([\w_]+)[\"'`]")
+    ENVELOPE_KEY = re.compile(r'["`]([\w_]+)["`]\s*:')
 
     def _card(self) -> str:
+        """The card, read once per test: nothing here writes to it."""
         return self.CARD.read_text(encoding="utf-8")
 
-    def _card_names(self, word: str) -> bool:
+    def _names(self, card: str, word: str) -> bool:
         """A word counts as documented when the card quotes it, any style."""
-        card = self._card()
         return f"`{word}`" in card or f'"{word}"' in card or f"'{word}'" in card
+
+    def _enumerations(self, card: str) -> list[set[str]]:
+        """Every `|`-separated run of quoted words the card carries, as sets."""
+        runs = self.QUOTED_RUN.finditer(card)
+        return [set(self.QUOTED_WORD.findall(run.group())) for run in runs]
+
+    def _printed_envelope(self, card: str, marker: str) -> set[str]:
+        """The keys the card prints in the envelope introducing `marker`."""
+        at = card.find(marker)
+        assert at != -1, f"the card no longer introduces {marker!r} - re-aim this pin"
+        printed = set(self.ENVELOPE_KEY.findall(card[at : card.find("\n", at)]))
+        assert printed, f"no envelope printed for {marker!r} - re-aim this pin"
+        return printed
 
     def _codes_emitted(self) -> set[str]:
         tree = ast.parse(self.FRAGMENT.read_text(encoding="utf-8"))
@@ -503,48 +516,58 @@ class TestCardPinsTheShippedApi:
                 codes.add(str(node.args[0].value))
         return codes
 
-    def _severities_accepted(self, env) -> set[str]:
-        """The refusal prints the vocabulary it checks against, so the
-        expectation comes from the shipped module rather than this test."""
-        out = env.module.register_validator("probe", lambda: True, severity="not-a-severity")
-        return {str(word) for word in ast.literal_eval(out["error"]["message"].split("not in ")[1])}
-
-    def _card_enumerations(self) -> list[set[str]]:
-        """Every `|`-separated run of quoted words the card carries, as sets."""
-        runs = self.QUOTED_RUN.finditer(self._card())
-        return [set(self.QUOTED_WORD.findall(run.group())) for run in runs]
-
     def test_the_card_names_every_code_and_invents_no_other(self):
-        documented = set(self.CODE_SHAPE.findall(self._card()))
         emitted = self._codes_emitted()
+        documented = set(self.CODE_SHAPE.findall(self._card()))
         assert documented == emitted, (
             f"card omits {sorted(emitted - documented)}; "
             f"card names codes nothing emits: {sorted(documented - emitted)}"
         )
 
-    def test_the_card_prints_every_key_a_call_returns(self, env):
-        registered = env.module.register_validator("card_pin", lambda: True)
-        listed = env.module.list_validators()
-        unregistered = env.module.unregister_validator("card_pin")
-
-        returned = set(registered) | set(listed) | set(unregistered) | set(listed["validators"][0])
-        undocumented = {key for key in returned if not self._card_names(key)}
-        assert not undocumented, f"returns the card never names: {sorted(undocumented)}"
-
-    def test_the_card_prints_every_key_the_custom_section_returns(self, env):
+    def test_the_card_names_every_key_the_api_returns(self, env):
+        card = self._card()
         env.module.register_validator("ok", lambda: True)
         env.module.register_validator("broken", lambda: 1 / 0)
         custom = env.module.custom_validator_results()
+        registered = env.module.register_validator("again", lambda: True)
+        listed = env.module.list_validators()
+        unregistered = env.module.unregister_validator("again")
+        refused = env.module.unregister_validator("never_registered")
 
-        returned = set(custom) | set(custom["validators"][0]) | set(custom["issues"][0])
-        undocumented = {key for key in returned if not self._card_names(key)}
-        assert not undocumented, f"`custom` keys the card never names: {sorted(undocumented)}"
+        returned = (
+            set(registered)
+            | set(listed)
+            | set(unregistered)
+            | set(listed["validators"][0])
+            | set(refused)
+            | set(refused["error"])
+            | set(custom)
+            | set(custom["validators"][0])
+            | set(custom["issues"][0])
+        )
+        undocumented = {key for key in returned if not self._names(card, key)}
+        assert not undocumented, f"the API returns, the card never names: {sorted(undocumented)}"
+
+    def test_the_card_prints_no_key_the_api_does_not_return(self, env):
+        """The direction a reader acts on: an envelope the card promises and
+        the API no longer hands back is the lie that costs the whole call."""
+        card = self._card()
+        env.module.register_validator("card_pin", lambda: True)
+        listed = env.module.list_validators()
+        registered = env.module.register_validator("card_pin", lambda: False)
+
+        returned = {
+            "- `register_validator(name": set(registered),
+            "- `list_validators()`": set(listed) | set(listed["validators"][0]),
+            "- `unregister_validator(name": set(env.module.unregister_validator("card_pin")),
+        }
+        for marker, keys in returned.items():
+            assert self._printed_envelope(card, marker) == keys, f"{marker} drifted from the API"
 
     def test_the_card_enumerates_the_severities_the_api_accepts(self, env):
-        accepted = self._severities_accepted(env)
-        assert accepted == {"error", "warning", "info"}, "the shipped vocabulary moved"
-        assert accepted in self._card_enumerations(), (
-            f"the card never lists exactly {sorted(accepted)} as a severity vocabulary"
+        accepted = set(env.module._VALIDATOR_SEVERITIES)
+        assert accepted in self._enumerations(self._card()), (
+            f"the card never lists exactly {sorted(accepted)} as the severity vocabulary"
         )
 
     def test_the_card_enumerates_the_statuses_the_report_produces(self, env):
@@ -552,7 +575,8 @@ class TestCardPinsTheShippedApi:
         env.module.register_validator("bad", lambda: False)
         env.module.register_validator("broken", lambda: 1 / 0)
         produced = {row["status"] for row in env.module.custom_validator_results()["validators"]}
-        assert produced == {"passed", "failed", "check_error"}, "the shipped statuses moved"
-        assert produced in self._card_enumerations(), (
+
+        assert produced == {"passed", "failed", "check_error"}
+        assert produced in self._enumerations(self._card()), (
             f"the card never lists exactly {sorted(produced)} as the status vocabulary"
         )

@@ -7,7 +7,7 @@ uv sync --frozen
 python -m maya_mcp_server -vv
 uv run python -m pytest tests/ -q          # stub tier
 uvx ruff@0.17.1 check . && uv run python -m mypy src/ | uv run mypy-baseline filter
-uv run pre-commit run --all-files          # hooks are language: system; uv run keeps .venv first on PATH
+uv run pre-commit run --all-files          # the doc-claims hook is language: system; uv run keeps .venv first on PATH
 
 ## Gates
 A "governance gate" is any check a job runs in `.github/workflows/ci.yml`; `.github/gate-registry.yaml` indexes every enforced one with its pins, and `check_gate_registry.py` fails an unregistered or unwired entry, so neither list can rot quietly. To see what CI actually runs, read the `run:` lines: `grep -E 'run: python .github/scripts' .github/workflows/ci.yml`. The three baseline ratchets only ever move down — ruff budget and monolith line budget are `lint` steps, the mypy baseline is its own job.
