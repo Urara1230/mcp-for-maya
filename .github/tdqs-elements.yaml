@@ -248,7 +248,7 @@
         },
         {
                   "id": "boundary_line",
-                  "why": "one-way disambiguation marker (the one-way convention)",
+                  "why": "one-way disambiguation marker (also a P1 scene_* member)",
                   "any": [
                             "Boundary:"
                   ]

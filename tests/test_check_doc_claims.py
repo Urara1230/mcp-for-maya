@@ -66,6 +66,17 @@ def test_a_bullet_without_evidence_fails_the_gate(tmp_path):
     assert any("no allowed evidence form" in f for f in findings), findings
 
 
+def test_a_finding_does_not_republish_a_ledger_id_from_the_headline(tmp_path):
+    """The location prefix echoes the bullet's own headline, and the lane still
+    has ids in some headlines. A reader needs to find the bullet, not to be
+    handed an id the migration is retiring (#94)."""
+    root = _repo(tmp_path, "- **A gate landed (D-215)** \u2014 it checks a thing.\n")
+    findings = M.check_changelog(root)
+    assert findings, "the bullet still fails; only the echo changes"
+    assert not any("D-215" in f for f in findings), findings
+    assert any("A gate landed" in f for f in findings), findings
+
+
 def test_a_dead_pytest_node_fails_the_gate(tmp_path):
     """Counterfactual: a pointer must land on a collectible test."""
     root = _repo(

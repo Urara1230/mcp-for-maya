@@ -113,6 +113,17 @@ COUNT_CLAIMS = (
 PATH_REF = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)*)")
 
 
+# A bullet headline is echoed into the finding's location prefix, and the
+# [Unreleased] lane still has ids in its headlines. This checker's job is to
+# report the bullet, not to republish the id, so the prefix is stripped the same
+# way the drift canary strips workflow names.
+_LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
+
+
+def _strip_ledger_ids(text: str) -> str:
+    return _LEDGER_TAG.sub("", text).strip()
+
+
 def _unwrap_code(text: str) -> str:
     """Join identifiers that markdown wrapped inside a code span.
 
@@ -319,7 +330,8 @@ def check_changelog(root: Path) -> list[str]:
     for section, text in _iter_bullets(lines, start + 1, stop):
         if section not in RULED_SECTIONS:
             continue
-        where = f"CHANGELOG.md [{section}] {text.splitlines()[0][2:52].strip()}"
+        headline = _strip_ledger_ids(text.splitlines()[0][2:52].strip())
+        where = f"CHANGELOG.md [{section}] {headline}"
         # Soft-wrapped markdown must not cost a bullet its evidence form, so the
         # pattern match runs on flattened text. This is a loosening and is
         # disclosed below rather than passed off as precision: a command and a
