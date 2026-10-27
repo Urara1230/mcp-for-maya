@@ -1,11 +1,11 @@
-"""D-123 drift-canary notify bridge.
+"""Drift-canary notify bridge.
 
 Turns the weekly resolution-drift job's conclusion into a persistent
 work item (a GitHub issue), because a scheduled-job red only emails
 the person who last touched the cron line — a structural blind spot
 on a single-maintainer repo.
 
-The drift job carries two signal lanes since D-142gamma: the floating
+The drift job carries two signal lanes: the floating
 resolution itself, and the PyPI index dual-source probe. Both turn the
 same job red — for attribution the script lists the run's failed step
 names (best-effort, via ``gh api .../jobs``; a lookup failure here must
@@ -38,7 +38,7 @@ Invocation: notify_drift_canary.py (no args; env-driven).
 
 The notify job wraps this with job-level continue-on-error: the
 script may fail loudly (non-zero exit) without ever masking the
-drift job's own red (D-123).
+drift job's own red.
 """
 
 from __future__ import annotations
@@ -97,9 +97,9 @@ def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> in
 def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
     """Best-effort attribution: ``job: step`` names with conclusion=failure.
 
-    Never raises — a lookup failure must not break notify (D-123's
-    continue-on-error is for THIS script's own failure, not a licence to
-    crash on the attribution add-on).
+    Never raises — a lookup failure must not break notify (the
+    job's continue-on-error is for THIS script's own failure, not a
+    licence to crash on the attribution add-on).
     """
     run_id = env.get("RUN_ID", "")
     repo = env.get("REPO") or env.get("GITHUB_REPOSITORY", "")

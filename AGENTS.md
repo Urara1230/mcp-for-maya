@@ -17,9 +17,10 @@ A "governance gate" is any check a job runs in `.github/workflows/ci.yml`; `.git
 - Baseline files (ruff/monolith/mypy) are regenerated archives; CI never writes them.
 
 ## Known quirks
+- Shared GitButler workspace: another window can unapply your branch mid-run, and the tree stops being the thing you are testing. Before running a ticket's checks, confirm `but status` lists the ticket branch and HEAD equals the baseline SHA recorded at ticket start; when it does not, verify the branch tip in a throwaway worktree and remove it after.
 - Large module writes (>10K chars) stale the Maya command port; Qt sessions use the framed channel, temp-file fallback is headless-only.
 - `execute_code` with `result_type="JSON"` may return `dict`; handle both. `import X; X.func()` can fail under result capture — pre-import, then call expressions only.
-- Git Bash on Windows: never `2> nul`; use `2>/dev/null`. `D-xxx` refs cite the retired decision ledger — read it with `git show '1c5befe^:docs/decision-ledger.md'`.
+- Git Bash on Windows: never `2> nul`; use `2>/dev/null`. `D-xxx` refs cite the retired decision ledger — read it with `git show '1c5befe^:docs/decision-ledger.md'`; `docs/agents/domain.md` keys its row format and the sub-id notation.
 
 ## Agent skills
 
