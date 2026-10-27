@@ -15,16 +15,28 @@ list) and this checker reports the set difference in both directions.
 The rules:
 
   R1 unregistered_bound_object   a bound object with no registry entry
-  R2 unresolvable_pointer        a registered pin node or expected_source that
-                                 does not resolve
+  R2 unresolvable_pointer        a registered pointer that cannot be resolved,
+                                 or a pointer list that is not a list at all
   R3 stale_registration          an entry naming an object that is gone
   R4 gate_class_not_wired        bound_class=gate but no workflow runs it --
                                  veto-power drift: the entry claims hard-gate
                                  standing it does not have
-  R5 bad_exemption               an exemption with no expires|issue, or one
-                                 whose expires date has passed
+  R5 bad_exemption               an exemption with no expires|issue, one whose
+                                 expires date has passed, or one that is not an
+                                 object with a reason
   R6 zero_pin_guard              a gate/manual_preflight entry with no pin at
                                  all (fail-on-empty, OPA precedent)
+
+Three more tags cover what the rule table above does not: ``malformed_entry``
+(no usable gate_id, the same gate_id registered twice, or an entry that is not
+an object at all), ``bad_bound_class`` (a class outside the three this gate
+knows), and ``registry_unusable`` (the admitted termination layer -- an
+unreadable or empty registry, a root that parses to something other than an
+object, or one whose bound set cannot be enumerated). ``malformed_entry`` and
+``registry_unusable`` are emitted before or instead of the rule loop;
+``bad_bound_class`` is emitted inside it, before the entry's other rules can
+run. Every printed finding carries one of these tags, so an operator can map any
+CI line back to this table; a test pins that.
 
 On the rule count: "a bound object nobody registered" and "a new gate nobody
 registered" are one fact, so R1 reports it once rather than the list carrying
@@ -65,6 +77,18 @@ DEFAULT_REGISTRY = REPO / ".github" / "gate-registry.yaml"
 # its obligation is the sensitivity track, not a per-PR pin.
 PIN_REQUIRED_CLASSES = frozenset({"gate", "manual_preflight"})
 KNOWN_CLASSES = frozenset({"gate", "manual_preflight", "instrument"})
+
+# A finding echoes values it read from the registry, and this file is printed
+# into CI. Two passes: drop the parenthetical that holds an id, then drop any id
+# left bare, so neither the tagged form nor a truncated or unparenthesized one
+# reaches an operator. Other governance scripts import this one, so the strip
+# lives here rather than being copied into each of them.
+_LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
+_BARE_LEDGER_ID = re.compile(r"\s*D-\d+[\w()\u2460-\u246f]*")
+
+
+def strip_ledger_ids(text: str) -> str:
+    return _BARE_LEDGER_ID.sub("", _LEDGER_TAG.sub("", text)).strip()
 
 
 # --------------------------------------------------------------------------
@@ -263,120 +287,145 @@ def check(
         # This is the checker's ADMITTED TERMINATION LAYER: an
         # unreadable or corrupt registry is reported and stops here. No fourth
         # layer is added on top of it.
-        return [f"registry unreadable: {e}"]
+        return [f"registry_unusable -- registry unreadable: {e}"]
+
+    # The parse succeeding is not the same as the registry BEING a registry: a
+    # JSON-valid list/string/number parses fine and then dies on ``data.get``,
+    # which exits through a traceback -- an untagged line no rule table maps,
+    # and the one shape where "unreadable" would be a lie (the file read fine).
+    if not isinstance(data, dict):
+        return [
+            "registry_unusable -- the registry root is "
+            f"{type(data).__name__}, not an object with an 'entries' list"
+        ]
 
     entries = data.get("entries")
     if not isinstance(entries, list) or not entries:
         # fail-on-empty (OPA --fail-on-empty precedent). An empty
         # registry is not "nothing to report", it is a registry that governs
         # nothing -- the failure mode this whole gate exists to prevent.
-        return ["registry has no entries -- an empty registry governs nothing"]
+        return ["registry_unusable -- registry has no entries; an empty registry governs nothing"]
 
     try:
         bound = enumerate_bound_objects(scripts_dir)
     except OSError as e:
-        return [f"cannot enumerate bound objects: {e}"]
+        return [f"registry_unusable -- cannot enumerate bound objects: {e}"]
     wired = wired_gate_ids(workflows_dir)
 
     registered: dict[str, dict] = {}
     for entry in entries:
+        if not isinstance(entry, dict):
+            findings.append(
+                f"malformed_entry -- registry entry is {type(entry).__name__}, "
+                "not an object with a gate_id"
+            )
+            continue
         gate_id = entry.get("gate_id")
         if not isinstance(gate_id, str) or not gate_id:
-            findings.append("registry entry has no usable gate_id")
+            findings.append("malformed_entry -- registry entry has no usable gate_id")
             continue
         if gate_id in registered:
-            findings.append(f"{gate_id}: registered more than once")
+            findings.append(f"{gate_id}: malformed_entry -- registered more than once")
             continue
         registered[gate_id] = entry
 
     # R1 -- a bound object nobody registered
     for gate_id in sorted(bound - set(registered)):
         findings.append(
-            f"{gate_id}: bound object is not registered -- every governance "
-            "surface needs a bound_class, an expectation source and its pins "
-            "(D-215 1)"
+            f"{gate_id}: R1 unregistered_bound_object -- bound object is not "
+            "registered; every governance surface needs a bound_class, an "
+            "expectation source and its pins"
         )
 
     # R3 -- an entry pointing at an object that no longer exists
     for gate_id in sorted(set(registered) - bound):
         findings.append(
-            f"{gate_id}: stale registration -- the script no longer exists "
-            "(D-215 3); delete the entry or restore the surface"
+            f"{gate_id}: R3 stale_registration -- the script no longer exists; "
+            "delete the entry or restore the surface"
         )
 
     for gate_id in sorted(registered):
         entry = registered[gate_id]
         bound_class = entry.get("bound_class")
-        if bound_class not in KNOWN_CLASSES:
+        # Membership in a frozenset hashes the value, so an unhashable one
+        # (a list, a dict) raises TypeError instead of reporting. Validate the
+        # type first: this is the one input shape that turns a finding into a
+        # traceback.
+        if not isinstance(bound_class, str) or bound_class not in KNOWN_CLASSES:
             findings.append(
-                f"{gate_id}: bound_class {bound_class!r} is not one of "
-                f"{sorted(KNOWN_CLASSES)} (D-212 five tiers)"
+                f"{gate_id}: bad_bound_class -- {bound_class!r} is not one of "
+                f"the known bound classes {sorted(KNOWN_CLASSES)}"
             )
             continue
 
         # R2 -- registered pointers that do not resolve
         sources = entry.get("expected_sources")
         if not isinstance(sources, list):
-            findings.append(f"{gate_id}: expected_sources must be a list")
+            findings.append(
+                f"{gate_id}: R2 unresolvable_pointer -- expected_sources must be a list"
+            )
             sources = []
         for pointer in sources:
             reason = resolve_pointer(root, pointer)
             if reason:
-                findings.append(f"{gate_id}: expected_source {pointer}: {reason}")
+                findings.append(
+                    f"{gate_id}: R2 unresolvable_pointer -- expected_source {pointer}: {reason}"
+                )
         pins = entry.get("pin_node_ids")
         if not isinstance(pins, list):
-            findings.append(f"{gate_id}: pin_node_ids must be a list")
+            findings.append(f"{gate_id}: R2 unresolvable_pointer -- pin_node_ids must be a list")
             pins = []
         for node_id in pins:
             reason = resolve_pin_node(root, node_id)
             if reason:
-                findings.append(f"{gate_id}: pin node {node_id}: {reason}")
+                findings.append(
+                    f"{gate_id}: R2 unresolvable_pointer -- pin node {node_id}: {reason}"
+                )
 
         # R6 -- zero-pin guard (fail-on-empty)
         if bound_class in PIN_REQUIRED_CLASSES and not pins:
             findings.append(
-                f"{gate_id}: bound_class {bound_class} carries no pin "
-                "(zero-pin guard, D-215 3) -- a gate nobody can fail is a "
-                "claim, not a gate"
+                f"{gate_id}: R6 zero_pin_guard -- bound_class {bound_class} "
+                "carries no pin; a gate nobody can fail is a claim, not a gate"
             )
 
         # R4 -- veto-power drift
         if bound_class == "gate" and gate_id not in wired:
             findings.append(
-                f"{gate_id}: registered bound_class=gate but no workflow under "
-                ".github/workflows invokes it -- either wire it or reclassify it "
-                "as an instrument (D-212 2, verdict drift)"
+                f"{gate_id}: R4 gate_class_not_wired -- registered bound_class=gate "
+                "but no workflow under .github/workflows invokes it; either wire "
+                "it or reclassify it as an instrument (verdict drift)"
             )
 
         # R5 -- exemption discipline
         exemption = entry.get("exemption")
         if exemption is not None:
             if not isinstance(exemption, dict):
-                findings.append(f"{gate_id}: exemption must be an object or null")
+                findings.append(f"{gate_id}: R5 bad_exemption -- must be an object or null")
             else:
                 reason = (exemption.get("reason") or "").strip()
                 if not reason:
-                    findings.append(f"{gate_id}: exemption needs a non-empty reason")
+                    findings.append(f"{gate_id}: R5 bad_exemption -- needs a non-empty reason")
                 expires = exemption.get("expires")
                 issue = exemption.get("issue")
                 if expires is None and issue is None:
                     findings.append(
-                        f"{gate_id}: exemption needs expires or issue "
-                        "(D-215 5) -- an open-ended exemption is the "
-                        "Graveyard anti-pattern"
+                        f"{gate_id}: R5 bad_exemption -- exemption needs expires "
+                        "or issue; an open-ended exemption is the Graveyard "
+                        "anti-pattern"
                     )
                 elif expires is not None:
                     try:
                         when = date.fromisoformat(str(expires))
                     except ValueError:
                         findings.append(
-                            f"{gate_id}: exemption expires {expires!r} is not an ISO date"
+                            f"{gate_id}: R5 bad_exemption -- expires {expires!r} is not an ISO date"
                         )
                     else:
                         if when < today:
                             findings.append(
-                                f"{gate_id}: exemption EXPIRED at {expires} "
-                                "(D-215 5) -- renew it with a reason or drop it"
+                                f"{gate_id}: R5 bad_exemption -- exemption EXPIRED "
+                                f"at {expires}; renew it with a reason or drop it"
                             )
 
     return findings
@@ -394,11 +443,15 @@ def main() -> int:
     try:
         findings = check(REPO, registry_path)
     except OSError as e:
-        print(f"::error::{e}")
+        print(f"::error::registry_unusable -- {e}")
         return 2
 
     for finding in findings:
-        print(f"::error file=.github/gate-registry.yaml::{finding}")
+        # One choke point instead of per-message stripping: every finding
+        # echoes something it read from the registry (a gate_id, a pointer, a
+        # bound_class, a resolution reason), and the registry is a file an
+        # author edits. Filtering here covers fields this file never named.
+        print(f"::error file=.github/gate-registry.yaml::{strip_ledger_ids(finding)}")
     if findings:
         print(
             f"gate-registry: {len(findings)} finding(s). Fix by registering "

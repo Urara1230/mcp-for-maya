@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -125,7 +126,7 @@ def test_dry_run_mutates_nothing():
 def test_issue_body_carries_obligation_pointer():
     mod = _load()
     body = mod._issue_body(_env("failure"), FakeGh())
-    assert "human review record" in body and "D-127" in body
+    assert "human review record" in body and "v1.0.0 release checklist" in body
 
 
 def test_red_body_lists_failed_steps():
@@ -160,6 +161,50 @@ def test_red_body_lists_failed_steps():
     assert len(creates) == 1
     body = creates[0][creates[0].index("--body") + 1]
     assert "PyPI index dual-source probe" in body
+
+
+def test_forwarded_step_names_never_carry_a_ledger_id():
+    """The workflow's own job and step names still hold ledger ids, and this
+    body republishes them into a public issue. The worktree fix is the strip in
+    failed_steps; this pins that the issue never shows one, without requiring
+    the workflow file to be edited here."""
+    mod = _load()
+    jobs = {
+        "jobs": [
+            {
+                "name": "resolution-drift canary (D-112)",
+                "steps": [
+                    {"name": "gate-registry consistency (D-215)", "conclusion": "failure"},
+                    {"name": "resolve latest tag (D-142γ probe input)", "conclusion": "failure"},
+                ],
+            }
+        ]
+    }
+
+    def runner(argv):
+        if "api" in argv:
+            return json.dumps(jobs)
+        return ""
+
+    body = mod._issue_body(_env("failure", RUN_ID="4242"), runner)
+    assert "resolution-drift canary" in body, "the name survives, only the tag goes"
+    assert "gate-registry consistency" in body
+    assert "resolve latest tag" in body
+    assert not re.search(r"D-\d+", body), body
+
+
+def test_branch_and_workflow_labels_are_stripped_too():
+    """The issue title and body carry the branch and workflow labels, and a
+    branch name is free-form text a contributor controls. Both are stripped, and
+    an id with no parentheses around it must go as well."""
+    mod = _load()
+    env = _env("failure", DRIFT_WORKFLOW="CI (D-112)", BRANCH="fix/D-215-pins")
+    body = mod._issue_body(env, FakeGh())
+    assert not re.search(r"D-\d+", body), body
+    assert "fix/" in body, "the branch keeps its shape, only the id goes"
+    title = mod.title_for("CI (D-112)", "fix/D-215-pins")
+    assert not re.search(r"D-\d+", title), title
+    assert "resolution-drift red" in title
 
 
 def test_failed_step_lookup_failure_does_not_break_notify():

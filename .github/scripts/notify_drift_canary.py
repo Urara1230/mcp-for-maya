@@ -48,6 +48,11 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable
+from pathlib import Path
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from check_gate_registry import strip_ledger_ids  # noqa: E402
 
 
 MARKER = "[drift-canary]"
@@ -65,7 +70,10 @@ def _gh(args: list[str], runner: Runner) -> str:
 
 
 def title_for(workflow: str, branch: str) -> str:
-    return f"{MARKER} resolution-drift red — {workflow} on {branch}"
+    return (
+        f"{MARKER} resolution-drift red — "
+        f"{strip_ledger_ids(workflow)} on {strip_ledger_ids(branch)}"
+    )
 
 
 def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> int | None:
@@ -94,6 +102,13 @@ def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> in
     return None
 
 
+# Workflow job and step names, branch names and the workflow label still carry
+# ledger ids (they are edited in .github/workflows and in git, both outside this
+# script's surface), and this body republishes them into a public issue. Each is
+# filtered on the way out; the filter itself lives in check_gate_registry.py,
+# which every governance script already imports.
+
+
 def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
     """Best-effort attribution: ``job: step`` names with conclusion=failure.
 
@@ -113,7 +128,9 @@ def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
         for job in jobs:
             for step in job.get("steps", []):
                 if step.get("conclusion") == "failure":
-                    bad.append(f"{job.get('name', '?')}: {step.get('name', '?')}")
+                    job_name = strip_ledger_ids(str(job.get("name", "?")))
+                    step_name = strip_ledger_ids(str(step.get("name", "?")))
+                    bad.append(f"{job_name}: {step_name}")
         return bad
     except Exception:
         return []
@@ -132,22 +149,22 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
     body = (
         "Weekly resolution-drift canary (uv lock --upgrade + pytest on the "
         "floating resolution) went red.\n\n"
-        f"- workflow: {env.get('DRIFT_WORKFLOW', '?')}\n"
-        f"- branch: {env.get('BRANCH', '?')}\n"
+        f"- workflow: {strip_ledger_ids(env.get('DRIFT_WORKFLOW', '?'))}\n"
+        f"- branch: {strip_ledger_ids(env.get('BRANCH', '?'))}\n"
         f"- run: {env.get('RUN_URL', '?')} (attempt {env.get('RUN_ATTEMPT', '?')})\n"
         f"- sha: {env.get('GITHUB_SHA', '?')}\n\n"
-        "A red here means upstream dependency drift first broke us — "
-        "the D-100 trigger-debt is armed by this signal. Since D-142gamma "
-        "the same job also carries the PyPI index dual-source probe "
+        "A red here means upstream dependency drift first broke us — it is the "
+        "re-review trigger for the dependency-upgrade decision. "
+        "The same job also carries the "
+        "PyPI index dual-source probe "
         "(simple index + project JSON vs the latest tag) — check the "
         "failed steps below / the run log for which lane went red; a "
         "simple-index red is the install face broken. Repeated reds "
         "comment on this issue instead of opening new ones; the issue "
         "auto-closes on the next green run.\n\n"
         "Obligation: at least one human review record (result + "
-        "attribution in the decision ledger) is required before the "
-        "v1.0.0 release checklist can pass — red or green counts "
-        "(D-127)."
+        "attribution) is required before the v1.0.0 release checklist "
+        "can pass — red or green counts."
     )
     return body + _failed_steps_md(env, runner)
 

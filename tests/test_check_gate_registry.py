@@ -111,7 +111,9 @@ def test_unregistered_bound_object_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry()])
     findings = mod.check(root, reg)
     assert findings, "a bound object with no registry entry must be reported"
-    assert any("check_newcomer" in f and "not registered" in f for f in findings), findings
+    assert any("check_newcomer" in f and "R1 unregistered_bound_object" in f for f in findings), (
+        findings
+    )
 
 
 def test_a_gate_script_added_later_is_caught_as_unregistered(tmp_path):
@@ -123,7 +125,9 @@ def test_a_gate_script_added_later_is_caught_as_unregistered(tmp_path):
     assert mod.check(root, reg) == []
     (root / ".github" / "scripts" / "check_sneaked_in.py").write_text("x = 1\n", encoding="utf-8")
     findings = mod.check(root, reg)
-    assert any("check_sneaked_in" in f and "not registered" in f for f in findings), findings
+    assert any("check_sneaked_in" in f and "R1 unregistered_bound_object" in f for f in findings), (
+        findings
+    )
 
 
 # --- R2 unresolvable pointers --------------------------------------------
@@ -135,7 +139,7 @@ def test_pin_node_pointing_at_a_deleted_test_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])])
     findings = mod.check(root, reg)
     assert findings, "a pin node that no longer resolves must be reported"
-    assert any("test_gone.py" in f for f in findings), findings
+    assert any("test_gone.py" in f and "R2 unresolvable_pointer" in f for f in findings), findings
 
 
 def test_pin_node_with_a_missing_test_function_is_red(tmp_path):
@@ -294,7 +298,7 @@ def test_stale_registration_for_a_deleted_gate_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(), _good_entry("check_retired")])
     findings = mod.check(root, reg)
     assert findings, "an entry for a deleted script must be reported"
-    assert any("check_retired" in f and "stale" in f for f in findings), findings
+    assert any("check_retired" in f and "R3 stale_registration" in f for f in findings), findings
 
 
 # --- R4 veto-power drift --------------------------------------------------
@@ -308,7 +312,7 @@ def test_gate_class_with_no_workflow_wiring_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(), _good_entry("check_unwired")])
     findings = mod.check(root, reg)
     assert findings, "an unwired bound_class=gate must be reported"
-    assert any("check_unwired" in f and "no workflow" in f for f in findings), findings
+    assert any("check_unwired" in f and "R4 gate_class_not_wired" in f for f in findings), findings
 
 
 def test_an_instrument_is_allowed_to_be_unwired(tmp_path):
@@ -335,7 +339,7 @@ def test_expired_exemption_is_red(tmp_path):
     )
     findings = mod.check(root, reg, today=date(2026, 10, 3))
     assert findings, "an expired exemption must be reported"
-    assert any("EXPIRED" in f for f in findings), findings
+    assert any("R5 bad_exemption" in f and "EXPIRED" in f for f in findings), findings
 
 
 def test_exemption_expiring_today_is_not_yet_expired(tmp_path):
@@ -356,7 +360,7 @@ def test_exemption_with_neither_expires_nor_issue_is_red(tmp_path):
     root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
     reg = _write_registry(root, [_good_entry(exemption={"reason": "we meant to"})])
     findings = mod.check(root, reg)
-    assert any("expires or issue" in f for f in findings), findings
+    assert any("R5 bad_exemption" in f and "expires or issue" in f for f in findings), findings
 
 
 def test_exemption_with_an_issue_instead_of_a_date_is_accepted(tmp_path):
@@ -370,9 +374,9 @@ def test_unparseable_expiry_is_red_not_silently_accepted(tmp_path):
     mod = _load()
     root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
     reg = _write_registry(root, [_good_entry(exemption={"reason": "temporary", "expires": "soon"})])
-    assert any("not an ISO date" in f for f in findings_of(mod, root, reg)), findings_of(
-        mod, root, reg
-    )
+    assert any(
+        "R5 bad_exemption" in f and "not an ISO date" in f for f in findings_of(mod, root, reg)
+    ), findings_of(mod, root, reg)
 
 
 def findings_of(mod, root, reg):
@@ -388,7 +392,7 @@ def test_gate_with_no_pins_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(pin_node_ids=[])])
     findings = mod.check(root, reg)
     assert findings, "a gate with zero pins must be reported (fail-on-empty)"
-    assert any("zero-pin guard" in f for f in findings), findings
+    assert any("R6 zero_pin_guard" in f for f in findings), findings
 
 
 # --- the admitted termination layer ---------------------------------------
@@ -436,6 +440,233 @@ def test_findings_are_blocking_with_no_opt_out(tmp_path):
     assert proc.returncode == 1, proc.stdout + proc.stderr
     assert "::error" in proc.stdout, proc.stdout
     assert "::warning" not in proc.stdout, proc.stdout
+
+
+# --- every finding is mappable to a rule ---------------------------------
+
+
+RULE_TAGS = (
+    "R1 unregistered_bound_object",
+    "R2 unresolvable_pointer",
+    "R3 stale_registration",
+    "R4 gate_class_not_wired",
+    "R5 bad_exemption",
+    "R6 zero_pin_guard",
+    "malformed_entry",
+    "bad_bound_class",
+    "registry_unusable",
+)
+
+
+def test_every_finding_names_the_rule_it_fired(tmp_path):
+    """The docstring's id column is gone, so the printed tag IS the mapping from
+    a CI line to a rule. A finding with no tag is unmappable, and the property
+    regressed once by being claimed in a commit message instead of pinned here.
+
+    A loop rather than ``parametrize``: ``check_doc_claims`` declines to verify
+    a suite count for any file carrying that marker, and this file's count is
+    cited in the changelog."""
+    mod = _load()
+    demo = ["check_demo"]
+    cases = [
+        # case id, expected tag, entries, scripts, wired
+        (
+            "R1",
+            "R1 unregistered_bound_object",
+            [_good_entry()],
+            ["check_demo", "check_extra"],
+            demo,
+        ),
+        (
+            "R2-pin",
+            "R2 unresolvable_pointer",
+            [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])],
+            demo,
+            demo,
+        ),
+        (
+            "R2-source",
+            "R2 unresolvable_pointer",
+            [_good_entry(expected_sources=["gone/spec.yaml::cap"])],
+            demo,
+            demo,
+        ),
+        ("R2-not-a-list", "R2 unresolvable_pointer", [_good_entry(pin_node_ids="x")], demo, demo),
+        (
+            "R3",
+            "R3 stale_registration",
+            [_good_entry(), _good_entry("check_retired")],
+            demo,
+            demo,
+        ),
+        ("R4", "R4 gate_class_not_wired", [_good_entry()], demo, []),
+        ("R6", "R6 zero_pin_guard", [_good_entry(pin_node_ids=[])], demo, demo),
+        (
+            "bad_bound_class",
+            "bad_bound_class",
+            [_good_entry(bound_class="nonsense")],
+            demo,
+            demo,
+        ),
+        (
+            "R5-noend",
+            "R5 bad_exemption",
+            [_good_entry(exemption={"reason": "we meant to"})],
+            demo,
+            demo,
+        ),
+        (
+            "R5-expired",
+            "R5 bad_exemption",
+            [_good_entry(exemption={"reason": "temporary", "expires": "2020-01-01"})],
+            demo,
+            demo,
+        ),
+        (
+            "R5-noreason",
+            "R5 bad_exemption",
+            [_good_entry(exemption={"reason": ""})],
+            demo,
+            demo,
+        ),
+        (
+            "R5-not-an-object",
+            "R5 bad_exemption",
+            [_good_entry(exemption="waived")],
+            demo,
+            demo,
+        ),
+        (
+            "R5-baddate",
+            "R5 bad_exemption",
+            [_good_entry(exemption={"reason": "x", "expires": "soon"})],
+            demo,
+            demo,
+        ),
+        (
+            "malformed-duplicate",
+            "malformed_entry",
+            [_good_entry(), _good_entry()],
+            demo,
+            demo,
+        ),
+        (
+            "malformed-no-id",
+            "malformed_entry",
+            [{"bound_class": "gate"}],
+            demo,
+            demo,
+        ),
+    ]
+    for case_id, expected, entries, scripts, wired in cases:
+        root = _tree(tmp_path / case_id, scripts=scripts, wired=wired)
+        findings = mod.check(root, _write_registry(root, entries))
+        assert findings, f"{case_id}: the fixture must produce at least one finding"
+        untagged = [f for f in findings if not any(tag in f for tag in RULE_TAGS)]
+        assert untagged == [], f"{case_id} produced an unmappable finding: {untagged}"
+        # The tag that SHOULD fire is the one that fires. Asserting only "some
+        # tag is present" let a case drift onto a neighbouring rule and stay
+        # green -- the defect this test exists to catch.
+        assert any(expected in f for f in findings), (
+            f"{case_id}: expected {expected!r}, got {findings}"
+        )
+
+
+def test_the_termination_layer_is_tagged(tmp_path):
+    """An unreadable or empty registry returns before the rule loop, so its
+    findings are the easiest ones to leave untagged. Each case asserts a
+    non-empty result first: ``all()`` over an empty list is vacuously true, so
+    without that line a silent pass would satisfy this test."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    bad = root / ".github" / "gate-registry.yaml"
+    bad.write_text("{not json at all", encoding="utf-8")
+    unreadable = mod.check(root, bad)
+    assert unreadable, "a corrupt registry must not return an empty finding list"
+    assert all("registry_unusable" in f for f in unreadable), unreadable
+    empty = mod.check(root, _write_registry(root, []))
+    assert empty, "an empty registry must not return an empty finding list"
+    assert all("registry_unusable" in f for f in empty), empty
+    # The third branch: the bound set cannot be enumerated at all. The registry
+    # must be VALID here, or check() returns at the unreadable branch above and
+    # this asserts on a finding it never produced.
+    good = _write_registry(root, [_good_entry()])
+    unenumerable = mod.check(root, good, scripts_dir=root / "no-such-scripts-dir")
+    assert unenumerable, "an unlistable scripts dir must not pass silently"
+    assert all("registry_unusable" in f for f in unenumerable), unenumerable
+    assert any("cannot enumerate" in f for f in unenumerable), unenumerable
+
+
+def test_a_shape_valid_registry_that_is_not_an_object_is_tagged_not_a_traceback(tmp_path):
+    """Parseable is not the same as shaped. A JSON list, string or number reads
+    fine and then dies on ``data.get``, which exits through an untagged
+    traceback -- the one output this gate's "every finding names its rule"
+    property cannot survive, and the one place calling it "unreadable" would be
+    false. Each case asserts a non-empty, tagged finding rather than merely
+    "no exception": a bare try/except here would pass on any silent return."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    reg = root / ".github" / "gate-registry.yaml"
+    for payload in ('[{"gate_id": "check_demo"}]', '"just a string"', "42", "null"):
+        reg.write_text(payload, encoding="utf-8")
+        findings = mod.check(root, reg)
+        assert findings, f"{payload}: a non-object root must not pass silently"
+        assert all("registry_unusable" in f for f in findings), findings
+        assert any("not an object" in f for f in findings), findings
+
+
+def test_an_entry_that_is_not_an_object_is_a_malformed_entry(tmp_path):
+    """R2 already guards a pointer list of the wrong type; the LIST ITSELF has
+    the same failure mode one level up. A registry whose ``entries`` holds a
+    number must be a tagged row an operator can fix, not an ``AttributeError``
+    that looks like a broken gate."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    reg = _write_registry(root, [7, _good_entry()])
+    findings = mod.check(root, reg)
+    assert findings, "a non-object entry must not pass silently"
+    assert all(any(tag in f for tag in RULE_TAGS) for f in findings), findings
+    assert any("malformed_entry" in f for f in findings), findings
+    # The good entry beside it is still adjudicated: one bad row must not
+    # swallow the rest of the registry.
+    assert not any("check_demo:" in f for f in findings), findings
+
+
+# --- hostile registry values ---------------------------------------------
+
+
+def test_an_unhashable_bound_class_is_a_finding_not_a_traceback(tmp_path):
+    """Membership in a frozenset hashes the value, so a list raises TypeError
+    and the run dies without a finding. Type is checked before membership."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    for bad in ([], {}, ["gate"]):
+        reg = _write_registry(root, [_good_entry(bound_class=bad)])
+        findings = mod.check(root, reg)
+        assert findings, f"{bad!r}: must be reported, not raise"
+        assert any("bad_bound_class" in f for f in findings), findings
+
+
+def test_a_ledger_id_in_the_registry_is_not_echoed_to_ci(tmp_path, capsys):
+    """Findings echo values read from the registry, and the registry is a file
+    an author edits. main() strips at the print boundary, so an id in any of
+    those fields never reaches a CI line."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    reg = _write_registry(root, [_good_entry(bound_class="D-215")])
+    argv = ["check_gate_registry.py", str(reg)]
+    import sys as _sys
+
+    old = _sys.argv
+    _sys.argv = argv
+    try:
+        rc = mod.main()
+    finally:
+        _sys.argv = old
+    out = capsys.readouterr().out
+    assert rc == 1, out
+    assert "D-215" not in out, out
+    assert "bad_bound_class" in out, out
 
 
 # --- enumeration honesty (D-215 7) ---------------------------------------

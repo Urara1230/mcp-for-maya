@@ -129,7 +129,7 @@ def main() -> int:
     elif _v(m.group(1)) != pp:
         errors.append(
             f"::error file=src/maya_mcp_server/__init__.py::__version__ is "
-            f"{m.group(1)} but pyproject.toml is {pp_s} (D-207 9)"
+            f"{m.group(1)} but pyproject.toml is {pp_s}"
         )
 
     # The registry manifest at the repo root must match pyproject.
@@ -138,8 +138,7 @@ def main() -> int:
     if not SERVER_JSON.exists():
         errors.append(
             "::error file=server.json::missing at the repo root - it is the "
-            "mcp-publisher default read path and must be version-controlled "
-            "(D-229 1)"
+            "mcp-publisher default read path and must be version-controlled"
         )
     else:
         sj = server_json_version(SERVER_JSON)
@@ -147,13 +146,13 @@ def main() -> int:
             errors.append(
                 "::error file=server.json::top-level 'version' field missing or not a "
                 "dotted number - the mcp-publisher manifest cannot be compared to "
-                "pyproject.toml (D-229 2)"
+                "pyproject.toml"
             )
         elif sj != pp:
             errors.append(
                 f"::error file=server.json::version is {'.'.join(map(str, sj))} but "
                 f"pyproject.toml is {pp_s} - the registry manifest drifted from the "
-                f"package (D-229 2)"
+                f"package"
             )
 
     log_text = CHANGELOG.read_text(encoding="utf-8")
@@ -161,7 +160,7 @@ def main() -> int:
     if newest is None:
         errors.append(
             "::error file=CHANGELOG.md::no released '## [x.y.z]' section found - the "
-            "changelog cannot be compared against pyproject.toml (D-207 9)"
+            "changelog cannot be compared against pyproject.toml"
         )
     elif newest == pp:
         pass  # released state: everything agrees
@@ -169,7 +168,7 @@ def main() -> int:
         errors.append(
             f"::error file=pyproject.toml::CHANGELOG has released {newest[0]}."
             f"{'.'.join(map(str, newest[1:]))} but pyproject is {pp_s} - a released "
-            f"version is ahead of the package (D-207 9)"
+            f"version is ahead of the package"
         )
     else:
         body = unreleased_body(log_text)
@@ -177,14 +176,13 @@ def main() -> int:
             errors.append(
                 f"::error file=CHANGELOG.md::pyproject is {pp_s} but the newest "
                 f"released section is {'.'.join(map(str, newest))} and [Unreleased] "
-                f"is empty - nothing to release and the version was bumped anyway "
-                f"(D-207 9)"
+                f"is empty - nothing to release and the version was bumped anyway"
             )
         else:
             warnings.append(
                 f"::warning file=CHANGELOG.md::unreleased state: pyproject is {pp_s}, "
                 f"newest released is {'.'.join(map(str, newest))}, work sits under "
-                f"[Unreleased] - tolerated (D-207 9)"
+                f"[Unreleased] - tolerated"
             )
 
     if LLMS.exists():
@@ -193,15 +191,15 @@ def main() -> int:
         if not m:
             errors.append(
                 "::error file=llms.txt::no 'tool registry (vX.Y.Z)' field - run "
-                "check_llms_txt.py --write (D-207 9)"
+                "check_llms_txt.py --write"
             )
         elif _v(m.group(1)) != pp:
             errors.append(
                 f"::error file=llms.txt::version field is v{m.group(1)} but "
-                f"pyproject.toml is {pp_s} - run check_llms_txt.py --write (D-207 9)"
+                f"pyproject.toml is {pp_s} - run check_llms_txt.py --write"
             )
     else:
-        errors.append("::error file=llms.txt::missing - run check_llms_txt.py --write (D-207 9)")
+        errors.append("::error file=llms.txt::missing - run check_llms_txt.py --write")
 
     for w in warnings:
         print(w)

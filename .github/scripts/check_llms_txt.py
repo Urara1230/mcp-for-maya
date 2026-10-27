@@ -340,7 +340,7 @@ def main(argv: list[str] | None = None) -> int:
     if n_lines > LINE_CAP:
         problems.append(
             f"::error file={LLMS.name}::{n_lines} lines exceeds the {LINE_CAP}-line cap "
-            f"(D-207 2) - shorten summaries rather than shipping a second file"
+            f"- shorten summaries rather than shipping a second file"
         )
     if actual != expected and not problems:
         problems.append(
@@ -350,7 +350,7 @@ def main(argv: list[str] | None = None) -> int:
     if problems:
         print("\n".join(problems))
         return 1
-    print(f"llms.txt OK: {n_lines} lines, {len(matrix)} tools, matches the registry (D-207 2).")
+    print(f"llms.txt OK: {n_lines} lines, {len(matrix)} tools, matches the tool registry.")
     return 0
 
 

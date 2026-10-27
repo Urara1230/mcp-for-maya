@@ -52,7 +52,7 @@
       "required_elements": [
         {
                   "id": "read_only_disclosure",
-                  "why": "read-only check disclosure — the description must state it does not modify the scene (real API has no auto_fix parameter; revised from autofix_two_state/autofix_mutation per D-180)",
+                  "why": "read-only check disclosure — the description must state it does not modify the scene (real API has no auto_fix parameter; revised from autofix_two_state/autofix_mutation by the polarity rule)",
                   "any": [
                             "(?i)read[-\\s]?only",
                             "(?i)non-destructive",
@@ -71,7 +71,7 @@
         },
         {
                   "id": "no_mutation_no_undo",
-                  "why": "no-mutation implies no-undo consequence disclosed (revised from irreversible_when_mutating per D-180)",
+                  "why": "no-mutation implies no-undo consequence disclosed (revised from irreversible_when_mutating by the polarity rule)",
                   "any": [
                             "(?i)non-destructive[^\\n]{0,120}(no|without)[^\\n]{0,40}(undo|rollback)",
                             "(?i)(no|without)[^\\n]{0,40}(undo|rollback)\\s+checkpoint",
@@ -205,7 +205,7 @@
       "required_elements": [
         {
                   "id": "mutation_side_effects",
-                  "why": "creates a camera and animation curves and marks the scene dirty — mutation side effects must be disclosed (polarity_aware per D-180: a negated claim must not satisfy; pure-positive pattern set, the only guarded element per D-190 3)",
+                  "why": "creates a camera and animation curves and marks the scene dirty — mutation side effects must be disclosed (polarity_aware: a negated claim must not satisfy; pure-positive pattern set, the only guarded element under the direction limit)",
                   "polarity_aware": true,
                   "positive_exemptions": [
                             "not idempotent",
@@ -248,7 +248,7 @@
         },
         {
                   "id": "boundary_line",
-                  "why": "one-way disambiguation marker (D-174 one-way convention)",
+                  "why": "one-way disambiguation marker (also a P1 scene_* member)",
                   "any": [
                             "Boundary:"
                   ]

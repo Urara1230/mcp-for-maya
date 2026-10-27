@@ -62,7 +62,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_gate_registry import resolve_pin_node, resolve_pointer  # noqa: E402
+from check_gate_registry import (  # noqa: E402
+    resolve_pin_node,
+    resolve_pointer,
+    strip_ledger_ids,
+)
 
 
 # Where D1 looks, and where D2 looks.
@@ -319,7 +323,8 @@ def check_changelog(root: Path) -> list[str]:
     for section, text in _iter_bullets(lines, start + 1, stop):
         if section not in RULED_SECTIONS:
             continue
-        where = f"CHANGELOG.md [{section}] {text.splitlines()[0][2:52].strip()}"
+        headline = strip_ledger_ids(text.splitlines()[0][2:].strip())[:50].strip()
+        where = f"CHANGELOG.md [{section}] {headline}"
         # Soft-wrapped markdown must not cost a bullet its evidence form, so the
         # pattern match runs on flattened text. This is a loosening and is
         # disclosed below rather than passed off as precision: a command and a

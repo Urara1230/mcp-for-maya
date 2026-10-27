@@ -24,9 +24,9 @@ side catches it deterministically instead of relying on the rename
 heuristic; the filter still lists M/R/T explicitly.
 
 Escape hatch: a maintainer-aware merge can still land a removal — the
-PR body must state the removal and a ledger note records it. The guard
-only forces the decision to be visible; it cannot "guarantee" anything
-about rendered PyPI pages.
+PR body must state the removal, and that stated decision in the PR is
+the record. The guard only forces the decision to be visible; it cannot
+"guarantee" anything about rendered PyPI pages.
 """
 
 from __future__ import annotations
@@ -99,9 +99,9 @@ def main() -> int:
     for f in bad:
         print(
             f"::error file={f}::.github/assets/ is append-only —"
-            " delete/modify/rename blocked (D-113). Escape hatch:"
+            " delete/modify/rename blocked. Escape hatch:"
             " maintainer-aware merge with the removal stated in the PR"
-            " body + a ledger note."
+            " body."
         )
     print(f"assets-guard: {len(bad)} violation(s) under {GUARDED} in {rng}")
     return 1

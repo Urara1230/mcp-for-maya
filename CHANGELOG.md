@@ -37,8 +37,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   What is machine-checked is **registration discipline, not pin effectiveness** —
   a hollow pin passes every rule, and that residual is disclosed rather than
   papered over.
+  Every printed finding names the rule that fired (`R1 unregistered_bound_object`
+  and so on, plus `malformed_entry`, `bad_bound_class` and `registry_unusable`
+  for the cases the numbered rules do not cover), because the docstring's id column
+  was retired in #92 — the printed tag is now the only mapping from a CI line
+  back to a rule, and a per-branch pin fails any finding that names none. That
+  property holds for registry SHAPE too, not only for registry content: a root
+  that parses to a list or a number, or an entry that is not an object, used to
+  die on `data.get` and exit through an untagged traceback. Both are now tagged
+  rows (`registry_unusable` / `malformed_entry`), and the entry case keeps
+  adjudicating the valid rows beside it.
   Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
-  `.github/gate-registry.yaml::entries` (the suite collects 29 tests).
+  `tests/test_check_gate_registry.py::test_every_finding_names_the_rule_it_fired`,
+  `tests/test_check_gate_registry.py::test_a_shape_valid_registry_that_is_not_an_object_is_tagged_not_a_traceback`,
+  `.github/gate-registry.yaml::entries` (the suite collects 35 tests).
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the
@@ -98,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   point-in-time records, and a gate that "corrected" them would be a rewriting
   machine.
   Evidence: `tests/test_check_doc_claims.py::test_a_stale_count_claim_fails_the_gate`;
-  `tests/test_check_doc_claims.py` (23 tests);
+  `tests/test_check_doc_claims.py` (25 tests);
   `python .github/scripts/check_doc_claims.py` → doc-claims OK.
 
 - **Sample-size floor counts verdict-bearing labels only (D-203)** —

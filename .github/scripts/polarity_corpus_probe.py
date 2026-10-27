@@ -105,7 +105,7 @@ def primary_track(checker, tools, by_name):
         " (0 = the list is a forward guard, no verdict depends on it today)"
     )
     verdict = "PASS" if negated_only == 0 else "REVIEW"
-    print(f"  D-190(4) zero-false-rejection verdict: {verdict}")
+    print(f"  zero-false-rejection verdict: {verdict}")
 
 
 def stress_track(checker, tools, docs):
@@ -196,7 +196,7 @@ LABELLED_CORPUS = [
     {
         "label": KNOWN_LIMITATION,
         "text": "It does not delete anything. The tool creates a new camera.",
-        "why": "the cue sits in an earlier clause; clause scope forgives it by design (D-190 1)",
+        "why": "the cue sits in an earlier clause; clause scope forgives it by design",
     },
     {
         "label": KNOWN_LIMITATION,
@@ -352,11 +352,11 @@ def labelled_track(checker, tools):
         print(
             f"    PER-ELEMENT TN {tool}/{eid}: "
             f"{per_element_tn.get((tool, eid), 0)} true negatives "
-            f"(D-203 floor {MIN_TN_PER_ELEMENT})"
+            f"(per-element floor {MIN_TN_PER_ELEMENT})"
         )
     print(
         f"  adjudicable (true_negative + forgiven) = {adjudicated} "
-        f"[known_limitation excluded by D-203: {counts[KNOWN_LIMITATION]}]"
+        f"[known_limitation excluded from the floor: {counts[KNOWN_LIMITATION]}]"
     )
     # The floor verdict is reported INDEPENDENTLY of the label-agreement verdict.
     # Chaining them with elif let a label disagreement swallow a floor
@@ -371,13 +371,13 @@ def labelled_track(checker, tools):
     elif thin:
         print(
             f"  PER-ELEMENT FLOOR NOT MET by {len(thin)} element(s) "
-            f"(D-203: >= {MIN_TN_PER_ELEMENT} true negatives each)"
+            f"(floor: >= {MIN_TN_PER_ELEMENT} true negatives each)"
         )
     else:
         print(
             f"  floor met: {adjudicated} adjudicable clears "
             f"MIN_ADJUDICABLE={MIN_ADJUDICABLE} and every guarded element "
-            f"carries >= {MIN_TN_PER_ELEMENT} true negatives (D-203)"
+            f"carries >= {MIN_TN_PER_ELEMENT} true negatives"
         )
     # Hard admission is a TWO-precondition gate, not one: (a) the PRIMARY
     # track reports zero false rejections AND
@@ -386,7 +386,7 @@ def labelled_track(checker, tools):
     # single-condition reading the spec's precondition caveat forbids. Restated
     # here (not only in the spec file) because this line IS the promotion report.
     print(
-        "  NOTE (D-198 5): this floor is ONE of two preconditions for warn->hard "
+        "  NOTE: this floor is ONE of two preconditions for warn->hard "
         "promotion of the TDQS gate. The other is the PRIMARY track's "
         "zero-false-rejection verdict above. Floor met + a PRIMARY false "
         "rejection is NOT a promotion; both must hold."
@@ -438,7 +438,7 @@ def mutation_track(checker, tools):
     print(f"  constructions exercised={len(shapes)} (cue-prefix and clause-split)")
     for (shape, kind), n in sorted(shapes.items()):
         print(f"    {kind}: {shape!r} -> {n}")
-    print("  absolute counts only -- track 3 is NEVER a denominator (D-198)")
+    print("  absolute counts only -- track 3 is NEVER a denominator")
 
 
 def _guarded_elements(tools):
