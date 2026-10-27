@@ -82,7 +82,8 @@ resolves and a test count that no longer matches the suite it cites. Every
 ### Assertion & evidence discipline
 
 - Enumeration/count assertions declare their domain; recompute before restating a count.
-- A PR body and a changelog bullet are assertion surfaces too: recompute their counts and capability claims against the tip before posting.
+- A PR body and a changelog bullet are assertion surfaces too: recompute their counts and capability claims against the tip you push or merge — a review fix pushed after the body went out silently stalemates the numbers under it.
+- A mechanism claim travels with its reproduction: the condition that triggers it, the command that showed it, and the exit code that came back. Write the sentence no wider than that measurement — the `SRE module mismatch` lines in Development setup above are the shape, condition included.
 - Anything not reproducible is recorded "unverified" — never guess a cause.
 
 ### Asset directory discipline
