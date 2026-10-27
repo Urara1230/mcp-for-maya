@@ -7,9 +7,9 @@ deleted docstring as moved code, flagged migrations for deleting a
 delimiter-free comment, and double-counted the module docstring.
 
 The count assertions here are deliberate: a test that passes under the broken
-implementation pins nothing, which is the same hollow-pin failure D-213 legislates
-against, so the mis-nesting case is also asserted to be *invisible* to the
-aggregate-count implementation it replaced.
+implementation pins nothing, and no gate can check that for us, so the
+mis-nesting case is also asserted to be *invisible* to the aggregate-count
+implementation it replaced.
 """
 
 from __future__ import annotations
@@ -38,6 +38,25 @@ def _check(mod, path, base, tip):
 
 def _count(text, chars):
     return sum(text.count(c) for c in chars)
+
+
+def _repo(tmp_path, commits):
+    """A throwaway git repo: one commit per ``{path: source}`` dict, newest last."""
+
+    def git(*args):
+        return subprocess.run(
+            ["git", *args], cwd=tmp_path, capture_output=True, check=True, text=True
+        ).stdout
+
+    git("init", "-q", "--initial-branch=ticket")
+    git("config", "user.email", "gate@example.invalid")
+    git("config", "user.name", "gate")
+    for files in commits:
+        for name, src in files.items():
+            (tmp_path / name).write_bytes(src.encode())
+        git("add", "-A")
+        git("commit", "-q", "-m", "step")
+    return git("rev-parse", "HEAD").strip()
 
 
 BALANCED_DOC = '"""Module docstring that spans lines\nand stays balanced (one pair here).\n"""\n'
@@ -121,10 +140,18 @@ def test_fixing_a_block_is_not_a_finding():
 
 
 def test_string_literal_change_is_code_moved():
-    """A template literal is payload, not prose: the AST rule owns it."""
+    """A template literal is payload, not prose: the AST rule owns it.
+
+    #106's snippet took its prose scope from `tokenize` strings, so this edit read
+    as a delimiter finding — the literal's `(` and `#` are unmatched — while a
+    one-line docstring escaped. The prose rule has to stay silent on it.
+    """
     mod = _load()
     base = BALANCED_DOC + 'X = (\n    "def g(x):\\n    return g(x)\\n"\n)\n'
-    assert mod.code_moved(base, BALANCED_DOC + LITERAL) is True
+    tip = BALANCED_DOC + LITERAL
+    assert mod.code_moved(base, tip) is True
+    ok, errors, warnings = _check(mod, "m.py", base, tip)
+    assert ok and errors == [] and len(warnings) == 1
 
 
 def test_docstring_deletion_is_not_code_moved():
@@ -243,11 +270,37 @@ def test_a_trailing_comment_never_shares_a_block_with_its_neighbour():
         assert len(mod.bad_blocks(src)) == 2
 
 
-def test_an_ordinary_code_change_does_not_block(capsys):
-    """The gate was first wired hard on both findings and reddened every feature
-    branch — this pins the shape that fixed it.
+def test_an_ordinary_code_change_does_not_block(tmp_path, capsys):
+    """A feature commit moves code and adds files; neither may redden prose.
 
-    61476bd is #104's first validator commit: real code movement, no prose damage.
+    Built as a throwaway repo rather than pinned to a historical commit: the
+    `test` job's checkout is not `fetch-depth: 0`, so a history-backed registry
+    pin skips exactly where CI needs it to run. `new.py` arrives with an
+    unbalanced delimiter on purpose — an added file is out of scope
+    (`--diff-filter=M`), and dropping that filter turns this into exit 1 on a git
+    error instead.
+    """
+    mod = _load()
+    head = _repo(
+        tmp_path,
+        [
+            {"m.py": '"""Doc."""\nX = 1\n'},
+            {
+                "m.py": '"""Doc."""\nX = 1\nY = 2  # a plain trailing comment\n',
+                "new.py": '"""New."""\nZ = (\n',
+            },
+        ],
+    )
+    assert mod.main([f"{head}~1", head], tmp_path) == 0
+    out = capsys.readouterr().out
+    assert "CODE MOVED" in out and "prose intact" in out and "::error" not in out
+
+
+def test_a_real_feature_commit_warns_but_does_not_block(capsys):
+    """The same shape as the commit that first proved it: #104's first validator.
+
+    Skips where the object is absent, which is why the registry pins the
+    throwaway-repo test above rather than this one.
     """
     tip = "61476bda1dd1e54ef58280e00a48ffab859ea069"
     if subprocess.run(["git", "cat-file", "-e", tip], cwd=REPO).returncode != 0:
