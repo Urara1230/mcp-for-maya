@@ -587,11 +587,14 @@ def test_the_termination_layer_is_tagged(tmp_path):
     empty = mod.check(root, _write_registry(root, []))
     assert empty, "an empty registry must not return an empty finding list"
     assert all("registry_unusable" in f for f in empty), empty
-    # The third branch: the bound set cannot be enumerated at all.
-    gone = root / "no-such-scripts-dir"
-    unenumerable = mod.check(root, bad, scripts_dir=gone)
+    # The third branch: the bound set cannot be enumerated at all. The registry
+    # must be VALID here, or check() returns at the unreadable branch above and
+    # this asserts on a finding it never produced.
+    good = _write_registry(root, [_good_entry()])
+    unenumerable = mod.check(root, good, scripts_dir=root / "no-such-scripts-dir")
     assert unenumerable, "an unlistable scripts dir must not pass silently"
     assert all("registry_unusable" in f for f in unenumerable), unenumerable
+    assert any("cannot enumerate" in f for f in unenumerable), unenumerable
 
 
 # --- enumeration honesty (D-215 7) ---------------------------------------

@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   papered over.
   Every printed finding names the rule that fired (`R1 unregistered_bound_object`
   and so on, plus `malformed_entry`, `bad_bound_class` and `registry_unusable`
-  for the cases the rule loop cannot reach), because the docstring's id column
+  for the cases the numbered rules do not cover), because the docstring's id column
   was retired in #92 — the printed tag is now the only mapping from a CI line
   back to a rule, and a per-branch pin fails any finding that names none.
   Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
