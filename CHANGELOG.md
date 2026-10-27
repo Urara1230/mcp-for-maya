@@ -92,7 +92,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Migration shape gate** — `check_migration_shape.py <base> <tip>` compares, per
   Python file modified in the range, the AST with every docstring *removed* and the
   count of docstring/comment blocks whose delimiters are unmatched or mis-nested
-  (a stack, so `([)]` is a finding). Either difference fails. It exists because the
+  (a stack, so `([)]` is a finding). A file is reported once — UNPARSEABLE, else
+  CODE MOVED, else an increase in bad delimiter blocks. It exists because the
   entire existing gate set — ruff budget, monolith, TDQS, `llms.txt`,
   version consistency, gate-registry, mypy, `pre-commit`, the stub suite — stayed
   green on #90's commit that deleted `(D-018: ` from a docstring's first line and
@@ -100,11 +101,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scan can find it. String literals stay inside the AST comparison on purpose —
   injected-module templates are payload, not prose — and only an *increase* in bad
   blocks is a finding, because "balanced blocks must not fall" would fire on every
-  migration. The metric is pinned against the real commits, so the numbers cannot
-  drift from the code the way the doc prose they came from did.
+  migration. The blobs and the file list both come from the merge base, so a branch
+  that has fallen behind is not blamed for main's edits, and the step runs on
+  pull_request and push the way the assets guard does.
   Evidence: `tests/test_check_migration_shape.py::test_stranded_closer_in_docstring_fails`,
   `tests/test_check_migration_shape.py::test_main_reports_a_real_defect_and_a_real_repair`
-  (the file collects 15 tests).
+  (the file collects 20 tests, and reverting the stack to the aggregate counts #106
+  shipped turns 2 of them red — the numbers are pinned against the real commits
+  rather than restated in prose).
 
 ### Changed
 

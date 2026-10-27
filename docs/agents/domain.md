@@ -40,11 +40,11 @@ Open decisions are GitHub issues labelled `needs-triage`, not new documents. A d
 
 Retiring ids from comments and docstrings is invisible to the rest of the gate set. On the commit where `(D-018: ` was deleted from a docstring's first line, stranding its `)` on a second line the edit never touched, ruff budget, the monolith line budget, TDQS, `llms.txt`, version consistency, gate-registry, mypy, `pre-commit` and the whole stub suite were green.
 
-`.github/scripts/check_migration_shape.py <base-rev> <tip-rev>` enforces two rules per Python file modified in the range, and runs in the `lint` job:
+`.github/scripts/check_migration_shape.py <base-rev> <tip-rev>` enforces two rules per Python file modified between the merge base of the two revisions and the tip, and runs in the `lint` job on both pull_request and push:
 
 - **CODE MOVED** — the AST differs once every docstring is *removed* (not blanked: a migration may delete one outright). String literals stay inside the comparison, which is right — an injected-module template is payload, not prose.
 - **UNBALANCED** — the file gained a docstring or comment block whose delimiters are unmatched or mis-nested. A stack decides, so `([)]` is a finding, and only an *increase* counts: the opposite test, "balanced blocks must not fall", fires on every migration because removing a parenthetical is how the migration works.
 
-Revisions are arguments and both git calls check their return code; pasted with placeholders unfilled, the earlier form reported success on zero files. The numbers are pinned in `tests/test_check_migration_shape.py` against the real commits, not carried here as prose to rot.
+Revisions are arguments and every git call checks its return code; pasted with placeholders unfilled, the earlier form reported success on zero files. An all-zero base (first push of a branch) skips, as the assets guard does. The numbers are pinned in `tests/test_check_migration_shape.py` against the real commits rather than carried here as prose to rot.
 
-Residual limits, stated so a green run is not over-read: it compares counts, not identities, so one block fixed while another breaks nets nothing; a parenthetical legitimately spanning two comment lines reads as two bad blocks, so each finding is read rather than obeyed blindly; and shape is not sense — whether the surviving sentence still states the decision it inherited is a reader's call.
+Residual limits, stated so a green run is not over-read: it compares counts, not identities, so one block fixed while another breaks nets nothing; a parenthetical legitimately spanning two comment lines reads as two bad blocks, so each finding is read rather than obeyed blindly; only *modified* files are compared, so a PR adding a module is unchecked here; and shape is not sense — whether the surviving sentence still states the decision it inherited is a reader's call.

@@ -30,12 +30,15 @@ Two rules, per Python file modified between two revisions:
 Scope limits, stated so nobody reads more into this than it does:
 
 - It compares counts, not identities: one block fixed while another breaks nets
-  nothing.
-- A parenthetical legitimately spanning two comment lines reads as two bad
-  blocks, so every finding is read, not obeyed blindly.
+  nothing, so a finding is read, not obeyed blindly.
+- A parenthetical legitimately spanning two comment lines reads as two bad blocks.
 - It checks *modified* files only (`--diff-filter=M`): a blob that exists on one
-  side has nothing to compare. A migration adds and deletes no Python file —
-  that is its own acceptance criterion, not this gate's business.
+  side has nothing to compare. A migration adds and deletes no Python file — that
+  is its own acceptance criterion — so a PR adding a module is unchecked here.
+- Both the file list and the blobs come from the merge base of the two revisions,
+  so a branch that has fallen behind its base cannot be blamed for main's edits.
+- An all-zero or empty base (first push of a branch) skips the check, as the
+  assets guard does: there is no prior state to compare.
 - It proves shape, not sense. Whether the surviving sentence still states the
   decision it inherited is a reader's call; see docs/agents/domain.md.
 
@@ -115,7 +118,11 @@ def code_moved(base_src: str, tip_src: str) -> bool | None:
 
 
 def check(pairs: Sequence[tuple[str, str, str]]) -> tuple[bool, list[str], list[str]]:
-    """(ok, errors, warnings) for (path, base_src, tip_src) triples."""
+    """(ok, errors, warnings) for (path, base_src, tip_src) triples.
+
+    A file is reported once: UNPARSEABLE wins, then CODE MOVED, then UNBALANCED —
+    a file whose AST already differs is not also worth a delimiter count.
+    """
     errors: list[str] = []
     for path, base_src, tip_src in pairs:
         moved = code_moved(base_src, tip_src)
@@ -125,11 +132,7 @@ def check(pairs: Sequence[tuple[str, str, str]]) -> tuple[bool, list[str], list[
         if moved:
             errors.append(f"::error file={path}::CODE MOVED: the docstring-stripped AST differs")
             continue
-        try:
-            before, after = len(bad_blocks(base_src)), len(bad_blocks(tip_src))
-        except (SyntaxError, ValueError) as e:
-            errors.append(f"::error file={path}::UNPARSEABLE: cannot tokenize: {e}")
-            continue
+        before, after = len(bad_blocks(base_src)), len(bad_blocks(tip_src))
         if after > before:
             errors.append(
                 f"::error file={path}::UNBALANCED: bad delimiter blocks {before} -> {after}"
@@ -137,16 +140,34 @@ def check(pairs: Sequence[tuple[str, str, str]]) -> tuple[bool, list[str], list[
     return not errors, errors, []
 
 
-def python_paths(runner: Callable[..., object], base: str, tip: str) -> list[str]:
+def python_paths(runner: Callable[..., object], base: str, tip: str, root: Path) -> list[str]:
     """Modified Python files only, and a failing git call is allowed to raise."""
     result = runner(
         ["git", "diff", "--name-only", "--diff-filter=M", f"{base}...{tip}"],
         capture_output=True,
         text=True,
         check=True,
-        cwd=REPO,
+        cwd=root,
     )
     return [p for p in result.stdout.split() if p.endswith(".py")]  # type: ignore[attr-defined]
+
+
+def merge_base(runner: Callable[..., object], base: str, tip: str, root: Path) -> str:
+    """The left side for BOTH the file list and the blobs.
+
+    ``git diff base...tip`` selects files from the merge base, so reading the
+    blobs from ``base`` itself would compare against a commit the file list never
+    referred to: on a PR branch that has fallen behind, files that main changed
+    meanwhile would read as CODE MOVED in a PR that never touched them.
+    """
+    result = runner(
+        ["git", "merge-base", base, tip],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=root,
+    )
+    return result.stdout.strip()  # type: ignore[attr-defined]
 
 
 def sources(root: Path, rev: str, path: str) -> str:
@@ -163,16 +184,22 @@ def main(argv: Sequence[str], root: Path = REPO) -> int:
         print("usage: check_migration_shape.py <base-rev> <tip-rev> [repo-root]")
         return 1
     base, tip = argv
-    try:
-        paths = python_paths(subprocess.run, base, tip)
-    except (subprocess.CalledProcessError, OSError) as e:
-        print(f"::error::git diff {base}...{tip} failed: {e}")
-        return 1
-    if not paths:
-        print(f"no Python files modified between {base} and {tip} — nothing to compare")
+    if not base or set(base) == {"0"}:
+        # First push of a branch: the caller's base is an all-zero SHA, and there
+        # is no prior state to compare. Same posture as the assets guard.
+        print(f"no base ref ({base or 'empty'}) — skipped")
         return 0
     try:
-        pairs = [(p, sources(root, base, p), sources(root, tip, p)) for p in paths]
+        left = merge_base(subprocess.run, base, tip, root)
+        paths = python_paths(subprocess.run, left, tip, root)
+    except (subprocess.CalledProcessError, OSError) as e:
+        print(f"::error::git could not resolve {base}...{tip}: {e}")
+        return 1
+    if not paths:
+        print(f"no Python files modified between {left} and {tip} — nothing to compare")
+        return 0
+    try:
+        pairs = [(p, sources(root, left, p), sources(root, tip, p)) for p in paths]
     except (subprocess.CalledProcessError, OSError) as e:
         print(f"::error::git show failed: {e}")
         return 1

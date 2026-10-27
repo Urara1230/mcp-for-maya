@@ -62,12 +62,12 @@ jobs:
         run: python .github/scripts/check_doc_claims.py
       - name: migration shape gate
         # Hard gate: a comment-only migration must not move code or strand a
-        # delimiter. Needs both ends of a range, so it runs where a PR supplies
-        # a base; a push event has no base to compare against.
-        if: github.event_name == 'pull_request'
+        # delimiter, both of which every other gate here missed on #90. Range
+        # comes from the PR base or, on push, from event.before — same sourcing
+        # as the assets guard, whose checkout already sets fetch-depth: 0.
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          TIP_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TIP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python .github/scripts/check_migration_shape.py "$BASE_SHA" "$TIP_SHA"
       - name: pre-commit fallback (all files)
         run: |
