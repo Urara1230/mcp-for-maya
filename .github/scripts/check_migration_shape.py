@@ -36,10 +36,12 @@ Scope limits, stated so nobody reads more into this than it does:
 
 - It compares counts, not identities: one block fixed while another breaks nets
   nothing, so a finding is read, not obeyed blindly.
-- Prose blocks are a docstring, or a run of consecutive comment lines — a
-  parenthetical that wraps across two comment lines is one balanced block, not
-  two bad ones. Two blocks separated by a blank line stay separate, because that
-  is how a reader sees them.
+- Prose blocks are a docstring, or a run of consecutive standalone comment
+  lines — a parenthetical that wraps across two comment lines is one balanced
+  block, not two bad ones, and a trailing comment after code ends the run so two
+  unrelated fragments cannot cancel out a real stray delimiter. Two blocks
+  separated by a blank line stay separate, because that is how a reader sees
+  them.
 - It checks *modified* files only (`--diff-filter=M`): a blob that exists on one
   side has nothing to compare. A migration adds and deletes no Python file — that
   is its own acceptance criterion — so a PR adding a module is unchecked here.
@@ -91,9 +93,12 @@ def prose_blocks(src: str) -> list[str]:
     """Docstrings (from the AST, so a one-line docstring is not skipped) and
     comment blocks. Deliberately not other string literals.
 
-    Consecutive comment lines are one block: a parenthetical that legitimately
-    wraps across two lines is balanced as a block and would otherwise read as two
-    bad ones, which is a false positive on honest prose.
+    A run of consecutive standalone ``#`` lines is one block: a parenthetical
+    that legitimately wraps is balanced as a block and would otherwise read as
+    two bad ones, a false positive on honest prose. A trailing comment after code
+    breaks the run, so two unrelated fragments on adjacent lines cannot cancel
+    each other out and hide a real one. And line 1 is never a continuation —
+    hence the ``-1``, which is what makes the adjacency test say ``+ 1``.
     """
     tree = ast.parse(src)
     found = [
@@ -101,15 +106,17 @@ def prose_blocks(src: str) -> list[str]:
         for n in ast.walk(tree)  # ast.walk yields the root: do not seed it again
         if isinstance(n, NODES) and (d := ast.get_docstring(n))
     ]
-    last_line = 0
+    last_standalone_line = -1
     for tok in tokenize.generate_tokens(io.StringIO(src).readline):
         if tok.type != tokenize.COMMENT:
             continue
-        if tok.start[0] == last_line + 1 and found:
+        standalone = not tok.line[: tok.start[1]].strip()
+        if standalone and tok.start[0] == last_standalone_line + 1:
             found[-1] += "\n" + tok.string
         else:
             found.append(tok.string)
-        last_line = tok.start[0]
+        if standalone:
+            last_standalone_line = tok.start[0]
     return found
 
 

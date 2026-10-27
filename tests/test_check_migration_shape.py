@@ -214,6 +214,35 @@ def test_a_stranded_closer_inside_a_comment_block_still_fails():
     assert not ok and any("UNBALANCED" in e for e in errors)
 
 
+def test_a_comment_on_the_first_line_is_never_a_continuation():
+    """The sentinel bug: line 1 compares equal to 0 + 1.
+
+    Docstrings are collected before the comment pass, so a file opening with a
+    comment merged it onto the module docstring instead of standing alone —
+    reachable here, since introspect_module.py line 1 is a comment.
+    """
+    mod = _load()
+    src = "# a stray closer)\n" + BALANCED_DOC + "X = 1\n"
+    assert mod.prose_blocks(src)[-1] == "# a stray closer)"
+    assert len(mod.bad_blocks(src)) == 1
+
+
+def test_a_trailing_comment_never_shares_a_block_with_its_neighbour():
+    """One rule, three adjacencies: a run is made of standalone lines only.
+
+    Two trailing lines, a standalone line under a trailing one, and a trailing
+    line under a standalone one — adjacency alone would group each pair and let
+    two unrelated fragments cancel out a real stray delimiter.
+    """
+    mod = _load()
+    for src in (
+        '"""Doc."""\nA = 1  # opens ( here\nB = 2  # closes ) here\n',
+        '"""Doc."""\nA = 1  # opens ( here\n# closes ) here\n',
+        '"""Doc."""\n# opens ( here\nB = 2  # closes ) here\n',
+    ):
+        assert len(mod.bad_blocks(src)) == 2
+
+
 def test_an_ordinary_code_change_does_not_block(capsys):
     """The gate was first wired hard on both findings and reddened every feature
     branch — this pins the shape that fixed it.
