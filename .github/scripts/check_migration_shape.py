@@ -4,9 +4,9 @@
 docstrings (`src/` in #90, `.github/scripts/` in #92). Two failure modes are
 invisible to every other gate in this repo:
 
-- deleting `(D-018: ` from a docstring's first line strands the `)` on the
-  second line, and that second line is never edited, so no per-line scan finds
-  it;
+- deleting a `(D-number: ` citation prefix from a docstring's first line strands
+  the `)` on the second line, and that second line is never edited, so no
+  per-line scan finds it;
 - an edit that reads like prose can move code, because a docstring is data and
   injected-module source lives in string literals.
 
