@@ -9,7 +9,10 @@ must hold in real Maya, where the predicate runs against a live DG.
 
 from __future__ import annotations
 
+import ast
 import json
+import re
+from pathlib import Path
 
 import maya_stub
 import pytest
@@ -452,3 +455,104 @@ class TestSessionScope:
         reinjected = maya_stub.load_scene_module()
         assert reinjected.list_validators()["count"] == 0
         assert reinjected.custom_validator_results() is None
+
+
+class TestCardPinsTheShippedApi:
+    """The scene-review card promises the API is usable without opening this
+    fragment, and `skills/` sits outside check_doc_claims.py's surfaces - so
+    this is the only thing that goes red when card and code drift apart.
+
+    Codes are checked in both directions: the card names every code the
+    fragment can emit, and no code it cannot. Return keys and the severity and
+    status vocabularies are checked from the shipped behavior toward the card,
+    because that is the direction the card's own promise runs.
+
+    The vocabulary assertions demand an *enumeration* - a `|`-separated run
+    whose membership equals the shipped set - because a bare mention test passes
+    while the line that lists the vocabulary goes stale. It pins that the card
+    enumerates the set correctly somewhere, not that every passing mention of
+    one of these words agrees with it.
+    """
+
+    ROOT = Path(__file__).resolve().parents[1]
+    CARD = ROOT / "skills" / "scene-review-playbook" / "SKILL.md"
+    FRAGMENT = ROOT / "src" / "maya_mcp_server" / "validator_module.py"
+    CODE_SHAPE = re.compile(r"\b(invalid_[a-z_]+|weight_overflow|validator_not_found)\b")
+    QUOTED_RUN = re.compile(r"(?:[\"'`][\w_]+[\"'`]\s*\|\s*)+[\"'`][\w_]+[\"'`]")
+    QUOTED_WORD = re.compile(r"[\"'`]([\w_]+)[\"'`]")
+
+    def _card(self) -> str:
+        return self.CARD.read_text(encoding="utf-8")
+
+    def _card_names(self, word: str) -> bool:
+        """A word counts as documented when the card quotes it, any style."""
+        card = self._card()
+        return f"`{word}`" in card or f'"{word}"' in card or f"'{word}'" in card
+
+    def _codes_emitted(self) -> set[str]:
+        tree = ast.parse(self.FRAGMENT.read_text(encoding="utf-8"))
+        codes = set()
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "_val_err"
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+            ):
+                codes.add(str(node.args[0].value))
+        return codes
+
+    def _severities_accepted(self, env) -> set[str]:
+        """The refusal prints the vocabulary it checks against, so the
+        expectation comes from the shipped module rather than this test."""
+        out = env.module.register_validator("probe", lambda: True, severity="not-a-severity")
+        return {str(word) for word in ast.literal_eval(out["error"]["message"].split("not in ")[1])}
+
+    def _card_enumerations(self) -> list[set[str]]:
+        """Every `|`-separated run of quoted words the card carries, as sets."""
+        runs = self.QUOTED_RUN.finditer(self._card())
+        return [set(self.QUOTED_WORD.findall(run.group())) for run in runs]
+
+    def test_the_card_names_every_code_and_invents_no_other(self):
+        documented = set(self.CODE_SHAPE.findall(self._card()))
+        emitted = self._codes_emitted()
+        assert documented == emitted, (
+            f"card omits {sorted(emitted - documented)}; "
+            f"card names codes nothing emits: {sorted(documented - emitted)}"
+        )
+
+    def test_the_card_prints_every_key_a_call_returns(self, env):
+        registered = env.module.register_validator("card_pin", lambda: True)
+        listed = env.module.list_validators()
+        unregistered = env.module.unregister_validator("card_pin")
+
+        returned = set(registered) | set(listed) | set(unregistered) | set(listed["validators"][0])
+        undocumented = {key for key in returned if not self._card_names(key)}
+        assert not undocumented, f"returns the card never names: {sorted(undocumented)}"
+
+    def test_the_card_prints_every_key_the_custom_section_returns(self, env):
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("broken", lambda: 1 / 0)
+        custom = env.module.custom_validator_results()
+
+        returned = set(custom) | set(custom["validators"][0]) | set(custom["issues"][0])
+        undocumented = {key for key in returned if not self._card_names(key)}
+        assert not undocumented, f"`custom` keys the card never names: {sorted(undocumented)}"
+
+    def test_the_card_enumerates_the_severities_the_api_accepts(self, env):
+        accepted = self._severities_accepted(env)
+        assert accepted == {"error", "warning", "info"}, "the shipped vocabulary moved"
+        assert accepted in self._card_enumerations(), (
+            f"the card never lists exactly {sorted(accepted)} as a severity vocabulary"
+        )
+
+    def test_the_card_enumerates_the_statuses_the_report_produces(self, env):
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("bad", lambda: False)
+        env.module.register_validator("broken", lambda: 1 / 0)
+        produced = {row["status"] for row in env.module.custom_validator_results()["validators"]}
+        assert produced == {"passed", "failed", "check_error"}, "the shipped statuses moved"
+        assert produced in self._card_enumerations(), (
+            f"the card never lists exactly {sorted(produced)} as the status vocabulary"
+        )
