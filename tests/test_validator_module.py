@@ -5,8 +5,8 @@ fragments assembled - maya_env.module), the same seam
 tests/test_introspect_module.py uses. Those are CONTRACT tests: the
 registration surface, the score separation and the check_error isolation must
 hold in real Maya, where the predicate runs against a live DG. The last class
-reads files instead - it pins the scene-review skill card against this
-fragment, and needs no Maya at all.
+pins the scene-review skill card against this fragment - mostly through the
+same stub seam, and never against a real Maya.
 """
 
 from __future__ import annotations
@@ -468,9 +468,12 @@ class TestCardPinsTheShippedApi:
     Two bounds, stated because a pin that cannot fail is worse than none: codes
     are compared inside the shapes this API names refusals with
     (`invalid_*`, `weight_overflow`, `validator_not_found`), so a code named
-    otherwise slips past; and the two vocabularies demand an *enumeration* - a
+    otherwise slips past; the two vocabularies demand an *enumeration* - a
     `|`-separated run whose membership equals the shipped set - so a stale line
-    fails even while the words still appear in prose somewhere else.
+    fails even while the words still appear in prose somewhere else; and the
+    `custom` section's own top-level names are checked one way only, that the
+    card names them, because the card writes `score`/`max_score` as a fraction
+    in running prose rather than as an envelope.
     """
 
     ROOT = Path(__file__).resolve().parents[1]
@@ -480,6 +483,8 @@ class TestCardPinsTheShippedApi:
     QUOTED_RUN = re.compile(r"(?:[\"'`][\w_]+[\"'`]\s*\|\s*)+[\"'`][\w_]+[\"'`]")
     QUOTED_WORD = re.compile(r"[\"'`]([\w_]+)[\"'`]")
     ENVELOPE_KEY = re.compile(r'["`]([\w_]+)["`]\s*:')
+    ROW_SHAPE = re.compile(r"`(\w+)` \(each with([^)]*)\)")
+    ROW_KEY = re.compile(r"`(\w+)")
 
     def _card(self) -> str:
         """The card, read once per test: nothing here writes to it."""
@@ -494,12 +499,16 @@ class TestCardPinsTheShippedApi:
         runs = self.QUOTED_RUN.finditer(card)
         return [set(self.QUOTED_WORD.findall(run.group())) for run in runs]
 
-    def _printed_envelope(self, card: str, marker: str) -> set[str]:
-        """The keys the card prints in the envelope introducing `marker`."""
+    def _printed_envelope(self, card: str, marker: str) -> tuple[set[str], set[str]]:
+        """Keys the card prints outside and inside the first `[...]` of the
+        envelope introducing `marker`, so a key moved between levels fails."""
         at = card.find(marker)
         assert at != -1, f"the card no longer introduces {marker!r} - re-aim this pin"
-        printed = set(self.ENVELOPE_KEY.findall(card[at : card.find("\n", at)]))
-        assert printed, f"no envelope printed for {marker!r} - re-aim this pin"
+        line = card[at : card.find("\n", at)]
+        head, bracket, rest = line.partition("[")
+        inner = rest.partition("]")[0] if bracket else ""
+        printed = (set(self.ENVELOPE_KEY.findall(head)), set(self.ENVELOPE_KEY.findall(inner)))
+        assert printed[0], f"no envelope printed for {marker!r} - re-aim this pin"
         return printed
 
     def _codes_emitted(self) -> set[str]:
@@ -555,14 +564,38 @@ class TestCardPinsTheShippedApi:
         env.module.register_validator("card_pin", lambda: True)
         listed = env.module.list_validators()
         registered = env.module.register_validator("card_pin", lambda: False)
+        unregistered = env.module.unregister_validator("card_pin")
 
         returned = {
-            "- `register_validator(name": set(registered),
-            "- `list_validators()`": set(listed) | set(listed["validators"][0]),
-            "- `unregister_validator(name": set(env.module.unregister_validator("card_pin")),
+            "- `register_validator(name": (set(registered), set()),
+            "- `list_validators()`": (set(listed), set(listed["validators"][0])),
+            "- `unregister_validator(name": (set(unregistered), set()),
         }
         for marker, keys in returned.items():
             assert self._printed_envelope(card, marker) == keys, f"{marker} drifted from the API"
+
+    def test_the_card_prints_no_key_the_refusal_does_not_return(self, env):
+        refused = env.module.unregister_validator("never_registered")
+        returned = set(refused) | set(refused["error"])
+        printed, _ = self._printed_envelope(self._card(), "A bad argument is refused")
+        assert printed <= returned, (
+            f"envelope keys the card promises and no refusal returns: {sorted(printed - returned)}"
+        )
+
+    def test_the_card_lists_exactly_the_keys_the_custom_rows_carry(self, env):
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("broken", lambda: 1 / 0)
+        custom = env.module.custom_validator_results()
+        rows = {"validators": set(custom["validators"][0]), "issues": set(custom["issues"][0])}
+
+        for label, body in self.ROW_SHAPE.findall(self._card()):
+            if label not in rows:
+                continue
+            # The status enumeration sits inside the validators run, so it is
+            # dropped before the keys are read; `check: "custom"` still yields
+            # its key because a key is whatever opens a backtick.
+            keys = set(self.ROW_KEY.findall(self.QUOTED_RUN.sub("", body)))
+            assert keys == rows[label], f"`custom.{label}` drifted: {sorted(keys ^ rows[label])}"
 
     def test_the_card_enumerates_the_severities_the_api_accepts(self, env):
         accepted = set(env.module._VALIDATOR_SEVERITIES)
