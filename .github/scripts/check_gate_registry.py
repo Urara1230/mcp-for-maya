@@ -293,7 +293,7 @@ def check(
     for gate_id in sorted(bound - set(registered)):
         findings.append(
             f"{gate_id}: R1 unregistered_bound_object -- bound object is not "
-            "registered: every governance surface needs a bound_class, an "
+            "registered; every governance surface needs a bound_class, an "
             "expectation source and its pins"
         )
 
@@ -317,20 +317,26 @@ def check(
         # R2 -- registered pointers that do not resolve
         sources = entry.get("expected_sources")
         if not isinstance(sources, list):
-            findings.append(f"{gate_id}: expected_sources must be a list")
+            findings.append(
+                f"{gate_id}: R2 unresolvable_pointer -- expected_sources must be a list"
+            )
             sources = []
         for pointer in sources:
             reason = resolve_pointer(root, pointer)
             if reason:
-                findings.append(f"{gate_id}: expected_source {pointer}: {reason}")
+                findings.append(
+                    f"{gate_id}: R2 unresolvable_pointer -- expected_source {pointer}: {reason}"
+                )
         pins = entry.get("pin_node_ids")
         if not isinstance(pins, list):
-            findings.append(f"{gate_id}: pin_node_ids must be a list")
+            findings.append(f"{gate_id}: R2 unresolvable_pointer -- pin_node_ids must be a list")
             pins = []
         for node_id in pins:
             reason = resolve_pin_node(root, node_id)
             if reason:
-                findings.append(f"{gate_id}: pin node {node_id}: {reason}")
+                findings.append(
+                    f"{gate_id}: R2 unresolvable_pointer -- pin node {node_id}: {reason}"
+                )
 
         # R6 -- zero-pin guard (fail-on-empty)
         if bound_class in PIN_REQUIRED_CLASSES and not pins:
@@ -351,11 +357,11 @@ def check(
         exemption = entry.get("exemption")
         if exemption is not None:
             if not isinstance(exemption, dict):
-                findings.append(f"{gate_id}: exemption must be an object or null")
+                findings.append(f"{gate_id}: R5 bad_exemption -- must be an object or null")
             else:
                 reason = (exemption.get("reason") or "").strip()
                 if not reason:
-                    findings.append(f"{gate_id}: exemption needs a non-empty reason")
+                    findings.append(f"{gate_id}: R5 bad_exemption -- needs a non-empty reason")
                 expires = exemption.get("expires")
                 issue = exemption.get("issue")
                 if expires is None and issue is None:
@@ -369,7 +375,7 @@ def check(
                         when = date.fromisoformat(str(expires))
                     except ValueError:
                         findings.append(
-                            f"{gate_id}: exemption expires {expires!r} is not an ISO date"
+                            f"{gate_id}: R5 bad_exemption -- expires {expires!r} is not an ISO date"
                         )
                     else:
                         if when < today:

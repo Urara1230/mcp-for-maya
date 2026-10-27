@@ -232,7 +232,7 @@ def check(root: Path, elements_path: Path) -> tuple[bool, list[str], list[str], 
                     warnings.append(
                         f"file={file_rel}::{tool_name} element '{eid}' matched only "
                         "inside negated statements \u2014 a negated claim must not satisfy "
-                        "a mutation-class existence assertion (polarity guard, "
+                        "a mutation-class existence assertion (polarity_aware guard, "
                         "observation period)"
                     )
                 else:

@@ -111,7 +111,9 @@ def test_unregistered_bound_object_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry()])
     findings = mod.check(root, reg)
     assert findings, "a bound object with no registry entry must be reported"
-    assert any("check_newcomer" in f and "not registered" in f for f in findings), findings
+    assert any("check_newcomer" in f and "R1 unregistered_bound_object" in f for f in findings), (
+        findings
+    )
 
 
 def test_a_gate_script_added_later_is_caught_as_unregistered(tmp_path):
@@ -123,7 +125,9 @@ def test_a_gate_script_added_later_is_caught_as_unregistered(tmp_path):
     assert mod.check(root, reg) == []
     (root / ".github" / "scripts" / "check_sneaked_in.py").write_text("x = 1\n", encoding="utf-8")
     findings = mod.check(root, reg)
-    assert any("check_sneaked_in" in f and "not registered" in f for f in findings), findings
+    assert any("check_sneaked_in" in f and "R1 unregistered_bound_object" in f for f in findings), (
+        findings
+    )
 
 
 # --- R2 unresolvable pointers --------------------------------------------
@@ -135,7 +139,7 @@ def test_pin_node_pointing_at_a_deleted_test_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])])
     findings = mod.check(root, reg)
     assert findings, "a pin node that no longer resolves must be reported"
-    assert any("test_gone.py" in f for f in findings), findings
+    assert any("test_gone.py" in f and "R2 unresolvable_pointer" in f for f in findings), findings
 
 
 def test_pin_node_with_a_missing_test_function_is_red(tmp_path):
@@ -294,7 +298,7 @@ def test_stale_registration_for_a_deleted_gate_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(), _good_entry("check_retired")])
     findings = mod.check(root, reg)
     assert findings, "an entry for a deleted script must be reported"
-    assert any("check_retired" in f and "stale" in f for f in findings), findings
+    assert any("check_retired" in f and "R3 stale_registration" in f for f in findings), findings
 
 
 # --- R4 veto-power drift --------------------------------------------------
@@ -308,7 +312,7 @@ def test_gate_class_with_no_workflow_wiring_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(), _good_entry("check_unwired")])
     findings = mod.check(root, reg)
     assert findings, "an unwired bound_class=gate must be reported"
-    assert any("check_unwired" in f and "no workflow" in f for f in findings), findings
+    assert any("check_unwired" in f and "R4 gate_class_not_wired" in f for f in findings), findings
 
 
 def test_an_instrument_is_allowed_to_be_unwired(tmp_path):
@@ -335,7 +339,7 @@ def test_expired_exemption_is_red(tmp_path):
     )
     findings = mod.check(root, reg, today=date(2026, 10, 3))
     assert findings, "an expired exemption must be reported"
-    assert any("EXPIRED" in f for f in findings), findings
+    assert any("R5 bad_exemption" in f and "EXPIRED" in f for f in findings), findings
 
 
 def test_exemption_expiring_today_is_not_yet_expired(tmp_path):
@@ -356,7 +360,7 @@ def test_exemption_with_neither_expires_nor_issue_is_red(tmp_path):
     root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
     reg = _write_registry(root, [_good_entry(exemption={"reason": "we meant to"})])
     findings = mod.check(root, reg)
-    assert any("expires or issue" in f for f in findings), findings
+    assert any("R5 bad_exemption" in f and "expires or issue" in f for f in findings), findings
 
 
 def test_exemption_with_an_issue_instead_of_a_date_is_accepted(tmp_path):
@@ -370,9 +374,9 @@ def test_unparseable_expiry_is_red_not_silently_accepted(tmp_path):
     mod = _load()
     root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
     reg = _write_registry(root, [_good_entry(exemption={"reason": "temporary", "expires": "soon"})])
-    assert any("not an ISO date" in f for f in findings_of(mod, root, reg)), findings_of(
-        mod, root, reg
-    )
+    assert any(
+        "R5 bad_exemption" in f and "not an ISO date" in f for f in findings_of(mod, root, reg)
+    ), findings_of(mod, root, reg)
 
 
 def findings_of(mod, root, reg):

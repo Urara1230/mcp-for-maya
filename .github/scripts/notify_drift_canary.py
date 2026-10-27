@@ -136,8 +136,8 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
         f"- branch: {env.get('BRANCH', '?')}\n"
         f"- run: {env.get('RUN_URL', '?')} (attempt {env.get('RUN_ATTEMPT', '?')})\n"
         f"- sha: {env.get('GITHUB_SHA', '?')}\n\n"
-        "A red here means upstream dependency drift first broke us — "
-        "this signal arms the trigger debt. The same job also carries the "
+        "A red here means upstream dependency drift first broke us. "
+        "The same job also carries the "
         "PyPI index dual-source probe "
         "(simple index + project JSON vs the latest tag) — check the "
         "failed steps below / the run log for which lane went red; a "
@@ -145,8 +145,8 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
         "comment on this issue instead of opening new ones; the issue "
         "auto-closes on the next green run.\n\n"
         "Obligation: at least one human review record (result + "
-        "attribution, posted on this issue) is required before the "
-        "v1.0.0 release checklist can pass — red or green counts."
+        "attribution) is required before the v1.0.0 release checklist "
+        "can pass — red or green counts."
     )
     return body + _failed_steps_md(env, runner)
 
