@@ -632,6 +632,43 @@ def test_an_entry_that_is_not_an_object_is_a_malformed_entry(tmp_path):
     assert not any("check_demo:" in f for f in findings), findings
 
 
+# --- hostile registry values ---------------------------------------------
+
+
+def test_an_unhashable_bound_class_is_a_finding_not_a_traceback(tmp_path):
+    """Membership in a frozenset hashes the value, so a list raises TypeError
+    and the run dies without a finding. Type is checked before membership."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    for bad in ([], {}, ["gate"]):
+        reg = _write_registry(root, [_good_entry(bound_class=bad)])
+        findings = mod.check(root, reg)
+        assert findings, f"{bad!r}: must be reported, not raise"
+        assert any("bad_bound_class" in f for f in findings), findings
+
+
+def test_a_ledger_id_in_the_registry_is_not_echoed_to_ci(tmp_path, capsys):
+    """Findings echo values read from the registry, and the registry is a file
+    an author edits. main() strips at the print boundary, so an id in any of
+    those fields never reaches a CI line."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    reg = _write_registry(root, [_good_entry(bound_class="D-215")])
+    argv = ["check_gate_registry.py", str(reg)]
+    import sys as _sys
+
+    old = _sys.argv
+    _sys.argv = argv
+    try:
+        rc = mod.main()
+    finally:
+        _sys.argv = old
+    out = capsys.readouterr().out
+    assert rc == 1, out
+    assert "D-215" not in out, out
+    assert "bad_bound_class" in out, out
+
+
 # --- enumeration honesty (D-215 7) ---------------------------------------
 
 

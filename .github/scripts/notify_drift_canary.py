@@ -45,10 +45,14 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 from collections.abc import Callable
+from pathlib import Path
+
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from check_gate_registry import strip_ledger_ids  # noqa: E402
 
 
 MARKER = "[drift-canary]"
@@ -68,7 +72,7 @@ def _gh(args: list[str], runner: Runner) -> str:
 def title_for(workflow: str, branch: str) -> str:
     return (
         f"{MARKER} resolution-drift red — "
-        f"{_strip_ledger_ids(workflow)} on {_strip_ledger_ids(branch)}"
+        f"{strip_ledger_ids(workflow)} on {strip_ledger_ids(branch)}"
     )
 
 
@@ -100,15 +104,9 @@ def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> in
 
 # Workflow job and step names, branch names and the workflow label still carry
 # ledger ids (they are edited in .github/workflows and in git, both outside this
-# script's surface), and this body republishes them into a public issue. Two
-# passes: drop the parenthetical that holds an id, then drop any id left bare,
-# so neither the tagged form nor a truncated or unparenthesized one survives.
-_LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
-_BARE_LEDGER_ID = re.compile(r"\s*D-\d+[\w()①-⑯]*")
-
-
-def _strip_ledger_ids(name: str) -> str:
-    return _BARE_LEDGER_ID.sub("", _LEDGER_TAG.sub("", name)).strip()
+# script's surface), and this body republishes them into a public issue. Each is
+# filtered on the way out; the filter itself lives in check_gate_registry.py,
+# which every governance script already imports.
 
 
 def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
@@ -130,8 +128,8 @@ def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
         for job in jobs:
             for step in job.get("steps", []):
                 if step.get("conclusion") == "failure":
-                    job_name = _strip_ledger_ids(str(job.get("name", "?")))
-                    step_name = _strip_ledger_ids(str(step.get("name", "?")))
+                    job_name = strip_ledger_ids(str(job.get("name", "?")))
+                    step_name = strip_ledger_ids(str(step.get("name", "?")))
                     bad.append(f"{job_name}: {step_name}")
         return bad
     except Exception:
@@ -151,8 +149,8 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
     body = (
         "Weekly resolution-drift canary (uv lock --upgrade + pytest on the "
         "floating resolution) went red.\n\n"
-        f"- workflow: {_strip_ledger_ids(env.get('DRIFT_WORKFLOW', '?'))}\n"
-        f"- branch: {_strip_ledger_ids(env.get('BRANCH', '?'))}\n"
+        f"- workflow: {strip_ledger_ids(env.get('DRIFT_WORKFLOW', '?'))}\n"
+        f"- branch: {strip_ledger_ids(env.get('BRANCH', '?'))}\n"
         f"- run: {env.get('RUN_URL', '?')} (attempt {env.get('RUN_ATTEMPT', '?')})\n"
         f"- sha: {env.get('GITHUB_SHA', '?')}\n\n"
         "A red here means upstream dependency drift first broke us — it is the "

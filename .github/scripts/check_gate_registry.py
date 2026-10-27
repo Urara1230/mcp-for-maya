@@ -78,6 +78,18 @@ DEFAULT_REGISTRY = REPO / ".github" / "gate-registry.yaml"
 PIN_REQUIRED_CLASSES = frozenset({"gate", "manual_preflight"})
 KNOWN_CLASSES = frozenset({"gate", "manual_preflight", "instrument"})
 
+# A finding echoes values it read from the registry, and this file is printed
+# into CI. Two passes: drop the parenthetical that holds an id, then drop any id
+# left bare, so neither the tagged form nor a truncated or unparenthesized one
+# reaches an operator. Other governance scripts import this one, so the strip
+# lives here rather than being copied into each of them.
+_LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
+_BARE_LEDGER_ID = re.compile(r"\s*D-\d+[\w()\u2460-\u246f]*")
+
+
+def strip_ledger_ids(text: str) -> str:
+    return _BARE_LEDGER_ID.sub("", _LEDGER_TAG.sub("", text)).strip()
+
 
 # --------------------------------------------------------------------------
 # Machine enumeration: the bound set is read, never transcribed
@@ -335,7 +347,11 @@ def check(
     for gate_id in sorted(registered):
         entry = registered[gate_id]
         bound_class = entry.get("bound_class")
-        if bound_class not in KNOWN_CLASSES:
+        # Membership in a frozenset hashes the value, so an unhashable one
+        # (a list, a dict) raises TypeError instead of reporting. Validate the
+        # type first: this is the one input shape that turns a finding into a
+        # traceback.
+        if not isinstance(bound_class, str) or bound_class not in KNOWN_CLASSES:
             findings.append(
                 f"{gate_id}: bad_bound_class -- {bound_class!r} is not one of "
                 f"the known bound classes {sorted(KNOWN_CLASSES)}"
@@ -431,7 +447,11 @@ def main() -> int:
         return 2
 
     for finding in findings:
-        print(f"::error file=.github/gate-registry.yaml::{finding}")
+        # One choke point instead of per-message stripping: every finding
+        # echoes something it read from the registry (a gate_id, a pointer, a
+        # bound_class, a resolution reason), and the registry is a file an
+        # author edits. Filtering here covers fields this file never named.
+        print(f"::error file=.github/gate-registry.yaml::{strip_ledger_ids(finding)}")
     if findings:
         print(
             f"gate-registry: {len(findings)} finding(s). Fix by registering "

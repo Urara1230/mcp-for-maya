@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
   `tests/test_check_gate_registry.py::test_every_finding_names_the_rule_it_fired`,
   `tests/test_check_gate_registry.py::test_a_shape_valid_registry_that_is_not_an_object_is_tagged_not_a_traceback`,
-  `.github/gate-registry.yaml::entries` (the suite collects 33 tests).
+  `.github/gate-registry.yaml::entries` (the suite collects 35 tests).
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the

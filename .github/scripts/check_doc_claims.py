@@ -62,7 +62,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_gate_registry import resolve_pin_node, resolve_pointer  # noqa: E402
+from check_gate_registry import (  # noqa: E402
+    resolve_pin_node,
+    resolve_pointer,
+    strip_ledger_ids,
+)
 
 
 # Where D1 looks, and where D2 looks.
@@ -111,20 +115,6 @@ COUNT_CLAIMS = (
 # "(2 tests)" claim beside it passed -- the count was checked against the wrong
 # subject, and a wrong claim went green.
 PATH_REF = re.compile(r"(tests/[\w.\-/]+\.py(?:::[\w.\-]+)*)")
-
-
-# A bullet headline is echoed into the finding's location prefix, and the
-# [Unreleased] lane still has ids in its headlines. This checker's job is to
-# report the bullet, not to republish the id. Strip BEFORE truncating: the
-# window can cut a parenthetical in half, and a half-cut one has no closing
-# paren for the paired rule to match. The bare-id pass is the backstop for ids
-# that sit outside parentheses at all.
-_LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
-_BARE_LEDGER_ID = re.compile(r"\s*D-\d+[\w()①-⑯]*")
-
-
-def _strip_ledger_ids(text: str) -> str:
-    return _BARE_LEDGER_ID.sub("", _LEDGER_TAG.sub("", text)).strip()
 
 
 def _unwrap_code(text: str) -> str:
@@ -333,7 +323,7 @@ def check_changelog(root: Path) -> list[str]:
     for section, text in _iter_bullets(lines, start + 1, stop):
         if section not in RULED_SECTIONS:
             continue
-        headline = _strip_ledger_ids(text.splitlines()[0][2:].strip())[:50].strip()
+        headline = strip_ledger_ids(text.splitlines()[0][2:].strip())[:50].strip()
         where = f"CHANGELOG.md [{section}] {headline}"
         # Soft-wrapped markdown must not cost a bullet its evidence form, so the
         # pattern match runs on flattened text. This is a loosening and is
