@@ -108,7 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prints `nothing to compare`, and neither is a verdict.
   Evidence: `tests/test_check_migration_shape.py::test_misnesting_is_invisible_to_aggregate_counts`,
   `tests/test_check_migration_shape.py::test_an_ordinary_code_change_does_not_block`
-  (the file collects 30 tests, and the second pin there builds its own throwaway
+  (the file collects 32 tests, and the second pin there builds its own throwaway
   repo because the `test` job's checkout is not `fetch-depth: 0`, where a
   history-backed pin would skip. A prose block is a docstring or a run of
   consecutive standalone comment lines — a trailing comment ends the run and line 1
@@ -119,17 +119,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is the failure this ticket was raised to close. Blobs decode with the source's own
   encoding (`tokenize.detect_encoding`): under strict UTF-8 a UTF-8 BOM survived
   decoding only to make `ast.parse` raise on U+FEFF, reported as UNPARSEABLE, and a
-  PEP 263 coding cookie raised UnicodeDecodeError straight out of `main`. Sixteen
-  mutants were run during review and each killed at least one test then — stack back
-  to aggregate counts, CODE MOVED back to an error, prose skipped when code moves,
-  blobs read from the base instead of the merge base, metric direction reversed,
-  `--diff-filter=M` dropped, comment grouping disabled, one-line docstrings skipped
-  again, unparseable side ignored, the line-1 sentinel removed, a trailing comment
-  joining the run, the standalone gate dropped from the merge test, string literals
-  taken as prose, paths split on whitespace, `-z` dropped from the listing, and blobs
-  decoded as strict UTF-8; the two registry-pinned tests above kill the first two,
-  one each, and the last three are killed by throwaway repos on disk — a non-ASCII
-  filename, a BOM and a coding cookie.) The battery is a development harness, not a
+  PEP 263 coding cookie raised UnicodeDecodeError straight out of `main`; a file that
+  cannot be read or decoded is now a named finding and the rest of the range is still
+  read. Nineteen mutants were run during review and each killed at least one test
+  then — stack back to aggregate counts, CODE MOVED back to an error, prose skipped
+  when code moves, blobs read from the base instead of the merge base, metric
+  direction reversed, `--diff-filter=M` dropped, comment grouping disabled, one-line
+  docstrings skipped again, unparseable side ignored, the line-1 sentinel removed, a
+  trailing comment joining the run, the standalone gate dropped from the merge test,
+  string literals taken as prose, paths split on whitespace, `-z` dropped from the
+  listing, blobs decoded as strict UTF-8, a decode failure left to escape, an
+  unreadable file found but not printed, and an unreadable file not affecting the
+  exit code; the two registry-pinned tests above kill the first two, one each, and
+  the last six are killed by throwaway repos on disk — a non-ASCII filename, a BOM, a
+  cookie naming a codec that does not exist, and bytes that disagree with the cookie
+  their own file declares.) The battery is a development harness, not a
   committed artifact, so that list is a point-in-time record: what the tree checks is
   the behaviour each mutant names, not the count of mutants.)
 

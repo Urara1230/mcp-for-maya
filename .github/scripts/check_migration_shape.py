@@ -66,8 +66,9 @@ Scope limits, stated so nobody reads more into this than it does:
   decision it inherited is a reader's call; see docs/agents/domain.md.
 
 Invocation: check_migration_shape.py <base-rev> <tip-rev> [repo-root]
-Exits 1 on a prose finding, an unparseable side, or a git command that fails;
-CODE MOVED prints as ::warning:: and does not affect the exit code.
+Exits 1 on a prose finding, an unparseable side, or a blob that cannot be read or
+decoded — each named with its path, and one such file does not stop the others from
+being read. CODE MOVED prints as ::warning:: and does not affect the exit code.
 """
 
 from __future__ import annotations
@@ -282,12 +283,21 @@ def main(argv: Sequence[str], root: Path = REPO, runner: Callable = subprocess.r
         except (subprocess.CalledProcessError, OSError):
             pass
         return 0
-    try:
-        pairs = [(p, blob(runner, root, left, p), blob(runner, root, tip, p)) for p in paths]
-    except (subprocess.CalledProcessError, OSError) as e:
-        print(f"::error::git show failed: {e}")
-        return 1
+    pairs, unreadable = [], []
+    for path in paths:
+        try:
+            pairs.append((path, blob(runner, root, left, path), blob(runner, root, tip, path)))
+        except (subprocess.CalledProcessError, OSError) as e:
+            unreadable.append(f"::error file={path}::GIT UNREADABLE: {left[:12]}:{path}: {e}")
+        except (ValueError, SyntaxError) as e:
+            # `blob()` can raise: a cookie naming a codec that does not exist is a
+            # SyntaxError, bytes that disagree with the cookie it declares is the
+            # UnicodeDecodeError that subclasses ValueError. Both are one broken
+            # file, and neither is a reason to stop reading the others.
+            unreadable.append(f"::error file={path}::UNPARSEABLE: will not decode ({e})")
     ok, errors, warnings = check(pairs)
+    errors = unreadable + errors
+    ok = ok and not unreadable
     for w in warnings:
         print(w)
     for e in errors:

@@ -387,6 +387,52 @@ def test_a_bom_and_a_coding_cookie_are_not_findings(tmp_path, capsys):
     assert "UNPARSEABLE" not in out and "::error" not in out
 
 
+def test_a_blob_that_will_not_decode_names_its_file(tmp_path, capsys):
+    """One broken file is a finding, not a traceback that ends the run.
+
+    A cookie naming a codec that does not exist raises SyntaxError out of the
+    encoding detector; bytes that disagree with the cookie the file declares
+    raise UnicodeDecodeError. Both escaped `main` before, so the run died having
+    read nothing else — which is why both files are asserted named here.
+    """
+    mod = _load()
+    head = _repo(
+        tmp_path,
+        [
+            {"bogus.py": b"# -*- coding: bogus-99 -*-\nX = 1\n", "lying.py": b"X = 1\n"},
+            {
+                "bogus.py": b"# -*- coding: bogus-99 -*-\nX = 2\n",
+                "lying.py": b"# -*- coding: utf-8 -*-\nX = '\xff\xfe'\n",
+            },
+        ],
+    )
+    assert mod.main([f"{head}~1", head], tmp_path) == 1
+    out = capsys.readouterr().out
+    assert "UNPARSEABLE" in out and "bogus.py" in out and "lying.py" in out
+
+
+def test_a_git_show_failure_names_its_file(capsys):
+    """The unreadable-blob branch was reachable only by hand until now."""
+    mod = _load()
+
+    def runner(cmd, **kw):
+        class R:
+            def __init__(self, out):
+                self.stdout = out
+
+        if cmd[1] == "merge-base":
+            return R("cafe\n")
+        if cmd[1] == "diff":
+            return R("m.py\0")
+        if cmd[1] == "show":
+            raise subprocess.CalledProcessError(128, cmd)
+        return R("")
+
+    assert mod.main(["base", "tip"], REPO, runner) == 1
+    out = capsys.readouterr().out
+    assert "GIT UNREADABLE" in out and "file=m.py" in out
+
+
 def test_blobs_come_from_the_merge_base():
     """A stale branch must not be blamed for what main changed meanwhile."""
     mod = _load()
