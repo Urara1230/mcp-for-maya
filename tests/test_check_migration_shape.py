@@ -205,7 +205,7 @@ def test_blobs_are_read_from_the_merge_base_end_to_end(tmp_path):
         if cmd[1] == "merge-base":
             return R("cafe\n")
         if cmd[1] == "diff":
-            return R("m.py\n")
+            return R("m.py\0")
         if cmd[1] == "show":
             return R(b'"""Docstring (balanced)."""\nX = 1\n')
         return R("")
@@ -324,15 +324,38 @@ def test_paths_are_filtered_to_modified_python_files():
         calls.append((cmd, kw))
 
         class R:
-            stdout = "a.py\ndocs/note.md\nb.py\n"
+            stdout = "a.py\0docs/note.md\0b.py\0"
 
         return R()
 
     paths = mod.python_paths(runner, "base", "tip", REPO)
     assert paths == ["a.py", "b.py"]
     assert "--diff-filter=M" in calls[0][0]
+    assert "-z" in calls[0][0]
     assert calls[0][1]["check"] is True
     assert calls[0][1]["cwd"] == REPO
+
+
+def test_a_quoted_path_reaches_the_check(tmp_path, capsys):
+    """Git quotes any path with non-ASCII bytes; whitespace splitting dropped it.
+
+    A dropped file is a silent pass, which is the failure this ticket exists to
+    close, so this runs on a real repo instead of a mocked runner: the old
+    ``split()`` returns no paths here and the gate exits 0 saying it had nothing
+    to compare.
+    """
+    mod = _load()
+    head = _repo(
+        tmp_path,
+        [
+            {"clean.py": '"""Doc."""\nX = 1\n', "咖啡.py": '"""Doc."""\nX = 1\n'},
+            {"clean.py": '"""Doc."""\nX = 2\n', "咖啡.py": '"""Doc (unmatched.\n"""\nX = 2\n'},
+        ],
+    )
+    assert mod.main([f"{head}~1", head], tmp_path) == 1
+    out = capsys.readouterr().out
+    assert "咖啡.py" in out and "UNBALANCED" in out
+    assert "file=clean.py::UNBALANCED" not in out
 
 
 def test_blobs_come_from_the_merge_base():

@@ -191,15 +191,23 @@ def check(pairs: Sequence[tuple[str, str, str]]) -> tuple[bool, list[str], list[
 
 
 def python_paths(runner: Callable[..., object], base: str, tip: str, root: Path) -> list[str]:
-    """Modified Python files only, and a failing git call is allowed to raise."""
+    """Modified Python files only, and a failing git call is allowed to raise.
+
+    ``-z`` because it is the only form that cannot lie: plain ``--name-only``
+    quotes any path with non-ASCII bytes, and splitting on whitespace then drops
+    that file from the range — a silent pass on the exact regression the gate
+    exists to catch. NUL-separated names are raw, and git's own encoding is
+    UTF-8 regardless of the runner's locale.
+    """
     result = runner(
-        ["git", "diff", "--name-only", "--diff-filter=M", f"{base}...{tip}"],
+        ["git", "diff", "-z", "--name-only", "--diff-filter=M", f"{base}...{tip}"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
         cwd=root,
     )
-    return [p for p in result.stdout.split() if p.endswith(".py")]  # type: ignore[attr-defined]
+    return [p for p in result.stdout.split("\0") if p.endswith(".py")]  # type: ignore[attr-defined]
 
 
 def merge_base(runner: Callable[..., object], base: str, tip: str, root: Path) -> str:
