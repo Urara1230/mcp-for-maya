@@ -37,8 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   What is machine-checked is **registration discipline, not pin effectiveness** —
   a hollow pin passes every rule, and that residual is disclosed rather than
   papered over.
+  Every printed finding names the rule that fired, because the module
+  docstring's id column was retired with the decision ledger (#94) — the tag
+  is the only remaining mapping from a CI line back to a rule.
   Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
-  `.github/gate-registry.yaml::entries` (the suite collects 29 tests).
+  `.github/gate-registry.yaml::entries` (the suite collects 31 tests).
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the

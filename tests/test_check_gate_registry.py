@@ -25,8 +25,6 @@ import sys
 from datetime import date
 from pathlib import Path
 
-import pytest
-
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / ".github" / "scripts" / "check_gate_registry.py"
@@ -460,65 +458,90 @@ RULE_TAGS = (
 )
 
 
-@pytest.mark.parametrize(
-    "entries, script_names",
-    [
-        pytest.param([_good_entry()], ["check_demo", "check_newcomer"], id="R1"),
-        pytest.param(
-            [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])],
-            ["check_demo"],
-            id="R2-pin",
-        ),
-        pytest.param(
-            [_good_entry(expected_sources=["gone/spec.yaml::cap"])], ["check_demo"], id="R2-source"
-        ),
-        pytest.param([_good_entry(), _good_entry("check_retired")], ["check_demo"], id="R3"),
-        pytest.param(
-            [_good_entry(), _good_entry("check_demo", bound_class="gate", pin_node_ids=[])],
-            ["check_demo"],
-            id="R6",
-        ),
-        pytest.param([_good_entry(bound_class="nonsense")], ["check_demo"], id="bad_bound_class"),
-        pytest.param(
-            [_good_entry(exemption={"reason": "we meant to"})], ["check_demo"], id="R5-noend"
-        ),
-        pytest.param(
-            [_good_entry(exemption={"reason": "temporary", "expires": "2020-01-01"})],
-            ["check_demo"],
-            id="R5-expired",
-        ),
-        pytest.param([_good_entry(exemption={"reason": ""})], ["check_demo"], id="R5-noreason"),
-        pytest.param(
-            [_good_entry(exemption={"reason": "x", "expires": "soon"})],
-            ["check_demo"],
-            id="R5-baddate",
-        ),
-        pytest.param([_good_entry(), _good_entry()], ["check_demo"], id="malformed-duplicate"),
-        pytest.param([{"bound_class": "gate"}], ["check_demo"], id="malformed-no-id"),
-    ],
-)
-def test_every_finding_names_the_rule_it_fired(tmp_path, entries, script_names):
+def test_every_finding_names_the_rule_it_fired(tmp_path):
     """The docstring's id column is gone, so the printed tag IS the mapping from
     a CI line to a rule. A finding with no tag is unmappable, and the property
-    regressed once by being claimed in a commit message instead of pinned here."""
+    regressed once by being claimed in a commit message instead of pinned here.
+
+    A loop rather than ``parametrize``: ``check_doc_claims`` declines to verify
+    a suite count for any file carrying that marker, and this file's count is
+    cited in the changelog."""
     mod = _load()
-    root = _tree(tmp_path, scripts=script_names, wired=script_names)
-    findings = mod.check(root, _write_registry(root, entries))
-    assert findings, "the fixture must produce at least one finding"
-    untagged = [f for f in findings if not any(tag in f for tag in RULE_TAGS)]
-    assert untagged == [], untagged
+    wired_both = ["check_demo", "check_extra"]
+    cases = [
+        ("R1", [_good_entry()], ["check_demo", "check_newcomer"], wired_both),
+        (
+            "R2-pin",
+            [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])],
+            ["check_demo"],
+            ["check_demo"],
+        ),
+        (
+            "R2-source",
+            [_good_entry(expected_sources=["gone/spec.yaml::cap"])],
+            ["check_demo"],
+            ["check_demo"],
+        ),
+        ("R2-not-a-list", [_good_entry(pin_node_ids="x")], ["check_demo"], ["check_demo"]),
+        ("R3", [_good_entry(), _good_entry("check_retired")], ["check_demo"], ["check_demo"]),
+        ("R4", [_good_entry()], ["check_demo"], []),
+        ("R6", [_good_entry(pin_node_ids=[])], ["check_demo"], ["check_demo"]),
+        ("bad_bound_class", [_good_entry(bound_class="nonsense")], ["check_demo"], ["check_demo"]),
+        (
+            "R5-noend",
+            [_good_entry(exemption={"reason": "we meant to"})],
+            ["check_demo"],
+            ["check_demo"],
+        ),
+        (
+            "R5-expired",
+            [_good_entry(exemption={"reason": "temporary", "expires": "2020-01-01"})],
+            ["check_demo"],
+            ["check_demo"],
+        ),
+        (
+            "R5-noreason",
+            [_good_entry(exemption={"reason": ""})],
+            ["check_demo"],
+            ["check_demo"],
+        ),
+        (
+            "R5-baddate",
+            [_good_entry(exemption={"reason": "x", "expires": "soon"})],
+            ["check_demo"],
+            ["check_demo"],
+        ),
+        ("malformed-duplicate", [_good_entry(), _good_entry()], ["check_demo"], ["check_demo"]),
+        ("malformed-no-id", [{"bound_class": "gate"}], ["check_demo"], ["check_demo"]),
+    ]
+    seen = set()
+    for case_id, entries, scripts, wired in cases:
+        root = _tree(tmp_path / case_id, scripts=scripts, wired=wired)
+        findings = mod.check(root, _write_registry(root, entries))
+        assert findings, f"{case_id}: the fixture must produce at least one finding"
+        untagged = [f for f in findings if not any(tag in f for tag in RULE_TAGS)]
+        assert untagged == [], f"{case_id} produced an unmappable finding: {untagged}"
+        seen.update(tag for tag in RULE_TAGS if any(tag in f for f in findings))
+    assert {"R4 gate_class_not_wired", "R6 zero_pin_guard"} <= seen, (
+        f"the cases above must reach every tag they name; reached {sorted(seen)}"
+    )
 
 
 def test_the_termination_layer_is_tagged(tmp_path):
     """An unreadable or empty registry returns before the rule loop, so its
-    findings are the easiest ones to leave untagged."""
+    findings are the easiest ones to leave untagged. Each case asserts a
+    non-empty result first: ``all()`` over an empty list is vacuously true, so
+    without that line a silent pass would satisfy this test."""
     mod = _load()
     root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
     bad = root / ".github" / "gate-registry.yaml"
     bad.write_text("{not json at all", encoding="utf-8")
-    assert all("registry_unusable" in f for f in mod.check(root, bad))
-    empty = _write_registry(root, [])
-    assert all("registry_unusable" in f for f in mod.check(root, empty))
+    unreadable = mod.check(root, bad)
+    assert unreadable, "a corrupt registry must not return an empty finding list"
+    assert all("registry_unusable" in f for f in unreadable), unreadable
+    empty = mod.check(root, _write_registry(root, []))
+    assert empty, "an empty registry must not return an empty finding list"
+    assert all("registry_unusable" in f for f in empty), empty
 
 
 # --- enumeration honesty (D-215 7) ---------------------------------------
