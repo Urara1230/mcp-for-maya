@@ -60,6 +60,15 @@ jobs:
         # See check_doc_claims.py for the scope limit -- released sections are
         # point-in-time records and a landing pointer is not proof of a claim.
         run: python .github/scripts/check_doc_claims.py
+      - name: migration shape gate
+        # Hard on prose integrity: a comment-only migration must not strand a
+        # delimiter, which every other gate here missed on #90. CODE MOVED prints
+        # as a warning — ordinary PRs move code by design. Range from the PR base
+        # or, on push, event.before; the checkout above sets fetch-depth: 0.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TIP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python .github/scripts/check_migration_shape.py "$BASE_SHA" "$TIP_SHA"
       - name: pre-commit fallback (all files)
         run: |
           pip install pre-commit
