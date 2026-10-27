@@ -803,7 +803,7 @@ def test_due_warns_but_does_not_bite_on_the_deadline_itself(monkeypatch):
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 0))
     hits = _covers_warn(mod, data, "is DUE 0.7.0")
     assert len(hits) == 12, hits
-    assert "D-168 waiver renewal" in hits[0]
+    assert "waiver renewal" in hits[0]
     assert _covers_err(mod, data, "EXPIRED") == [], "the deadline itself is not overdue"
 
 
@@ -817,7 +817,8 @@ def test_past_the_deadline_is_an_error_not_a_warning(monkeypatch):
     hits = _covers_err(mod, data, "EXPIRED at 0.7.0")
     assert len(hits) == 12, hits
     assert _covers_warn(mod, data, "is DUE") == [], "expired is an error, not a warning"
-    # D-168 4 (as revised by D-176) - not a generic five-item checklist.
+    # The five renewal elements the EXPIRED message must name - not a generic
+    # five-item checklist.
     for required in (
         "gate_authority",  # countersignature distinct from debt_owner
         "expiry",  # event-anchored, not calendar
@@ -825,7 +826,7 @@ def test_past_the_deadline_is_an_error_not_a_warning(monkeypatch):
         "reason",  # re-validated on each renewal
         "gate review",  # waiver lane closes after gate review
     ):
-        assert required in hits[0], f"D-168(4) renewal must name {required}"
+        assert required in hits[0], f"a waiver renewal must name {required}"
 
 
 def test_due_boundary_is_inclusive(monkeypatch):

@@ -149,15 +149,14 @@ def probe(package: str, expected: str, fetch: Fetcher) -> list[str]:
             problems.append(
                 f"simple index missing {expected} in BOTH serializations "
                 f"(latest listed: {_latest(j_ver | h_ver)}) — install face "
-                "broken (highest severity): pip resolves an older release "
-                "(D-139 class)"
+                "broken (highest severity): pip resolves an older release"
             )
         elif expected not in j_ver:
             problems.append(
                 f"PEP 691 JSON serialization stale: missing {expected} "
                 f"(latest listed: {_latest(j_ver)}) while HTML lists it — "
                 "CDN split; pip still resolves via HTML but the JSON edge "
-                "is inconsistent (D-139 residue)"
+                "is inconsistent"
             )
         elif expected not in h_ver:
             problems.append(
@@ -208,7 +207,7 @@ def main() -> int:
         print(f"::error::pypi-index[{package}]: {msg}")
     if problems:
         print(
-            "Probe red — the D-123 notify channel turns this into a dedup "
+            "Probe red — the drift-notify channel turns this into a dedup "
             "issue; maintenance-window false reds get human attribution."
         )
         return 1

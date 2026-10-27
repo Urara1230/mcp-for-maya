@@ -232,7 +232,7 @@ def check(root: Path, elements_path: Path) -> tuple[bool, list[str], list[str], 
                     warnings.append(
                         f"file={file_rel}::{tool_name} element '{eid}' matched only "
                         "inside negated statements \u2014 a negated claim must not satisfy "
-                        "a mutation-class existence assertion (D-180 polarity-aware, "
+                        "a mutation-class existence assertion (polarity guard, "
                         "observation period)"
                     )
                 else:
@@ -443,33 +443,33 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
         errors.append(
             f"::error file=.github/tdqs-elements.yaml::tool '{tool}' is in TOOL_ANNOTATIONS but "
             f"neither 'tools' nor 'coverage_exemptions' — add disclosure elements or an "
-            f"explicit exemption with a reason (D-195 1)"
+            f"explicit exemption with a reason"
         )
     # -- coverage, reverse (no rot) --------------------------------------
     for tool in sorted(set(tools) - annotated):
         errors.append(
             f"::error file=.github/tdqs-elements.yaml::tool '{tool}' has elements but is not in "
-            f"TOOL_ANNOTATIONS — stale entry, the gate would never check it (D-195 1)"
+            f"TOOL_ANNOTATIONS — stale entry, the gate would never check it"
         )
     # -- ambiguity: covered AND exempt ------------------------------------
     for tool in sorted(set(tools) & set(exempt)):
         errors.append(
             f"::error file=.github/tdqs-elements.yaml::tool '{tool}' is both covered and exempt — "
-            f"pick one, or the exemption silently rots (D-195 1)"
+            f"pick one, or the exemption silently rots"
         )
     # -- every exemption must justify itself ------------------------------
     for tool, entry in sorted(exempt.items()):
         if not isinstance(entry, dict) or not str(entry.get("reason", "")).strip():
             errors.append(
                 f"::error file={ELEMENTS_FILE}::exemption for '{tool}' needs a non-empty "
-                f"'reason' — absence is a CI failure, not a silent skip (D-195 1)"
+                f"'reason' — absence is a CI failure, not a silent skip"
             )
             continue
         due_raw = str(entry.get("due", "")).strip()
         if not due_raw:
             errors.append(
                 f"::error file={ELEMENTS_FILE}::exemption for '{tool}' needs a 'due' — an "
-                f"open-ended exemption is the new-code blind spot (D-195 4)"
+                f"open-ended exemption is the new-code blind spot"
             )
             continue
         due = _version_tuple(due_raw)
@@ -490,7 +490,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
             warnings.append(
                 f"::warning file={ELEMENTS_FILE}::exemption for '{tool}' is DUE {due_raw} "
                 f"(project version {'.'.join(str(v) for v in current)}) — cover the tool this "
-                f"release or file a D-168 waiver renewal; the next version bump turns this "
+                f"release or file a waiver renewal; the next version bump turns this "
                 f"into an error"
             )
         elif current > due:
@@ -500,9 +500,9 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
             errors.append(
                 f"::error file={ELEMENTS_FILE}::exemption for '{tool}' EXPIRED at {due_raw} "
                 f"(project version {'.'.join(str(v) for v in current)}) — cover the tool, or "
-                f"renew via a D-168§4 waiver renewal carrying all five of its "
-                f"elements: a gate_authority countersignature distinct from the "
-                f"debt_owner (D-176), a new expiry anchored to an event rather than "
+                f"renew the waiver carrying all five renewal elements: a "
+                f"gate_authority countersignature distinct from the "
+                f"debt_owner, a new expiry anchored to an event rather than "
                 f"the calendar, the per-row renewal cap of 2, a re-validated "
                 f"reason, and the waiver lane closing after gate review"
             )
@@ -528,7 +528,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
     for tool, eid in sorted(new):
         errors.append(
             f"::error file=.github/tdqs-elements.yaml::tool '{tool}' is missing '{eid}', which is "
-            f"derivable from its own signature — the floor tightens, add it (D-195 2)"
+            f"derivable from its own signature — the floor tightens, add it"
         )
     if violations != DERIVATION_BASELINE:
         stale = DERIVATION_BASELINE - violations
@@ -538,7 +538,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
                 f"baseline still lists {len(stale)} violation(s) "
                 f"({', '.join(f'{t}/{e}' for t, e in sorted(stale))}) — drop them from "
                 f"DERIVATION_BASELINE in .github/scripts/check_tdqs_disclosure.py "
-                f"(D-195 4, tighten only)"
+                f"(tighten only)"
             )
     return errors, warnings
 

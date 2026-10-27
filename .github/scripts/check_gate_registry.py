@@ -292,16 +292,16 @@ def check(
     # R1 -- a bound object nobody registered
     for gate_id in sorted(bound - set(registered)):
         findings.append(
-            f"{gate_id}: bound object is not registered -- every governance "
-            "surface needs a bound_class, an expectation source and its pins "
-            "(D-215 1)"
+            f"{gate_id}: R1 unregistered_bound_object -- bound object is not "
+            "registered: every governance surface needs a bound_class, an "
+            "expectation source and its pins"
         )
 
     # R3 -- an entry pointing at an object that no longer exists
     for gate_id in sorted(set(registered) - bound):
         findings.append(
-            f"{gate_id}: stale registration -- the script no longer exists "
-            "(D-215 3); delete the entry or restore the surface"
+            f"{gate_id}: R3 stale_registration -- the script no longer exists; "
+            "delete the entry or restore the surface"
         )
 
     for gate_id in sorted(registered):
@@ -309,8 +309,8 @@ def check(
         bound_class = entry.get("bound_class")
         if bound_class not in KNOWN_CLASSES:
             findings.append(
-                f"{gate_id}: bound_class {bound_class!r} is not one of "
-                f"{sorted(KNOWN_CLASSES)} (D-212 five tiers)"
+                f"{gate_id}: bound_class {bound_class!r} is not one of the known "
+                f"bound classes {sorted(KNOWN_CLASSES)}"
             )
             continue
 
@@ -335,17 +335,16 @@ def check(
         # R6 -- zero-pin guard (fail-on-empty)
         if bound_class in PIN_REQUIRED_CLASSES and not pins:
             findings.append(
-                f"{gate_id}: bound_class {bound_class} carries no pin "
-                "(zero-pin guard, D-215 3) -- a gate nobody can fail is a "
-                "claim, not a gate"
+                f"{gate_id}: R6 zero_pin_guard -- bound_class {bound_class} "
+                "carries no pin; a gate nobody can fail is a claim, not a gate"
             )
 
         # R4 -- veto-power drift
         if bound_class == "gate" and gate_id not in wired:
             findings.append(
-                f"{gate_id}: registered bound_class=gate but no workflow under "
-                ".github/workflows invokes it -- either wire it or reclassify it "
-                "as an instrument (D-212 2, verdict drift)"
+                f"{gate_id}: R4 gate_class_not_wired -- registered bound_class=gate "
+                "but no workflow under .github/workflows invokes it; either wire "
+                "it or reclassify it as an instrument (verdict drift)"
             )
 
         # R5 -- exemption discipline
@@ -361,9 +360,9 @@ def check(
                 issue = exemption.get("issue")
                 if expires is None and issue is None:
                     findings.append(
-                        f"{gate_id}: exemption needs expires or issue "
-                        "(D-215 5) -- an open-ended exemption is the "
-                        "Graveyard anti-pattern"
+                        f"{gate_id}: R5 bad_exemption -- exemption needs expires "
+                        "or issue; an open-ended exemption is the Graveyard "
+                        "anti-pattern"
                     )
                 elif expires is not None:
                     try:
@@ -375,8 +374,8 @@ def check(
                     else:
                         if when < today:
                             findings.append(
-                                f"{gate_id}: exemption EXPIRED at {expires} "
-                                "(D-215 5) -- renew it with a reason or drop it"
+                                f"{gate_id}: R5 bad_exemption -- exemption EXPIRED "
+                                f"at {expires}; renew it with a reason or drop it"
                             )
 
     return findings

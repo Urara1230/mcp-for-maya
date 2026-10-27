@@ -125,7 +125,7 @@ def test_dry_run_mutates_nothing():
 def test_issue_body_carries_obligation_pointer():
     mod = _load()
     body = mod._issue_body(_env("failure"), FakeGh())
-    assert "human review record" in body and "D-127" in body
+    assert "human review record" in body and "v1.0.0 release checklist" in body
 
 
 def test_red_body_lists_failed_steps():

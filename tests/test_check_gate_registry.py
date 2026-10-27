@@ -388,7 +388,7 @@ def test_gate_with_no_pins_is_red(tmp_path):
     reg = _write_registry(root, [_good_entry(pin_node_ids=[])])
     findings = mod.check(root, reg)
     assert findings, "a gate with zero pins must be reported (fail-on-empty)"
-    assert any("zero-pin guard" in f for f in findings), findings
+    assert any("R6 zero_pin_guard" in f for f in findings), findings
 
 
 # --- the admitted termination layer ---------------------------------------

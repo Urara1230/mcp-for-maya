@@ -152,7 +152,7 @@ def check(tag: str, issue: int, runner: Runner) -> int:
         print(
             "Appendix obligation is active while the gate tracker is open: "
             "ship-time snapshot semantics only — declarative pointers, no "
-            "counts, no tracker dump (D-142alpha)."
+            "counts, no tracker dump."
         )
         return 1
     print(

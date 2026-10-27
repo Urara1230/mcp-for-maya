@@ -137,17 +137,16 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
         f"- run: {env.get('RUN_URL', '?')} (attempt {env.get('RUN_ATTEMPT', '?')})\n"
         f"- sha: {env.get('GITHUB_SHA', '?')}\n\n"
         "A red here means upstream dependency drift first broke us — "
-        "the D-100 trigger-debt is armed by this signal. Since D-142gamma "
-        "the same job also carries the PyPI index dual-source probe "
+        "this signal arms the trigger debt. The same job also carries the "
+        "PyPI index dual-source probe "
         "(simple index + project JSON vs the latest tag) — check the "
         "failed steps below / the run log for which lane went red; a "
         "simple-index red is the install face broken. Repeated reds "
         "comment on this issue instead of opening new ones; the issue "
         "auto-closes on the next green run.\n\n"
         "Obligation: at least one human review record (result + "
-        "attribution in the decision ledger) is required before the "
-        "v1.0.0 release checklist can pass — red or green counts "
-        "(D-127)."
+        "attribution, posted on this issue) is required before the "
+        "v1.0.0 release checklist can pass — red or green counts."
     )
     return body + _failed_steps_md(env, runner)
 
