@@ -467,64 +467,109 @@ def test_every_finding_names_the_rule_it_fired(tmp_path):
     a suite count for any file carrying that marker, and this file's count is
     cited in the changelog."""
     mod = _load()
-    wired_both = ["check_demo", "check_extra"]
+    demo = ["check_demo"]
     cases = [
-        ("R1", [_good_entry()], ["check_demo", "check_newcomer"], wired_both),
+        # case id, expected tag, entries, scripts, wired
+        (
+            "R1",
+            "R1 unregistered_bound_object",
+            [_good_entry()],
+            ["check_demo", "check_extra"],
+            demo,
+        ),
         (
             "R2-pin",
+            "R2 unresolvable_pointer",
             [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])],
-            ["check_demo"],
-            ["check_demo"],
+            demo,
+            demo,
         ),
         (
             "R2-source",
+            "R2 unresolvable_pointer",
             [_good_entry(expected_sources=["gone/spec.yaml::cap"])],
-            ["check_demo"],
-            ["check_demo"],
+            demo,
+            demo,
         ),
-        ("R2-not-a-list", [_good_entry(pin_node_ids="x")], ["check_demo"], ["check_demo"]),
-        ("R3", [_good_entry(), _good_entry("check_retired")], ["check_demo"], ["check_demo"]),
-        ("R4", [_good_entry()], ["check_demo"], []),
-        ("R6", [_good_entry(pin_node_ids=[])], ["check_demo"], ["check_demo"]),
-        ("bad_bound_class", [_good_entry(bound_class="nonsense")], ["check_demo"], ["check_demo"]),
+        ("R2-not-a-list", "R2 unresolvable_pointer", [_good_entry(pin_node_ids="x")], demo, demo),
+        (
+            "R3",
+            "R3 stale_registration",
+            [_good_entry(), _good_entry("check_retired")],
+            demo,
+            demo,
+        ),
+        ("R4", "R4 gate_class_not_wired", [_good_entry()], demo, []),
+        ("R6", "R6 zero_pin_guard", [_good_entry(pin_node_ids=[])], demo, demo),
+        (
+            "bad_bound_class",
+            "bad_bound_class",
+            [_good_entry(bound_class="nonsense")],
+            demo,
+            demo,
+        ),
         (
             "R5-noend",
+            "R5 bad_exemption",
             [_good_entry(exemption={"reason": "we meant to"})],
-            ["check_demo"],
-            ["check_demo"],
+            demo,
+            demo,
         ),
         (
             "R5-expired",
+            "R5 bad_exemption",
             [_good_entry(exemption={"reason": "temporary", "expires": "2020-01-01"})],
-            ["check_demo"],
-            ["check_demo"],
+            demo,
+            demo,
         ),
         (
             "R5-noreason",
+            "R5 bad_exemption",
             [_good_entry(exemption={"reason": ""})],
-            ["check_demo"],
-            ["check_demo"],
+            demo,
+            demo,
+        ),
+        (
+            "R5-not-an-object",
+            "R5 bad_exemption",
+            [_good_entry(exemption="waived")],
+            demo,
+            demo,
         ),
         (
             "R5-baddate",
+            "R5 bad_exemption",
             [_good_entry(exemption={"reason": "x", "expires": "soon"})],
-            ["check_demo"],
-            ["check_demo"],
+            demo,
+            demo,
         ),
-        ("malformed-duplicate", [_good_entry(), _good_entry()], ["check_demo"], ["check_demo"]),
-        ("malformed-no-id", [{"bound_class": "gate"}], ["check_demo"], ["check_demo"]),
+        (
+            "malformed-duplicate",
+            "malformed_entry",
+            [_good_entry(), _good_entry()],
+            demo,
+            demo,
+        ),
+        (
+            "malformed-no-id",
+            "malformed_entry",
+            [{"bound_class": "gate"}],
+            demo,
+            demo,
+        ),
     ]
-    seen = set()
-    for case_id, entries, scripts, wired in cases:
+    for case_id, expected, entries, scripts, wired in cases:
         root = _tree(tmp_path / case_id, scripts=scripts, wired=wired)
         findings = mod.check(root, _write_registry(root, entries))
         assert findings, f"{case_id}: the fixture must produce at least one finding"
         untagged = [f for f in findings if not any(tag in f for tag in RULE_TAGS)]
         assert untagged == [], f"{case_id} produced an unmappable finding: {untagged}"
-        seen.update(tag for tag in RULE_TAGS if any(tag in f for f in findings))
-    assert {"R4 gate_class_not_wired", "R6 zero_pin_guard"} <= seen, (
-        f"the cases above must reach every tag they name; reached {sorted(seen)}"
-    )
+        # The tag that SHOULD fire is the one that fires. Asserting only "some
+        # tag is present" let a case drift onto a neighbouring rule and stay
+        # green -- the defect this test exists to catch.
+        assert any(expected in f for f in findings), (
+            f"{case_id}: expected {expected!r}, got {findings}"
+        )
 
 
 def test_the_termination_layer_is_tagged(tmp_path):
@@ -542,6 +587,11 @@ def test_the_termination_layer_is_tagged(tmp_path):
     empty = mod.check(root, _write_registry(root, []))
     assert empty, "an empty registry must not return an empty finding list"
     assert all("registry_unusable" in f for f in empty), empty
+    # The third branch: the bound set cannot be enumerated at all.
+    gone = root / "no-such-scripts-dir"
+    unenumerable = mod.check(root, bad, scripts_dir=gone)
+    assert unenumerable, "an unlistable scripts dir must not pass silently"
+    assert all("registry_unusable" in f for f in unenumerable), unenumerable
 
 
 # --- enumeration honesty (D-215 7) ---------------------------------------

@@ -27,13 +27,15 @@ The rules:
   R6 zero_pin_guard              a gate/manual_preflight entry with no pin at
                                  all (fail-on-empty, OPA precedent)
 
-Three more tags are printed before the rules can run, because they describe a
-registry or entry the rule loop cannot reach: ``malformed_entry`` (no usable
-gate_id, or the same gate_id registered twice), ``bad_bound_class`` (a class
-outside the three this gate knows), and ``registry_unusable`` (the termination
-layer -- an unreadable or empty registry, or one whose bound set cannot be
-enumerated). Every printed finding carries exactly one of these tags, so an
-operator can map any CI line back to this table; a test pins that.
+Three more tags cover what the rule table above does not: ``malformed_entry``
+(no usable gate_id, or the same gate_id registered twice), ``bad_bound_class``
+(a class outside the three this gate knows), and ``registry_unusable`` (the
+admitted termination layer -- an unreadable or empty registry, or one whose
+bound set cannot be enumerated). ``malformed_entry`` and ``registry_unusable``
+are emitted before or instead of the rule loop; ``bad_bound_class`` is emitted
+inside it, before the entry's other rules can run. Every printed finding
+carries one of these tags, so an operator can map any CI line back to this
+table; a test pins that.
 
 On the rule count: "a bound object nobody registered" and "a new gate nobody
 registered" are one fact, so R1 reports it once rather than the list carrying
@@ -408,7 +410,7 @@ def main() -> int:
     try:
         findings = check(REPO, registry_path)
     except OSError as e:
-        print(f"::error::{e}")
+        print(f"::error::registry_unusable -- {e}")
         return 2
 
     for finding in findings:
