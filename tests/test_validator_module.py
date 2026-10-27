@@ -12,6 +12,7 @@ same stub seam, and never against a real Maya.
 from __future__ import annotations
 
 import ast
+import inspect
 import json
 import re
 from pathlib import Path
@@ -465,15 +466,18 @@ class TestCardPinsTheShippedApi:
     surfaces - so these are the only assertions that go red when card and code
     drift apart.
 
-    Two bounds, stated because a pin that cannot fail is worse than none: codes
-    are compared inside the shapes this API names refusals with
+    Three bounds, stated because a pin that cannot fail is worse than none.
+    Codes are compared inside the shapes this API names refusals with
     (`invalid_*`, `weight_overflow`, `validator_not_found`), so a code named
-    otherwise slips past; the two vocabularies demand an *enumeration* - a
+    otherwise slips past. The two vocabularies demand an *enumeration* - a
     `|`-separated run whose membership equals the shipped set - so a stale line
-    fails even while the words still appear in prose somewhere else; and the
-    `custom` section's own top-level names are checked one way only, that the
-    card names them, because the card writes `score`/`max_score` as a fraction
-    in running prose rather than as an envelope.
+    fails even while the words still appear in prose somewhere else, but a
+    second passing mention of one of those words is not itself checked. And two
+    claims stay one-way, that the card names what the API returns: the section's
+    own `score`/`max_score`, which the card writes as a fraction in running
+    prose, and the refusal's `suggestion`, which it names outside the printed
+    envelope. Restyled prose is a loud failure, not a silent pass: every anchor
+    this class reads asserts it was found.
     """
 
     ROOT = Path(__file__).resolve().parents[1]
@@ -485,6 +489,7 @@ class TestCardPinsTheShippedApi:
     ENVELOPE_KEY = re.compile(r'["`]([\w_]+)["`]\s*:')
     ROW_SHAPE = re.compile(r"`(\w+)` \(each with([^)]*)\)")
     ROW_KEY = re.compile(r"`(\w+)")
+    SIGNATURE = re.compile(r"`(\w+)\(([^)]*)\)`")
 
     def _card(self) -> str:
         """The card, read once per test: nothing here writes to it."""
@@ -532,6 +537,24 @@ class TestCardPinsTheShippedApi:
             f"card omits {sorted(emitted - documented)}; "
             f"card names codes nothing emits: {sorted(documented - emitted)}"
         )
+
+    def test_the_card_prints_the_shipped_signatures(self, env):
+        """The one thing a caller copies verbatim: parameter names and defaults."""
+        card = self._card()
+        for name in ("register_validator", "list_validators", "unregister_validator"):
+            printed = next((body for fn, body in self.SIGNATURE.findall(card) if fn == name), None)
+            assert printed is not None, f"the card no longer prints {name}() - re-aim this pin"
+            parts = [part.strip() for part in printed.split(",") if part.strip()]
+            signature = inspect.signature(getattr(env.module, name))
+            names = [part.split("=")[0] for part in parts]
+            assert names == list(signature.parameters), f"{name}: params {names}"
+            shown = {p.split("=")[0]: p.split("=", 1)[1].strip(" \"'") for p in parts if "=" in p}
+            shipped = {
+                p.name: str(p.default)
+                for p in signature.parameters.values()
+                if p.default is not inspect.Parameter.empty
+            }
+            assert shown == shipped, f"{name}: defaults {shown} != shipped {shipped}"
 
     def test_the_card_names_every_key_the_api_returns(self, env):
         card = self._card()
@@ -588,7 +611,12 @@ class TestCardPinsTheShippedApi:
         custom = env.module.custom_validator_results()
         rows = {"validators": set(custom["validators"][0]), "issues": set(custom["issues"][0])}
 
-        for label, body in self.ROW_SHAPE.findall(self._card()):
+        shapes = dict(self.ROW_SHAPE.findall(self._card()))
+        assert set(rows) <= set(shapes), (
+            "the card no longer writes `custom`'s rows as `(each with …)` - re-aim this pin"
+        )
+
+        for label, body in shapes.items():
             if label not in rows:
                 continue
             # The status enumeration sits inside the validators run, so it is
