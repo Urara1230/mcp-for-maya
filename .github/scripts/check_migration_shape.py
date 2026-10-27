@@ -11,9 +11,9 @@ invisible to every other gate in this repo:
   injected-module source lives in string literals.
 
 ruff budget, the monolith line budget, TDQS, `llms.txt`, version consistency,
-the gate registry, the mypy baseline, `pre-commit` and the stub suite all stayed
-green on the commit that did the first one (#90, caught in review, not by a
-check). This gate is the response.
+the gate registry, the mypy baseline, `pre-commit` and the maya stub layer all
+stayed green on the commit that did the first one (#90, caught in review, not by
+a check). This gate is the response.
 
 Two rules, per Python file modified between two revisions:
 
@@ -29,8 +29,10 @@ Two rules, per Python file modified between two revisions:
   which is correct: an injected-module template is payload, not prose. Most PRs
   exist to move code, so this one informs rather than blocks; a migration ticket
   carries "no code moved" as its own acceptance criterion, and the warning line
-  is where a reviewer reads it. Making it a hard gate was tried first and would
-  have reddened every feature branch — including the PR that added this file.
+  is where a reviewer reads it. The earlier form made it a blocking error and
+  reddened exactly that shape — `test_an_ordinary_code_change_does_not_block`
+  builds a commit whose only change is code movement and expects exit 0 with a
+  warning, so the downgrade is pinned rather than remembered.
 
 Scope limits, stated so nobody reads more into this than it does:
 
@@ -44,7 +46,13 @@ Scope limits, stated so nobody reads more into this than it does:
   them.
 - It checks *modified* files only (`--diff-filter=M`): a blob that exists on one
   side has nothing to compare. A migration adds and deletes no Python file — that
-  is its own acceptance criterion — so a PR adding a module is unchecked here.
+  is its own acceptance criterion — so a PR adding a module is unchecked here, and
+  a PR whose Python files are all new (this gate's own included) prints
+  `nothing to compare` rather than a verdict.
+- A docstring that *quotes* a broken delimiter is itself a bad block, so this
+  file and its tests carry a standing count. Only an increase blocks, but a new
+  example of the defect the file is about is an increase — read a finding on such
+  a file as prose, not damage.
 - Both the file list and the blobs come from the merge base of the two revisions,
   so a branch that has fallen behind its base cannot be blamed for main's edits.
   (The assets guard diffs a push two-dot instead; the difference matters here
@@ -52,6 +60,8 @@ Scope limits, stated so nobody reads more into this than it does:
 - An all-zero or empty base (first push of a branch) skips the check: there is no
   prior state to compare. A shallow clone reports a warning rather than passing
   silently, because "nothing modified" and "history absent" print the same way.
+  The same is true of a `schedule` or `workflow_dispatch` run — those events carry
+  no base, so the gate is not-run there, not green.
 - It proves shape, not sense. Whether the surviving sentence still states the
   decision it inherited is a reader's call; see docs/agents/domain.md.
 
