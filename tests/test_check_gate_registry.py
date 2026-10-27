@@ -597,6 +597,41 @@ def test_the_termination_layer_is_tagged(tmp_path):
     assert any("cannot enumerate" in f for f in unenumerable), unenumerable
 
 
+def test_a_shape_valid_registry_that_is_not_an_object_is_tagged_not_a_traceback(tmp_path):
+    """Parseable is not the same as shaped. A JSON list, string or number reads
+    fine and then dies on ``data.get``, which exits through an untagged
+    traceback -- the one output this gate's "every finding names its rule"
+    property cannot survive, and the one place calling it "unreadable" would be
+    false. Each case asserts a non-empty, tagged finding rather than merely
+    "no exception": a bare try/except here would pass on any silent return."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    reg = root / ".github" / "gate-registry.yaml"
+    for payload in ('[{"gate_id": "check_demo"}]', '"just a string"', "42", "null"):
+        reg.write_text(payload, encoding="utf-8")
+        findings = mod.check(root, reg)
+        assert findings, f"{payload}: a non-object root must not pass silently"
+        assert all("registry_unusable" in f for f in findings), findings
+        assert any("not an object" in f for f in findings), findings
+
+
+def test_an_entry_that_is_not_an_object_is_a_malformed_entry(tmp_path):
+    """R2 already guards a pointer list of the wrong type; the LIST ITSELF has
+    the same failure mode one level up. A registry whose ``entries`` holds a
+    number must be a tagged row an operator can fix, not an ``AttributeError``
+    that looks like a broken gate."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    reg = _write_registry(root, [7, _good_entry()])
+    findings = mod.check(root, reg)
+    assert findings, "a non-object entry must not pass silently"
+    assert all(any(tag in f for tag in RULE_TAGS) for f in findings), findings
+    assert any("malformed_entry" in f for f in findings), findings
+    # The good entry beside it is still adjudicated: one bad row must not
+    # swallow the rest of the registry.
+    assert not any("check_demo:" in f for f in findings), findings
+
+
 # --- enumeration honesty (D-215 7) ---------------------------------------
 
 

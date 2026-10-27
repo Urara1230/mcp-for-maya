@@ -28,14 +28,15 @@ The rules:
                                  all (fail-on-empty, OPA precedent)
 
 Three more tags cover what the rule table above does not: ``malformed_entry``
-(no usable gate_id, or the same gate_id registered twice), ``bad_bound_class``
-(a class outside the three this gate knows), and ``registry_unusable`` (the
-admitted termination layer -- an unreadable or empty registry, or one whose
-bound set cannot be enumerated). ``malformed_entry`` and ``registry_unusable``
-are emitted before or instead of the rule loop; ``bad_bound_class`` is emitted
-inside it, before the entry's other rules can run. Every printed finding
-carries one of these tags, so an operator can map any CI line back to this
-table; a test pins that.
+(no usable gate_id, the same gate_id registered twice, or an entry that is not
+an object at all), ``bad_bound_class`` (a class outside the three this gate
+knows), and ``registry_unusable`` (the admitted termination layer -- an
+unreadable or empty registry, a root that parses to something other than an
+object, or one whose bound set cannot be enumerated). ``malformed_entry`` and
+``registry_unusable`` are emitted before or instead of the rule loop;
+``bad_bound_class`` is emitted inside it, before the entry's other rules can
+run. Every printed finding carries one of these tags, so an operator can map any
+CI line back to this table; a test pins that.
 
 On the rule count: "a bound object nobody registered" and "a new gate nobody
 registered" are one fact, so R1 reports it once rather than the list carrying
@@ -276,6 +277,16 @@ def check(
         # layer is added on top of it.
         return [f"registry_unusable -- registry unreadable: {e}"]
 
+    # The parse succeeding is not the same as the registry BEING a registry: a
+    # JSON-valid list/string/number parses fine and then dies on ``data.get``,
+    # which exits through a traceback -- an untagged line no rule table maps,
+    # and the one shape where "unreadable" would be a lie (the file read fine).
+    if not isinstance(data, dict):
+        return [
+            "registry_unusable -- the registry root is "
+            f"{type(data).__name__}, not an object with an 'entries' list"
+        ]
+
     entries = data.get("entries")
     if not isinstance(entries, list) or not entries:
         # fail-on-empty (OPA --fail-on-empty precedent). An empty
@@ -291,6 +302,12 @@ def check(
 
     registered: dict[str, dict] = {}
     for entry in entries:
+        if not isinstance(entry, dict):
+            findings.append(
+                f"malformed_entry -- registry entry is {type(entry).__name__}, "
+                "not an object with a gate_id"
+            )
+            continue
         gate_id = entry.get("gate_id")
         if not isinstance(gate_id, str) or not gate_id:
             findings.append("malformed_entry -- registry entry has no usable gate_id")

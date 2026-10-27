@@ -41,10 +41,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and so on, plus `malformed_entry`, `bad_bound_class` and `registry_unusable`
   for the cases the numbered rules do not cover), because the docstring's id column
   was retired in #92 — the printed tag is now the only mapping from a CI line
-  back to a rule, and a per-branch pin fails any finding that names none.
+  back to a rule, and a per-branch pin fails any finding that names none. That
+  property holds for registry SHAPE too, not only for registry content: a root
+  that parses to a list or a number, or an entry that is not an object, used to
+  die on `data.get` and exit through an untagged traceback. Both are now tagged
+  rows (`registry_unusable` / `malformed_entry`), and the entry case keeps
+  adjudicating the valid rows beside it.
   Evidence: `tests/test_check_gate_registry.py::test_the_real_registry_is_clean`,
   `tests/test_check_gate_registry.py::test_every_finding_names_the_rule_it_fired`,
-  `.github/gate-registry.yaml::entries` (the suite collects 31 tests).
+  `tests/test_check_gate_registry.py::test_a_shape_valid_registry_that_is_not_an_object_is_tagged_not_a_traceback`,
+  `.github/gate-registry.yaml::entries` (the suite collects 33 tests).
 
 - **Governance constants moved to per-domain spec files (D-214)** —
   `MIN_ADJUDICABLE`/`MIN_TN_PER_ELEMENT`, `llms.txt`'s `LINE_CAP`, the
