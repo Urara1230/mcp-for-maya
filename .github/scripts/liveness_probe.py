@@ -36,7 +36,7 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
-# D-214: PROTOCOL is a GOVERNANCE constant (which MCP revision counts as the
+# PROTOCOL is a GOVERNANCE constant (which MCP revision counts as the
 # supported floor), so its single source is the per-domain spec file -- derived
 # here at runtime, never restated inline. POLICY_ENV_FLAGS below is the
 # opposite case: object-derivable from pipeline.py, so it stays derived from

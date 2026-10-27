@@ -1,8 +1,8 @@
-"""D-142gamma PyPI index dual-source probe — weekly drift-canary lane.
+"""PyPI index dual-source probe — weekly drift-canary lane.
 
-Catches the D-139 failure class: the 0.4.0 upload landed (files +
-attestation + per-version JSON) but the simple index rolled back during
-a PyPI maintenance window — pip resolution silently fell to 0.3.0.
+Catches the 0.4.0 index-registration regression: the upload landed (files +
+attestation + per-version JSON) but the simple index rolled back during a PyPI
+maintenance window — pip resolution silently fell to 0.3.0.
 
 Two sources, independent lanes:
 
@@ -17,7 +17,7 @@ Two sources, independent lanes:
   Simple green + JSON red = API drift, not install breakage.
 
 Both green = healthy. Maintenance-window false reds are digested by
-human attribution through the D-123 notify channel — the drift job goes
+human attribution through the notify channel — the drift job goes
 red and ``notify_drift_canary.py`` lands the dedup issue. This probe is
 deliberately fail-loud: transport errors and non-200s are red too, not
 silently skipped.
@@ -31,10 +31,10 @@ Env:
 
 Exit: 0 both lanes green; 1 any lane red; 2 misuse (LATEST_TAG unset).
 
-The probe doubles as the runnable answer to "would the D-129 schedule
-silence also hide a PyPI regression": GitHub auto-disables schedules
+The probe doubles as the runnable answer to "would a silent schedule
+failure also hide a PyPI regression": GitHub auto-disables schedules
 after 60 days of repo inactivity, which the external Task Scheduler
-carrier (D-137) is immune to — this lane rides that same carrier.
+carrier is immune to — this lane rides that same carrier.
 """
 
 from __future__ import annotations
@@ -124,7 +124,7 @@ def probe(package: str, expected: str, fetch: Fetcher) -> list[str]:
 
     The simple index is checked in both serializations — pip negotiates
     PEP 691 JSON first but falls back to HTML, so "install face broken"
-    is only claimed when NEITHER lists the version (the D-139 CDN-split
+    is only claimed when NEITHER lists the version (the CDN-split
     observation: JSON edge stale while HTML serves fresh).
     """
     problems: list[str] = []

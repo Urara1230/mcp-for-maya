@@ -1,4 +1,4 @@
-"""D-125 monolith line-count ratchet.
+"""Monolith line-count ratchet.
 
 ``maya_scene_module.py`` is a registered monolith under T-07
 strangler discipline: incremental splits happen where fixes touch,

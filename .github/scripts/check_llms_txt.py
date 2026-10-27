@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""llms.txt generator + gate (D-207 2).
+"""llms.txt generator + gate.
 
 Why this is a checker and not a document: a hand-written tool inventory is the
 third source of truth. The tool set already has two - the @mcp.tool
@@ -10,7 +10,7 @@ as the rest of the .github/scripts family.
 
 llms.txt follows the llmstxt.org convention: an H1, a blockquote summary, then
 `## section` headings with `- [name](url): description` entries. It is capped at
-100 lines (D-207 2): a discovery file that must be paged through has stopped
+100 lines: a discovery file that must be paged through has stopped
 being a discovery file. `llms-full.txt` is explicitly NOT produced - one file,
 one job.
 
@@ -38,7 +38,7 @@ SCRIPTS = REPO / ".github" / "scripts"
 LLMS = REPO / "llms.txt"
 PIPELINE = Path("src/maya_mcp_server/pipeline.py")
 
-# D-214: LINE_CAP is a GOVERNANCE constant (D-207 2), so its single source is
+# LINE_CAP is a GOVERNANCE constant, so its single source is
 # the per-domain spec file -- derived here at runtime, never restated inline.
 # The tool COUNT beside it is object-derivable, so it stays derived from
 # pipeline.TOOL_ANNOTATIONS and is deliberately NOT mirrored into the spec

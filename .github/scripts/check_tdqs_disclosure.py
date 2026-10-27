@@ -1,4 +1,4 @@
-"""D-175 TDQS disclosure elements static ratchet.
+"""TDQS disclosure elements static ratchet.
 
 Asserts that required disclosure elements (cataloged in
 .github/tdqs-elements.yaml) are present in the live
@@ -8,7 +8,7 @@ Elements are defined with either:
   - any: list of regex patterns (at least one must match)
   - all: list of literal strings (every string must be present)
 
-D-180: mutation-class existence assertions MUST be polarity-aware \u2014
+Mutation-class existence assertions MUST be polarity-aware \u2014
 a statement like "without auto_fix mutations" must not satisfy an
 assertion that a mutation exists (S-03 lesion: the old autofix_mutation
 assertion was satisfied by the negated sentence and CI went fake-green).
@@ -16,17 +16,16 @@ Elements opt in via 'polarity_aware: true'; during the legislated
 observation period a match occurring only inside a negation scope is
 reported as a warning, not an error.
 
-D-190 hardened the mechanism form (execution-window product, deliberately
-not legislated here): the negation scope is the enclosing CLAUSE instead of
-a fixed 80-char window, and an element may list the legitimate
+Hardening the mechanism behind that requirement (execution-window product,
+deliberately not legislated here): the negation scope is the enclosing CLAUSE
+instead of a fixed 80-char window, and an element may list the legitimate
 negation-form phrases that forgive a cue in 'positive_exemptions'.
-Direction limit (D-190 3): polarity_aware belongs only on mutation-class
+Direction limit: polarity_aware belongs only on mutation-class
 existence assertions whose pattern set is purely positive \u2014 negation-form
 pattern elements stay unguarded and rely on the exemption list instead.
 The hardened form passed the live corpus with zero false rejections
 (asserted in tests/test_check_tdqs_disclosure.py); warn may be promoted to
-hard only after that corpus stays clean, reviewed at the 0.6.0 preflight
-(D-189/D-190 4).
+hard only after that corpus stays clean, reviewed at the 0.6.0 preflight.
 
 Hard-gated in the CI lint job alongside other check scripts.
 """
@@ -44,7 +43,7 @@ REPO = Path(__file__).resolve().parent.parent.parent
 DEFAULT_ELEMENTS = REPO / ".github" / "tdqs-elements.yaml"
 ELEMENTS_FILE = ".github/tdqs-elements.yaml"
 
-# Execution-window-owned mechanism form (D-190, warn observation period):
+# Execution-window-owned mechanism form (warn observation period):
 # a match is negated when a negation cue appears in the same CLAUSE before
 # the match start. Clause scope, not a fixed window — the retired 80-char
 # form flagged legitimate disclosures whose cue sat in an earlier clause
@@ -62,7 +61,7 @@ ELEMENTS_FILE = ".github/tdqs-elements.yaml"
 # (tests/test_check_tdqs_disclosure.py::test_no_hand_pinned_corpus_counts)
 # keeps the rot class out.
 #
-# PRIMARY surface, the denominator the D-190(4) zero-false-rejection judgement
+# PRIMARY surface, the denominator the zero-false-rejection judgement
 # uses: each tool against its own docstring and its own elements. The invariant
 # is asserted live rather than quoted:
 # tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings
@@ -73,7 +72,7 @@ ELEMENTS_FILE = ".github/tdqs-elements.yaml"
 # no_mutation_no_undo / overwrite_or_persistence_semantics), which carry no
 # polarity_aware guard by the direction limit below, so they are never judged.
 #
-# Caliber note (D-191 1c): the stress denominator counts every function/async
+# Caliber note: the stress denominator counts every function/async
 # function carrying a docstring, per OCCURRENCE -- nothing de-duplicated. The
 # 264 figure quoted in the pre-hardening evidence was a probe artifact: that
 # probe keyed docstrings by bare function name into a single dict and silently
@@ -81,11 +80,11 @@ ELEMENTS_FILE = ".github/tdqs-elements.yaml"
 # were the same corpus.
 #
 # The narrowed scope trades that FP class for cross-clause false negatives —
-# the legislated direction (D-190 1: on a fake-green-prone gate an FN hurts
+# the legislated direction (on a fake-green-prone gate an FN hurts
 # less than FP noise).
 #
 # The boundary set is clause TERMINATORS only. A line wrap is deliberately
-# not a boundary: the D-180 lesion sentence wraps in real docstrings, and
+# not a boundary: the S-03 lesion sentence wraps in real docstrings, and
 # forgiving it would reopen the fake-green hole. A terminator counts only
 # when followed by whitespace, so decimals ("0.5.0") and abbreviations
 # ("e.g.") do not split a clause.
@@ -101,7 +100,7 @@ NEGATION_CUES = re.compile(
 
 
 def _clause_start(docstring: str, start: int) -> int:
-    """Index at which the clause containing start begins (D-190 1)."""
+    """Index at which the clause containing start begins."""
     boundaries = list(CLAUSE_BOUNDARIES.finditer(docstring, 0, start))
     return boundaries[-1].end() if boundaries else 0
 
@@ -109,7 +108,7 @@ def _clause_start(docstring: str, start: int) -> int:
 def _negated(docstring: str, start: int, exemptions: tuple[str, ...]) -> bool:
     """Match at start is negated if a cue sits in its clause before it.
 
-    ``exemptions`` is the element's positive_exemptions list (D-190 2): a
+    ``exemptions`` is the element's positive_exemptions list: a
     cue that BELONGS to one of those legitimate negation-form phrases is
     forgiven, because the phrase documents the negated property itself
     rather than negating this match. Scoped to the cue, not to the clause --
@@ -182,7 +181,7 @@ def check(root: Path, elements_path: Path) -> tuple[bool, list[str], list[str], 
             checked_elements += 1
             eid = elem.get("id", "<unnamed>")
             why = elem.get("why", "")
-            # Direction limit (D-190 3): only purely-positive pattern sets
+            # Direction limit: only purely-positive pattern sets
             # carry the guard; negation-form elements stay unguarded.
             polarity = bool(elem.get("polarity_aware"))
             exempt = tuple(elem.get("positive_exemptions", ()))
@@ -276,12 +275,12 @@ def tools_map(elements_path: Path) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# D-195 coverage floor + derivable minimum set
+# Coverage floor + derivable minimum set
 # ---------------------------------------------------------------------------
 
 PIPELINE = REPO / "src" / "maya_mcp_server" / "pipeline.py"
 
-# Functional sibling faces (D-195 2). A tool in one of these families competes
+# Functional sibling faces. A tool in one of these families competes
 # for the agent's choice with the others, so it must say how it differs:
 # boundary_line + boundary_targets_named are derived from membership alone.
 #
@@ -300,7 +299,7 @@ SIBLING_FAMILIES: tuple[frozenset[str], ...] = (
     frozenset({"asset_search", "asset_import"}),
     frozenset({"list_sessions", "add_session", "maya_setup_guide"}),
 )
-# Frozen legacy derivation violations (D-195 2). This is the ONLY ledger for
+# Frozen legacy derivation violations. This is the ONLY record for
 # derivation debt, and it is deliberately NOT coverage_exemptions: these 8 pairs
 # are tools that DO carry a full 'tools' entry but miss an element derivable
 # from their own signature, so by the coverage rule they cannot be exempted
@@ -395,7 +394,7 @@ def project_version(root: Path) -> tuple[int, ...] | None:
 
 
 def derivable_elements(tool: str, sig: dict, families: tuple[frozenset[str], ...]) -> list[str]:
-    """Elements implied by this tool's own signature (D-195 2)."""
+    """Elements implied by this tool's own signature."""
     derived: list[str] = []
     if sig.get("session_key"):
         derived.append("session_prerequisite")
@@ -405,7 +404,7 @@ def derivable_elements(tool: str, sig: dict, families: tuple[frozenset[str], ...
 
 
 def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], list[str]]:
-    """Enumeration-completeness + derivable-minimum-set gate (D-195 1/2).
+    """Enumeration-completeness + derivable-minimum-set gate.
 
     Coverage is absolute: every annotated tool must be covered or explicitly
     exempt with a reason, and the reverse direction is asserted too so a stale
@@ -486,7 +485,7 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
                 f"overdue exemption would pass unnoticed on a tree without pyproject.toml"
             )
         elif current == due:
-            # D-204 tiering: at the deadline the exemption is merely ripe —
+            # Exemption tiering: at the deadline the exemption is merely ripe —
             # warn. Past it, the waiver has expired and the gate must bite.
             warnings.append(
                 f"::warning file={ELEMENTS_FILE}::exemption for '{tool}' is DUE {due_raw} "
@@ -495,8 +494,8 @@ def check_coverage_and_derivation(root: Path, data: dict) -> tuple[list[str], li
                 f"into an error"
             )
         elif current > due:
-            # D-204 tiering: past the deadline. A warning here would be a
-            # dead check — D-210 closed "overdue passes unnoticed" only for
+            # Exemption tiering: past the deadline. A warning here would be a
+            # dead check — "overdue passes unnoticed" was closed only for
             # the un-readable-version branch, not for a real overdue waiver.
             errors.append(
                 f"::error file={ELEMENTS_FILE}::exemption for '{tool}' EXPIRED at {due_raw} "
