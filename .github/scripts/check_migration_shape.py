@@ -12,8 +12,8 @@ invisible to every other gate in this repo:
 
 ruff budget, the monolith line budget, TDQS, `llms.txt`, version consistency,
 the gate registry, the mypy baseline, `pre-commit` and the maya stub layer all
-stayed green on the commit that did the first one (#90, caught in review, not by
-a check). This gate is the response.
+stayed green on the commit that did the first one (1d785a4 — caught in review,
+not by a check). This gate is the response.
 
 Two rules, per Python file modified between two revisions:
 
@@ -162,10 +162,11 @@ def check(pairs: Sequence[tuple[str, str, str]]) -> tuple[bool, list[str], list[
 
     Only the prose rules block: an unparseable side, or more docstring/comment
     blocks with bad delimiters than the range started with. CODE MOVED is a
-    warning, because moving code is what most PRs exist to do — the gate that
-    made it an error would have reddened every feature branch, including the one
-    that introduced it. A migration ticket still owes "no code moved" as its own
-    acceptance criterion, and the warning is where a reviewer sees it.
+    warning, because moving code is what most PRs exist to do; the error form is
+    pinned to fail by `test_an_ordinary_code_change_does_not_block`, which builds a
+    commit whose only change is code movement. A migration ticket still owes "no
+    code moved" as its own acceptance criterion, and the warning is where a
+    reviewer sees it.
 
     A file whose code moved is still checked for prose: new code often arrives
     with new sentences, and a stranded delimiter is just as broken there.

@@ -1,7 +1,7 @@
 """Regression tests for .github/scripts/check_migration_shape.py.
 
-Every case is a defect a shipped form actually had. PR #106 carried these checks
-as documentation snippets, and five review rounds found that they passed while
+Each case is either a defect a shipped form actually had or a case #108 asked
+for. PR #106 carried these checks as documentation snippets that passed while
 validating nothing (unfilled placeholders), called `([)]` balanced, reported a
 deleted docstring as moved code, flagged migrations for deleting a
 delimiter-free comment, and double-counted the module docstring.
