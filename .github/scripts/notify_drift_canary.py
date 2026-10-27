@@ -66,7 +66,10 @@ def _gh(args: list[str], runner: Runner) -> str:
 
 
 def title_for(workflow: str, branch: str) -> str:
-    return f"{MARKER} resolution-drift red — {workflow} on {branch}"
+    return (
+        f"{MARKER} resolution-drift red — "
+        f"{_strip_ledger_ids(workflow)} on {_strip_ledger_ids(branch)}"
+    )
 
 
 def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> int | None:
@@ -95,16 +98,17 @@ def find_open_issue(repo: str, workflow: str, branch: str, runner: Runner) -> in
     return None
 
 
-# Workflow job and step names still carry ledger ids (they are edited in
-# .github/workflows, which is outside this script's surface), and this body
-# forwards them verbatim into a public issue. Strip the parenthetical that
-# carries an id so the issue never republishes one; the rest of the name is
-# the useful half and is kept.
+# Workflow job and step names, branch names and the workflow label still carry
+# ledger ids (they are edited in .github/workflows and in git, both outside this
+# script's surface), and this body republishes them into a public issue. Two
+# passes: drop the parenthetical that holds an id, then drop any id left bare,
+# so neither the tagged form nor a truncated or unparenthesized one survives.
 _LEDGER_TAG = re.compile(r"\s*\([^()]*D-\d+[^()]*\)")
+_BARE_LEDGER_ID = re.compile(r"\s*D-\d+[\w()①-⑯]*")
 
 
 def _strip_ledger_ids(name: str) -> str:
-    return _LEDGER_TAG.sub("", name).strip()
+    return _BARE_LEDGER_ID.sub("", _LEDGER_TAG.sub("", name)).strip()
 
 
 def failed_steps(env: dict[str, str], runner: Runner) -> list[str]:
@@ -147,8 +151,8 @@ def _issue_body(env: dict[str, str], runner: Runner) -> str:
     body = (
         "Weekly resolution-drift canary (uv lock --upgrade + pytest on the "
         "floating resolution) went red.\n\n"
-        f"- workflow: {env.get('DRIFT_WORKFLOW', '?')}\n"
-        f"- branch: {env.get('BRANCH', '?')}\n"
+        f"- workflow: {_strip_ledger_ids(env.get('DRIFT_WORKFLOW', '?'))}\n"
+        f"- branch: {_strip_ledger_ids(env.get('BRANCH', '?'))}\n"
         f"- run: {env.get('RUN_URL', '?')} (attempt {env.get('RUN_ATTEMPT', '?')})\n"
         f"- sha: {env.get('GITHUB_SHA', '?')}\n\n"
         "A red here means upstream dependency drift first broke us — it is the "

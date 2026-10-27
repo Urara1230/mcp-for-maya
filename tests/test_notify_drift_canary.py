@@ -193,6 +193,20 @@ def test_forwarded_step_names_never_carry_a_ledger_id():
     assert not re.search(r"D-\d+", body), body
 
 
+def test_branch_and_workflow_labels_are_stripped_too():
+    """The issue title and body carry the branch and workflow labels, and a
+    branch name is free-form text a contributor controls. Both are stripped, and
+    an id with no parentheses around it must go as well."""
+    mod = _load()
+    env = _env("failure", DRIFT_WORKFLOW="CI (D-112)", BRANCH="fix/D-215-pins")
+    body = mod._issue_body(env, FakeGh())
+    assert not re.search(r"D-\d+", body), body
+    assert "fix/" in body, "the branch keeps its shape, only the id goes"
+    title = mod.title_for("CI (D-112)", "fix/D-215-pins")
+    assert not re.search(r"D-\d+", title), title
+    assert "resolution-drift red" in title
+
+
 def test_failed_step_lookup_failure_does_not_break_notify():
     """Attribution is best-effort: a broken api call still files the issue."""
     mod = _load()
