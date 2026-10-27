@@ -143,13 +143,66 @@ def test_unparseable_side_is_reported_not_raised():
     assert any("UNPARSEABLE" in e for e in errors)
 
 
-def test_code_moved_outranks_a_delimiter_finding():
-    """A file is reported once, under the more serious cause."""
+def test_code_moved_warns_and_the_prose_rule_still_applies():
+    """Moving code is what a PR is for; it buys no escape from the prose rule."""
     mod = _load()
-    ok, errors, _ = _check(mod, "m.py", BALANCED_DOC + "X = 1\n", STRANDED_DOC + "X = 2\n")
+    ok, errors, warnings = _check(mod, "m.py", BALANCED_DOC + "X = 1\n", STRANDED_DOC + "X = 2\n")
     assert not ok
-    assert any("CODE MOVED" in e for e in errors)
-    assert not any("UNBALANCED" in e for e in errors)
+    assert any("UNBALANCED" in e for e in errors)
+    assert any("CODE MOVED" in w for w in warnings)
+    assert len(warnings) == 1
+
+
+def test_a_clean_code_change_warns_without_blocking():
+    mod = _load()
+    ok, errors, warnings = _check(mod, "m.py", BALANCED_DOC + "X = 1\n", BALANCED_DOC + "X = 2\n")
+    assert ok and errors == []
+    assert len(warnings) == 1 and "CODE MOVED" in warnings[0]
+
+
+def test_blobs_are_read_from_the_merge_base_end_to_end(tmp_path):
+    """The round-2 defect: main() could ignore its own merge base and stay green.
+
+    Reading blobs from the caller's base instead of the merge base blames a stale
+    branch for whatever main changed in the meantime.
+    """
+    mod = _load()
+    calls = []
+
+    class R:
+        def __init__(self, out):
+            self.stdout = out
+
+    def runner(cmd, **kw):
+        calls.append(cmd)
+        if cmd[1] == "merge-base":
+            return R("cafe\n")
+        if cmd[1] == "diff":
+            return R("m.py\n")
+        if cmd[1] == "show":
+            return R(b'"""Docstring (balanced)."""\nX = 1\n')
+        return R("")
+
+    assert mod.main(["base", "tip"], tmp_path, runner) == 0
+    assert [c[2] for c in calls if c[1] == "show"] == ["cafe:m.py", "tip:m.py"]
+
+
+def test_an_ordinary_code_change_does_not_block(capsys):
+    """The gate was first wired hard on both findings and reddened every feature
+    branch — this pins the shape that fixed it.
+
+    61476bd is #104's first validator commit: real code movement, no prose damage.
+    """
+    tip = "61476bda1dd1e54ef58280e00a48ffab859ea069"
+    if subprocess.run(["git", "cat-file", "-e", tip], cwd=REPO).returncode != 0:
+        import pytest
+
+        pytest.skip(f"{tip} is not in this clone")
+    mod = _load()
+    assert mod.main([f"{tip}~1", tip], REPO) == 0
+    out = capsys.readouterr().out
+    assert "CODE MOVED" in out and "::error" not in out
+    assert "prose intact" in out
 
 
 def test_paths_are_filtered_to_modified_python_files():
@@ -223,9 +276,10 @@ def test_main_reports_a_real_defect_and_a_real_repair(capsys):
     """The numbers the prose quoted drifted twice, so they live here instead.
 
     c65e457..1d785a4 is #90's commit that stranded a ")" in pipeline.py;
-    c65e457..feb6317 is #90's repaired tip. The objects exist in full-history
-    clones (CI's lint job checks out with fetch-depth: 0); a shallow clone skips
-    rather than silently pretending the evidence ran.
+    c65e457..feb6317 is #90's repaired tip. pytest runs in the `test` job, whose
+    checkout is not fetch-depth: 0 — the `lint` job that runs the gate itself is —
+    so on a shallow runner this skips and says so, instead of pretending the
+    historical evidence ran.
     """
     base, defect, repaired = (
         "c65e4576d5458907270859eaa84c06d683931533",

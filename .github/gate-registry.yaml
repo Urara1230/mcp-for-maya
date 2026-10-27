@@ -76,8 +76,8 @@
         "docs/agents/domain.md::Checks a ledger migration owes"
       ],
       "pin_node_ids": [
-        "tests/test_check_migration_shape.py::test_stranded_closer_in_docstring_fails",
-        "tests/test_check_migration_shape.py::test_string_literal_change_is_code_moved"
+        "tests/test_check_migration_shape.py::test_misnesting_is_invisible_to_aggregate_counts",
+        "tests/test_check_migration_shape.py::test_an_ordinary_code_change_does_not_block"
       ],
       "exemption": null
     },

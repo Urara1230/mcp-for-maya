@@ -61,10 +61,10 @@ jobs:
         # point-in-time records and a landing pointer is not proof of a claim.
         run: python .github/scripts/check_doc_claims.py
       - name: migration shape gate
-        # Hard gate: a comment-only migration must not move code or strand a
-        # delimiter, both of which every other gate here missed on #90. Range
-        # comes from the PR base or, on push, from event.before — same sourcing
-        # as the assets guard, whose checkout already sets fetch-depth: 0.
+        # Hard on prose integrity: a comment-only migration must not strand a
+        # delimiter, which every other gate here missed on #90. CODE MOVED prints
+        # as a warning — ordinary PRs move code by design. Range from the PR base
+        # or, on push, event.before; the checkout above sets fetch-depth: 0.
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           TIP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
