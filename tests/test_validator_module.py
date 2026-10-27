@@ -1,15 +1,21 @@
 """Issue #79 Maya-side contract tests: custom scene_review validators.
 
-Runs against the stub-bound _mcp_scene injection unit (monolith + both
+Most run against the stub-bound _mcp_scene injection unit (monolith + both
 fragments assembled - maya_env.module), the same seam
-tests/test_introspect_module.py uses. These are CONTRACT tests: the
-registration surface, the score separation and the check_error isolation
-must hold in real Maya, where the predicate runs against a live DG.
+tests/test_introspect_module.py uses. Those are CONTRACT tests: the
+registration surface, the score separation and the check_error isolation must
+hold in real Maya, where the predicate runs against a live DG. The last class
+pins the scene-review skill card against this fragment - mostly through the
+same stub seam, and never against a real Maya.
 """
 
 from __future__ import annotations
 
+import ast
+import inspect
 import json
+import re
+from pathlib import Path
 
 import maya_stub
 import pytest
@@ -452,3 +458,189 @@ class TestSessionScope:
         reinjected = maya_stub.load_scene_module()
         assert reinjected.list_validators()["count"] == 0
         assert reinjected.custom_validator_results() is None
+
+
+class TestCardPinsTheShippedApi:
+    """The scene-review card carries the validator recipe so nobody has to open
+    this fragment to use it, and `skills/` sits outside check_doc_claims.py's
+    surfaces - so these are the only assertions that go red when card and code
+    drift apart.
+
+    Bounds, stated because a pin that cannot fail is worse than none.
+    Codes are compared inside the shapes this API names refusals with
+    (`invalid_*`, `weight_overflow`, `validator_not_found`), so a code named
+    otherwise slips past. The two vocabularies demand an *enumeration* - a
+    `|`-separated run whose membership equals the shipped set - so a stale line
+    fails even while the words still appear in prose somewhere else, but a
+    second passing mention of one of those words is not itself checked. And two
+    claims stay one-way, that the card names what the API returns: the section's
+    own `score`/`max_score`, which the card writes as a fraction in running
+    prose, and the refusal's `suggestion`, which it names outside the printed
+    envelope. Two more, for completeness: each anchor reads the *first* place it
+    matches, so a contradictory bullet appended below the pinned ones would not
+    be seen; and defaults are compared by value, so a `1` and a `1.0` are the
+    same default to this class. Restyled prose is a loud failure, not a silent
+    pass: every anchor this class reads asserts it was found.
+    """
+
+    ROOT = Path(__file__).resolve().parents[1]
+    CARD = ROOT / "skills" / "scene-review-playbook" / "SKILL.md"
+    FRAGMENT = ROOT / "src" / "maya_mcp_server" / "validator_module.py"
+    CODE_SHAPE = re.compile(r"\b(invalid_[a-z_]+|weight_overflow|validator_not_found)\b")
+    QUOTED_RUN = re.compile(r"(?:[\"'`][\w_]+[\"'`]\s*\|\s*)+[\"'`][\w_]+[\"'`]")
+    QUOTED_WORD = re.compile(r"[\"'`]([\w_]+)[\"'`]")
+    ENVELOPE_KEY = re.compile(r'["`]([\w_]+)["`]\s*:')
+    ROW_SHAPE = re.compile(r"`(\w+)` \(each with([^)]*)\)")
+    ROW_KEY = re.compile(r"`(\w+)")
+    SIGNATURE = re.compile(r"`(\w+)\(([^)]*)\)`")
+
+    def _card(self) -> str:
+        """The card, read once per test: nothing here writes to it."""
+        return self.CARD.read_text(encoding="utf-8")
+
+    def _names(self, card: str, word: str) -> bool:
+        """A word counts as documented when the card quotes it, any style."""
+        return f"`{word}`" in card or f'"{word}"' in card or f"'{word}'" in card
+
+    def _enumerations(self, card: str) -> list[set[str]]:
+        """Every `|`-separated run of quoted words the card carries, as sets."""
+        runs = self.QUOTED_RUN.finditer(card)
+        return [set(self.QUOTED_WORD.findall(run.group())) for run in runs]
+
+    def _printed_envelope(self, card: str, marker: str) -> tuple[set[str], set[str]]:
+        """Keys the card prints outside and inside the first `[...]` of the
+        envelope introducing `marker`, so a key moved between levels fails."""
+        at = card.find(marker)
+        assert at != -1, f"the card no longer introduces {marker!r} - re-aim this pin"
+        line = card[at : card.find("\n", at)]
+        head, bracket, rest = line.partition("[")
+        inner = rest.partition("]")[0] if bracket else ""
+        printed = (set(self.ENVELOPE_KEY.findall(head)), set(self.ENVELOPE_KEY.findall(inner)))
+        assert printed[0], f"no envelope printed for {marker!r} - re-aim this pin"
+        return printed
+
+    def _codes_emitted(self) -> set[str]:
+        tree = ast.parse(self.FRAGMENT.read_text(encoding="utf-8"))
+        codes = set()
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "_val_err"
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+            ):
+                codes.add(str(node.args[0].value))
+        return codes
+
+    def test_the_card_names_every_code_and_invents_no_other(self):
+        emitted = self._codes_emitted()
+        documented = set(self.CODE_SHAPE.findall(self._card()))
+        assert documented == emitted, (
+            f"card omits {sorted(emitted - documented)}; "
+            f"card names codes nothing emits: {sorted(documented - emitted)}"
+        )
+
+    def test_the_card_prints_the_shipped_signatures(self, env):
+        """The one thing a caller copies verbatim: parameter names and defaults."""
+        card = self._card()
+        for name in ("register_validator", "list_validators", "unregister_validator"):
+            printed = next((body for fn, body in self.SIGNATURE.findall(card) if fn == name), None)
+            assert printed is not None, f"the card no longer prints {name}() - re-aim this pin"
+            parts = [part.strip() for part in printed.split(",") if part.strip()]
+            signature = inspect.signature(getattr(env.module, name))
+            names = [part.split("=")[0] for part in parts]
+            assert names == list(signature.parameters), f"{name}: params {names}"
+            shown = {p.split("=")[0]: p.split("=", 1)[1].strip(" \"'") for p in parts if "=" in p}
+            shipped = {
+                p.name: str(p.default)
+                for p in signature.parameters.values()
+                if p.default is not inspect.Parameter.empty
+            }
+            assert shown == shipped, f"{name}: defaults {shown} != shipped {shipped}"
+
+    def test_the_card_names_every_key_the_api_returns(self, env):
+        card = self._card()
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("broken", lambda: 1 / 0)
+        custom = env.module.custom_validator_results()
+        registered = env.module.register_validator("again", lambda: True)
+        listed = env.module.list_validators()
+        unregistered = env.module.unregister_validator("again")
+        refused = env.module.unregister_validator("never_registered")
+
+        returned = (
+            set(registered)
+            | set(listed)
+            | set(unregistered)
+            | set(listed["validators"][0])
+            | set(refused)
+            | set(refused["error"])
+            | set(custom)
+            | set(custom["validators"][0])
+            | set(custom["issues"][0])
+        )
+        undocumented = {key for key in returned if not self._names(card, key)}
+        assert not undocumented, f"the API returns, the card never names: {sorted(undocumented)}"
+
+    def test_the_card_prints_no_key_the_api_does_not_return(self, env):
+        """The direction a reader acts on: an envelope the card promises and
+        the API no longer hands back is the lie that costs the whole call."""
+        card = self._card()
+        env.module.register_validator("card_pin", lambda: True)
+        listed = env.module.list_validators()
+        registered = env.module.register_validator("card_pin", lambda: False)
+        unregistered = env.module.unregister_validator("card_pin")
+
+        returned = {
+            "- `register_validator(name": (set(registered), set()),
+            "- `list_validators()`": (set(listed), set(listed["validators"][0])),
+            "- `unregister_validator(name": (set(unregistered), set()),
+        }
+        for marker, keys in returned.items():
+            assert self._printed_envelope(card, marker) == keys, f"{marker} drifted from the API"
+
+    def test_the_card_prints_no_key_the_refusal_does_not_return(self, env):
+        refused = env.module.unregister_validator("never_registered")
+        returned = set(refused) | set(refused["error"])
+        printed, _ = self._printed_envelope(self._card(), "A bad argument is refused")
+        assert printed <= returned, (
+            f"envelope keys the card promises and no refusal returns: {sorted(printed - returned)}"
+        )
+
+    def test_the_card_lists_exactly_the_keys_the_custom_rows_carry(self, env):
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("broken", lambda: 1 / 0)
+        custom = env.module.custom_validator_results()
+        rows = {"validators": set(custom["validators"][0]), "issues": set(custom["issues"][0])}
+
+        shapes = dict(self.ROW_SHAPE.findall(self._card()))
+        assert set(rows) <= set(shapes), (
+            "the card no longer writes `custom`'s rows as `(each with …)` - re-aim this pin"
+        )
+
+        for label, body in shapes.items():
+            if label not in rows:
+                continue
+            # The status enumeration sits inside the validators run, so it is
+            # dropped before the keys are read; `check: "custom"` still yields
+            # its key because a key is whatever opens a backtick.
+            keys = set(self.ROW_KEY.findall(self.QUOTED_RUN.sub("", body)))
+            assert keys == rows[label], f"`custom.{label}` drifted: {sorted(keys ^ rows[label])}"
+
+    def test_the_card_enumerates_the_severities_the_api_accepts(self, env):
+        accepted = set(env.module._VALIDATOR_SEVERITIES)
+        assert accepted in self._enumerations(self._card()), (
+            f"the card never lists exactly {sorted(accepted)} as the severity vocabulary"
+        )
+
+    def test_the_card_enumerates_the_statuses_the_report_produces(self, env):
+        env.module.register_validator("ok", lambda: True)
+        env.module.register_validator("bad", lambda: False)
+        env.module.register_validator("broken", lambda: 1 / 0)
+        produced = {row["status"] for row in env.module.custom_validator_results()["validators"]}
+
+        assert produced == {"passed", "failed", "check_error"}
+        assert produced in self._enumerations(self._card()), (
+            f"the card never lists exactly {sorted(produced)} as the status vocabulary"
+        )

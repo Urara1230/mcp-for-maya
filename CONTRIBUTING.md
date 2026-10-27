@@ -5,8 +5,11 @@
 ```bash
 uv sync --frozen                   # installs project + dev group from uv.lock (D-112)
 # alternatives: uv sync (re-resolve) | pip install -e . --group dev (pip >=25.1)
-pre-commit install                  # one-time: wire git hooks (.pre-commit-config.yaml)
-pre-commit run --all-files          # hook sweep — CI runs this identical step as its lint fallback
+uv run pre-commit install            # one-time: wire git hooks (.pre-commit-config.yaml)
+uv run pre-commit run --all-files    # hook sweep — CI's lint fallback. The doc-claims hook is
+                                     # `language: system` and takes `python` from PATH, so running the
+                                     # .venv launcher with another Python *version* ahead of it dies in
+                                     # `AssertionError: SRE module mismatch`; uv run keeps them equal
 python -m pytest tests/ -q         # stub-layer suite (contract tests vs the maya.cmds stub)
 ruff check .                        # lint — frozen budget gate (.github/ruff-baseline.json), ratchet only goes down
 python -m mypy src | mypy-baseline filter   # typecheck gate — fails only on NEW errors vs mypy-baseline.txt
@@ -37,7 +40,7 @@ stale companions cause integration failures and gate reds.
 | `asset_tools.py` / `polyhaven.py` / `asset_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, asset tests, `tests/maya_stub/` (new cmds surface), READMEs | Host-side download/cache vs Maya-side import — every piece in sync |
 | `export_tools.py` / `export_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, export tests, `tests/maya_stub/` (export surface), READMEs | Host validation/registration vs Maya-side export contract |
 | `introspect_tools.py` / `introspect_module.py` | `pipeline.py`, `server.py`, `docs/threat-model.md`, `docs/visual-callform-matrix.md`, introspect tests, `tests/maya_stub/`, READMEs | Fragment concatenated into the `_mcp_scene` payload (same-unit file); the D-110 response budget (`limit`, `*_truncated`, `total_*` fields) is part of the contract |
-| `validator_module.py` | `scene_tools.py` (`extra_source_paths` + the `scene_review` tool), `tests/maya_stub/__init__.py`, `tests/test_mayapy_smoke.py`, `tests/test_validator_module.py`, `skills/scene-review-playbook/SKILL.md`, `GLOSSARY.md`, `docs/threat-model.md` §5 | Fragment concatenated into the `_mcp_scene` payload after `introspect_module.py`; both stub-tier assemblers must list it or they stop matching the shipped bytes. The session-scoped registry composes `scene_review_with_validators` Maya-side. #79 deliberately ships no registration MCP tool — calls go through `execute_code` — which is the exception the `maya_scene_module.py (new function)` row above does not cover, and nothing persists host-side |
+| `validator_module.py` | `scene_tools.py` (`extra_source_paths` + the `scene_review` tool), `tests/maya_stub/__init__.py`, `tests/test_mayapy_smoke.py`, `tests/test_validator_module.py` (whose `TestCardPinsTheShippedApi` goes red when the card and the fragment drift), `skills/scene-review-playbook/SKILL.md`, `GLOSSARY.md`, `docs/threat-model.md` §5 | Fragment concatenated into the `_mcp_scene` payload after `introspect_module.py`; both stub-tier assemblers must list it or they stop matching the shipped bytes. The session-scoped registry composes `scene_review_with_validators` Maya-side. #79 deliberately ships no registration MCP tool — calls go through `execute_code` — which is the exception the `maya_scene_module.py (new function)` row above does not cover, and nothing persists host-side |
 | `scene_tools.py` (new tool) | `server.py` instructions, READMEs, `AGENTS.md` | Tool surface changes require documentation sync |
 | `scene_cache.py` | `scene_tools.py`, `session_manager.py` | Cache invalidation consistency |
 | `security.py` | `pipeline.py`, `tests/test_security.py`, `tests/test_pipeline.py` | Rules enforced by the middleware pipeline |
