@@ -7,9 +7,9 @@ uv sync --frozen                   # installs project + dev group from uv.lock (
 # alternatives: uv sync (re-resolve) | pip install -e . --group dev (pip >=25.1)
 uv run pre-commit install            # one-time: wire git hooks (.pre-commit-config.yaml)
 uv run pre-commit run --all-files    # hook sweep — CI's lint fallback. The doc-claims hook is
-                                     # `language: system`, so it takes `python` from PATH and must match
-                                     # the venv the launcher came from; mismatched it dies in
-                                     # `AssertionError: SRE module mismatch`, and uv run keeps them equal
+                                     # `language: system` and takes `python` from PATH, so running the
+                                     # .venv launcher with another Python *version* ahead of it dies in
+                                     # `AssertionError: SRE module mismatch`; uv run keeps them equal
 python -m pytest tests/ -q         # stub-layer suite (contract tests vs the maya.cmds stub)
 ruff check .                        # lint — frozen budget gate (.github/ruff-baseline.json), ratchet only goes down
 python -m mypy src | mypy-baseline filter   # typecheck gate — fails only on NEW errors vs mypy-baseline.txt

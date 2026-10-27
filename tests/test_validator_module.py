@@ -466,7 +466,7 @@ class TestCardPinsTheShippedApi:
     surfaces - so these are the only assertions that go red when card and code
     drift apart.
 
-    Three bounds, stated because a pin that cannot fail is worse than none.
+    Bounds, stated because a pin that cannot fail is worse than none.
     Codes are compared inside the shapes this API names refusals with
     (`invalid_*`, `weight_overflow`, `validator_not_found`), so a code named
     otherwise slips past. The two vocabularies demand an *enumeration* - a
@@ -476,8 +476,11 @@ class TestCardPinsTheShippedApi:
     claims stay one-way, that the card names what the API returns: the section's
     own `score`/`max_score`, which the card writes as a fraction in running
     prose, and the refusal's `suggestion`, which it names outside the printed
-    envelope. Restyled prose is a loud failure, not a silent pass: every anchor
-    this class reads asserts it was found.
+    envelope. Two more, for completeness: each anchor reads the *first* place it
+    matches, so a contradictory bullet appended below the pinned ones would not
+    be seen; and defaults are compared by value, so a `1` and a `1.0` are the
+    same default to this class. Restyled prose is a loud failure, not a silent
+    pass: every anchor this class reads asserts it was found.
     """
 
     ROOT = Path(__file__).resolve().parents[1]

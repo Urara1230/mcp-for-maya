@@ -40,7 +40,7 @@ Create a GitHub issue.
 
 Run `gh issue view <number> --comments`.
 
-**Read each acceptance criterion against the baseline tree before writing anything.** A sibling ticket's review rounds can land part of this ticket: #91's documentation commits had already closed four of #93's five criteria, and #91's merge was #93's baseline. `git show <baseline-sha>:<path>` settles that in one call. A blocker being *closed* only proves it closed; its code reaches your tree through a merge commit — confirm that merge is an ancestor of the baseline you start from (`git merge-base --is-ancestor <blocker-merge-sha> <baseline-sha>`). Then name the commit that closes each criterion in the ticket's closeout comment.
+**Read each acceptance criterion against the baseline tree before writing anything.** A sibling ticket's review rounds can land part of this ticket: #91's documentation commits had already closed four of #93's five criteria, and the merge that landed #91 (`76f3ada`, PR #104) was #93's baseline. `git show <baseline-sha>:<path>` settles that in one call. A blocker being *closed* only proves it closed; its code reaches your tree through a merge commit — confirm that merge is an ancestor of the baseline you start from (`git merge-base --is-ancestor <blocker-merge-sha> <baseline-sha>`). Then name the commit that closes each criterion in the ticket's closeout comment.
 
 ## Wayfinding operations
 
