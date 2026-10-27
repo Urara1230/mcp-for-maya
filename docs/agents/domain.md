@@ -30,7 +30,7 @@ Open decisions are GitHub issues labelled `needs-triage`, not new documents. A d
 
 ## Reading the retired decision ledger
 
-`docs/decision-ledger.md` was deleted in the governance teardown; `AGENTS.md` carries the recovery command. Anything citing a `D-xxx` points into that table, so:
+`docs/decision-ledger.md` was deleted in the governance teardown — read it with `git show '1c5befe^:docs/decision-ledger.md'`, the command `AGENTS.md` names too. Anything citing a `D-xxx` points into that table, so:
 
 - One row per decision: `ID | 原问题 | 我的原回答原文 | 规范化需求 | 显式约束/负向需求 | 状态`. `规范化需求` holds what was decided, `显式约束/负向需求` what was ruled out — a bare id in code usually means the first, a 不要 clause the second.
 - A citation like `D-082⑥`, `D-110⑧` or `D-145β` names a clause **inside** the parent row: the table marks each row's items `①②…` and letters like `β`, so search the parent id and read the marker in place. The forms code used are sometimes shorthand rather than table tokens — `D-082a` and `D-207 1` occur zero times in the ledger (they mean `①` of their rows, and `D-207` runs `①…⑦`), while `D-082⑥` occurs 3 times and `D-145β` 6. Grep the parent id, not the citation.

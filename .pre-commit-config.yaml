@@ -27,8 +27,10 @@ repos:
         # in .github/ruff-baseline.json. Drop entries as each file reaches zero.
         exclude: ^(src/maya_mcp_server/(maya_scene_module|scene_tools)\.py|tests/(test_scene_tools|test_pipeline|test_security|test_connection_guide|test_cos_formatter|test_mayapy_smoke|test_scene_cache)\.py)$
       - id: ruff-format
-  # Local-only: the repo's own gates are stdlib scripts, so language: system reuses
-  # the interpreter already running pre-commit rather than provisioning a new env.
+  # Local-only: the repo's own gates are stdlib scripts, so language: system runs the PATH
+  # `python`, not pre-commit's own interpreter. Measured: with the .venv launcher and python
+  # 3.11.9 ahead on PATH, doc-claims exits 1 (`SRE module mismatch`); the same hook via
+  # `uv run pre-commit` exits 0. Call the sweep through `uv run` — see CONTRIBUTING's dev setup.
   - repo: local
     hooks:
       - id: doc-claims

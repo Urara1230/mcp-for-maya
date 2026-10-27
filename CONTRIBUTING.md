@@ -6,10 +6,10 @@
 uv sync --frozen                   # installs project + dev group from uv.lock (D-112)
 # alternatives: uv sync (re-resolve) | pip install -e . --group dev (pip >=25.1)
 uv run pre-commit install            # one-time: wire git hooks (.pre-commit-config.yaml)
-uv run pre-commit run --all-files    # hook sweep — CI's lint fallback. The doc-claims hook is
-                                     # `language: system` and takes `python` from PATH, so running the
-                                     # .venv launcher with another Python *version* ahead of it dies in
-                                     # `AssertionError: SRE module mismatch`; uv run keeps them equal
+uv run pre-commit run --all-files    # hook sweep — CI's lint fallback. doc-claims is language: system,
+                                     # so it runs the PATH `python`: `.venv/Scripts/pre-commit.exe run
+                                     # doc-claims --all-files` exits 1 with `SRE module mismatch` at
+                                     # python 3.11.9 against the uv 3.13 venv; `uv run` of it exits 0
 python -m pytest tests/ -q         # stub-layer suite (contract tests vs the maya.cmds stub)
 ruff check .                        # lint — frozen budget gate (.github/ruff-baseline.json), ratchet only goes down
 python -m mypy src | mypy-baseline filter   # typecheck gate — fails only on NEW errors vs mypy-baseline.txt
@@ -82,7 +82,8 @@ resolves and a test count that no longer matches the suite it cites. Every
 ### Assertion & evidence discipline
 
 - Enumeration/count assertions declare their domain; recompute before restating a count.
-- A PR body and a changelog bullet are assertion surfaces too: recompute their counts and capability claims against the tip before posting.
+- A PR body and a changelog bullet are assertion surfaces too: recompute their counts and capability claims against the tip you push or merge.
+- A mechanism claim travels with its reproduction: the condition that triggers it, the command that showed it, and the exit code that came back. Write the sentence no wider than that measurement — the `SRE module mismatch` note in Development setup above is that shape.
 - Anything not reproducible is recorded "unverified" — never guess a cause.
 
 ### Asset directory discipline
