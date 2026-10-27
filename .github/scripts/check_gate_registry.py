@@ -15,16 +15,25 @@ list) and this checker reports the set difference in both directions.
 The rules:
 
   R1 unregistered_bound_object   a bound object with no registry entry
-  R2 unresolvable_pointer        a registered pin node or expected_source that
-                                 does not resolve
+  R2 unresolvable_pointer        a registered pointer that cannot be resolved,
+                                 or a pointer list that is not a list at all
   R3 stale_registration          an entry naming an object that is gone
   R4 gate_class_not_wired        bound_class=gate but no workflow runs it --
                                  veto-power drift: the entry claims hard-gate
                                  standing it does not have
-  R5 bad_exemption               an exemption with no expires|issue, or one
-                                 whose expires date has passed
+  R5 bad_exemption               an exemption with no expires|issue, one whose
+                                 expires date has passed, or one that is not an
+                                 object with a reason
   R6 zero_pin_guard              a gate/manual_preflight entry with no pin at
                                  all (fail-on-empty, OPA precedent)
+
+Three more tags are printed before the rules can run, because they describe a
+registry or entry the rule loop cannot reach: ``malformed_entry`` (no usable
+gate_id, or the same gate_id registered twice), ``bad_bound_class`` (a class
+outside the three this gate knows), and ``registry_unusable`` (the termination
+layer -- an unreadable or empty registry, or one whose bound set cannot be
+enumerated). Every printed finding carries exactly one of these tags, so an
+operator can map any CI line back to this table; a test pins that.
 
 On the rule count: "a bound object nobody registered" and "a new gate nobody
 registered" are one fact, so R1 reports it once rather than the list carrying
@@ -263,29 +272,29 @@ def check(
         # This is the checker's ADMITTED TERMINATION LAYER: an
         # unreadable or corrupt registry is reported and stops here. No fourth
         # layer is added on top of it.
-        return [f"registry unreadable: {e}"]
+        return [f"registry_unusable -- registry unreadable: {e}"]
 
     entries = data.get("entries")
     if not isinstance(entries, list) or not entries:
         # fail-on-empty (OPA --fail-on-empty precedent). An empty
         # registry is not "nothing to report", it is a registry that governs
         # nothing -- the failure mode this whole gate exists to prevent.
-        return ["registry has no entries -- an empty registry governs nothing"]
+        return ["registry_unusable -- registry has no entries; an empty registry governs nothing"]
 
     try:
         bound = enumerate_bound_objects(scripts_dir)
     except OSError as e:
-        return [f"cannot enumerate bound objects: {e}"]
+        return [f"registry_unusable -- cannot enumerate bound objects: {e}"]
     wired = wired_gate_ids(workflows_dir)
 
     registered: dict[str, dict] = {}
     for entry in entries:
         gate_id = entry.get("gate_id")
         if not isinstance(gate_id, str) or not gate_id:
-            findings.append("registry entry has no usable gate_id")
+            findings.append("malformed_entry -- registry entry has no usable gate_id")
             continue
         if gate_id in registered:
-            findings.append(f"{gate_id}: registered more than once")
+            findings.append(f"{gate_id}: malformed_entry -- registered more than once")
             continue
         registered[gate_id] = entry
 
@@ -309,8 +318,8 @@ def check(
         bound_class = entry.get("bound_class")
         if bound_class not in KNOWN_CLASSES:
             findings.append(
-                f"{gate_id}: bound_class {bound_class!r} is not one of the known "
-                f"bound classes {sorted(KNOWN_CLASSES)}"
+                f"{gate_id}: bad_bound_class -- {bound_class!r} is not one of "
+                f"the known bound classes {sorted(KNOWN_CLASSES)}"
             )
             continue
 

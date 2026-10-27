@@ -25,6 +25,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPT = REPO / ".github" / "scripts" / "check_gate_registry.py"
@@ -440,6 +442,83 @@ def test_findings_are_blocking_with_no_opt_out(tmp_path):
     assert proc.returncode == 1, proc.stdout + proc.stderr
     assert "::error" in proc.stdout, proc.stdout
     assert "::warning" not in proc.stdout, proc.stdout
+
+
+# --- every finding is mappable to a rule ---------------------------------
+
+
+RULE_TAGS = (
+    "R1 unregistered_bound_object",
+    "R2 unresolvable_pointer",
+    "R3 stale_registration",
+    "R4 gate_class_not_wired",
+    "R5 bad_exemption",
+    "R6 zero_pin_guard",
+    "malformed_entry",
+    "bad_bound_class",
+    "registry_unusable",
+)
+
+
+@pytest.mark.parametrize(
+    "entries, script_names",
+    [
+        pytest.param([_good_entry()], ["check_demo", "check_newcomer"], id="R1"),
+        pytest.param(
+            [_good_entry(pin_node_ids=["tests/test_gone.py::test_deleted"])],
+            ["check_demo"],
+            id="R2-pin",
+        ),
+        pytest.param(
+            [_good_entry(expected_sources=["gone/spec.yaml::cap"])], ["check_demo"], id="R2-source"
+        ),
+        pytest.param([_good_entry(), _good_entry("check_retired")], ["check_demo"], id="R3"),
+        pytest.param(
+            [_good_entry(), _good_entry("check_demo", bound_class="gate", pin_node_ids=[])],
+            ["check_demo"],
+            id="R6",
+        ),
+        pytest.param([_good_entry(bound_class="nonsense")], ["check_demo"], id="bad_bound_class"),
+        pytest.param(
+            [_good_entry(exemption={"reason": "we meant to"})], ["check_demo"], id="R5-noend"
+        ),
+        pytest.param(
+            [_good_entry(exemption={"reason": "temporary", "expires": "2020-01-01"})],
+            ["check_demo"],
+            id="R5-expired",
+        ),
+        pytest.param([_good_entry(exemption={"reason": ""})], ["check_demo"], id="R5-noreason"),
+        pytest.param(
+            [_good_entry(exemption={"reason": "x", "expires": "soon"})],
+            ["check_demo"],
+            id="R5-baddate",
+        ),
+        pytest.param([_good_entry(), _good_entry()], ["check_demo"], id="malformed-duplicate"),
+        pytest.param([{"bound_class": "gate"}], ["check_demo"], id="malformed-no-id"),
+    ],
+)
+def test_every_finding_names_the_rule_it_fired(tmp_path, entries, script_names):
+    """The docstring's id column is gone, so the printed tag IS the mapping from
+    a CI line to a rule. A finding with no tag is unmappable, and the property
+    regressed once by being claimed in a commit message instead of pinned here."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=script_names, wired=script_names)
+    findings = mod.check(root, _write_registry(root, entries))
+    assert findings, "the fixture must produce at least one finding"
+    untagged = [f for f in findings if not any(tag in f for tag in RULE_TAGS)]
+    assert untagged == [], untagged
+
+
+def test_the_termination_layer_is_tagged(tmp_path):
+    """An unreadable or empty registry returns before the rule loop, so its
+    findings are the easiest ones to leave untagged."""
+    mod = _load()
+    root = _tree(tmp_path, scripts=["check_demo"], wired=["check_demo"])
+    bad = root / ".github" / "gate-registry.yaml"
+    bad.write_text("{not json at all", encoding="utf-8")
+    assert all("registry_unusable" in f for f in mod.check(root, bad))
+    empty = _write_registry(root, [])
+    assert all("registry_unusable" in f for f in mod.check(root, empty))
 
 
 # --- enumeration honesty (D-215 7) ---------------------------------------
