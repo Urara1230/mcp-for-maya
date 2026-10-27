@@ -106,11 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   payload, not prose. Runs in the `lint` job on pull_request and push.
   Evidence: `tests/test_check_migration_shape.py::test_misnesting_is_invisible_to_aggregate_counts`,
   `tests/test_check_migration_shape.py::test_an_ordinary_code_change_does_not_block`
-  (the file collects 23 tests; six mutants — stack back to aggregate counts,
+  (the file collects 25 tests. A prose block is a docstring or a run of
+  consecutive comment lines, so a parenthetical that wraps is not read as two bad
+  blocks. Nine mutants were run against it — stack back to aggregate counts,
   CODE MOVED back to an error, prose skipped when code moves, blobs read from the
   base instead of the merge base, metric direction reversed, `--diff-filter=M`
-  dropped — are each caught by at least one test, and the two pinned here kill the
-  first two).
+  dropped, comment grouping disabled, one-line docstrings skipped again,
+  unparseable side ignored — and each is killed by at least one test; the two
+  pinned in the registry kill the first two.)
 
 ### Changed
 

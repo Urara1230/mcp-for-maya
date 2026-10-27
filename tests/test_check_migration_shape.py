@@ -187,6 +187,33 @@ def test_blobs_are_read_from_the_merge_base_end_to_end(tmp_path):
     assert [c[2] for c in calls if c[1] == "show"] == ["cafe:m.py", "tip:m.py"]
 
 
+def test_a_parenthetical_wrapping_two_comment_lines_is_one_block():
+    """Consecutive comment lines are one prose block.
+
+    Counting each line separately calls a legitimately wrapped pair two bad
+    blocks — a false positive on honest prose, and the reason #90's range read
+    2 -> 3 before grouping instead of the true 0 -> 1.
+    """
+    mod = _load()
+    wrapped = (
+        BALANCED_DOC
+        + "# a rule that spans two lines (with the\n# parenthetical closing on the second)\n"
+    )
+    plain = BALANCED_DOC + "# a rule that spans two lines (with the parenthetical inline)\n"
+    assert len(mod.bad_blocks(wrapped)) == 0
+    ok, errors, _ = _check(mod, "m.py", plain, wrapped)
+    assert ok and errors == []
+
+
+def test_a_stranded_closer_inside_a_comment_block_still_fails():
+    """Grouping must not hide the defect: the closer is still unmatched."""
+    mod = _load()
+    base = BALANCED_DOC + "# rule text (D-013: cited here\n# and the sentence ends)\n"
+    tip = BALANCED_DOC + "# rule text\n# and the sentence ends)\n"
+    ok, errors, _ = _check(mod, "m.py", base, tip)
+    assert not ok and any("UNBALANCED" in e for e in errors)
+
+
 def test_an_ordinary_code_change_does_not_block(capsys):
     """The gate was first wired hard on both findings and reddened every feature
     branch — this pins the shape that fixed it.
@@ -294,6 +321,6 @@ def test_main_reports_a_real_defect_and_a_real_repair(capsys):
     mod = _load()
     assert mod.main([base, defect], REPO) == 1
     out = capsys.readouterr().out
-    assert "pipeline.py" in out and "2 -> 3" in out
+    assert "pipeline.py" in out and "0 -> 1" in out
     assert mod.main([base, repaired], REPO) == 0
     assert "UNBALANCED" not in capsys.readouterr().out
