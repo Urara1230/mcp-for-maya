@@ -170,9 +170,9 @@ def test_main_cli_entrypoint(tmp_path, monkeypatch, capsys):
 def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
     """Counterfactual for the release-deadline repair: coverage findings
     already carry `::warning file=`, so main must not add a second prefix
-    (GitHub reads `::warning::::warning file=` as no annotation at all), and
-    the summary must name the classes it counted rather than calling every
-    warning a polarity finding."""
+    (GitHub then parses one warning with no file property, so the finding
+    loses its file attribution), and the summary must name the classes it
+    counted rather than calling every warning a polarity finding."""
     mod = _load()
     warnings = [
         "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE 0.7.0",
