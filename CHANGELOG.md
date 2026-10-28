@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`docs/guide/session-lifecycle.md` no longer presents the deleted
+  `docs/adr/` directory as a governing authority** — the page derives its
+  authority from code and issue #97 instead, cites pytest nodes that collect
+  and pass rather than the node deleted along with its class, and its anchor
+  paragraph is a complete sentence whose stated count (eight `path::symbol`
+  anchors) matches the bullets listed. Broken version: 0.7.0; fixed version:
+  [Unreleased]. Evidence:
+  `tests/test_session_manager.py::TestPruneDeadSessions::test_prune_removes_dead_sessions`
+  and `tests/test_session_manager.py::TestStartStop::test_stop_disconnects_sessions`
+  collect and pass against the tree the page now points at.
+
 ## [0.7.0] - 2026-10-28
 
 Truth-repair release plus one additive capability. The repository's own
