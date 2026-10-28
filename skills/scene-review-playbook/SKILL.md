@@ -26,12 +26,13 @@ compatibility: "Tested on Claude Code only; requires mcp-for-maya MCP server"
 | organization | overall hierarchy health |
 | constraints | the built-in 500-object budget (not the `custom` section below) |
 
-Per-check weights are defined in the review engine — see the audit table in README/AGENTS.md for exact max points; this card intentionally does not duplicate them.
+Per-check weights are defined in the review engine — see the audit table in README.md for exact max points; this card intentionally does not duplicate them.
 
 ## How to run
 
 - Full audit: `scene_review()` — after structural changes.
-- Subset: `scene_review(checks=["overlaps","conflicts"])` — cheaper re-verify after a targeted fix.
+- Subset: `scene_review(checks="overlaps,conflicts")` — one comma-separated string; cheaper re-verify after a targeted fix. The tool splits it itself, so a Python list is not the shape it accepts.
+- Maya-side, for the same subset: `_mcp_scene.scene_review(["overlaps","conflicts"])` — a Python list, reached through `execute_code` once `_mcp_scene` is in the session (see Studio validators below). That is the Maya-side call, not the MCP argument.
 - Interpret: each entry in `issues[]` carries `severity` (error > warning > info), `check`, and a `msg` summary (counts + advice). An `info` row lands in neither the `errors` nor the `warnings` count. Per-object detail lives under `checks[]` — e.g. `checks.overlaps.details` names the colliding pairs (sampled list). Fix errors first; warnings are judgment calls.
 
 ## Findings → actions

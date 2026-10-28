@@ -332,3 +332,35 @@ class TestSceneReviewCustomValidators:
 
         assert "silent: None" not in out
         assert "[ERROR] silent: silent failed" in out
+
+
+# ------------------------------------------------------------
+# Issue #120: the `checks` argument shape the card documents
+# ------------------------------------------------------------
+
+
+class TestChecksArgumentShape:
+    """`checks` is a comma-separated string at the MCP boundary and a Python
+    list at the Maya side; the tool splits it itself. The scene-review card
+    carries the call shape and `skills/` sits outside check_doc_claims.py's
+    surfaces, so this is the only assertion that goes red when the two drift.
+
+    One bound, stated because a pin that cannot fail is worse than none: the
+    spy reads what the generated code hands to `scene_review_with_validators`,
+    so a tool that stopped splitting would still be pinned here — but a tool
+    that renamed the Maya-side entry point would fail to find its call at all
+    rather than report a shape.
+    """
+
+    async def test_two_names_reach_the_maya_side_call_as_a_list(self, tools):
+        seen = {}
+
+        def spy(checks=None):
+            seen["checks"] = checks
+            return {"checks": {}, "issues": [], "score": 0}
+
+        tools.env.module.scene_review_with_validators = spy
+        await tools.fns["scene_review"](checks="overlaps,conflicts", format="json")
+
+        assert "checks" in seen, "the Maya-side entry point was never called - re-aim this pin"
+        assert seen["checks"] == ["overlaps", "conflicts"]
