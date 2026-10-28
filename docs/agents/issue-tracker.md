@@ -10,6 +10,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+- **Point a duplicate child ticket back at the original**: when a parent spec splits a defect into a **new** child ticket instead of reusing the existing defect ticket, the child body must carry `Also closes #<original>`. A pull request closes only the issues it names, so the original defect record stays open as unfinished work once the child's PR merges.
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
