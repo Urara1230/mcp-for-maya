@@ -247,12 +247,18 @@ def check(root: Path, elements_path: Path) -> tuple[bool, list[str], list[str], 
 def main() -> int:
     elements_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_ELEMENTS
     ok, errors, warnings, total_checked = check(REPO, elements_path)
-    # Coverage findings already carry their own `::warning file=` prefix; the
-    # element-scan ones do not. Prefixing unconditionally printed the coverage
-    # class as `::warning::::warning file=`, which GitHub does not read as an
-    # annotation — invisible until the first release deadline made them fire.
+    # Coverage findings already carry a `::warning file=` command header; the
+    # element-scan ones carry only `file=<path>::` as their own text. Printing
+    # the latter behind `::warning::` made the path message text instead of the
+    # file property, so GitHub lost the attribution — invisible until the first
+    # release deadline made those findings fire.
     for w in warnings:
-        print(w if w.startswith("::") else f"::warning::{w}")
+        if w.startswith("::"):
+            print(w)
+        elif w.startswith("file="):
+            print(f"::warning {w}")
+        else:
+            print(f"::warning::{w}")
     for err in errors:
         print(err)
     if not ok:

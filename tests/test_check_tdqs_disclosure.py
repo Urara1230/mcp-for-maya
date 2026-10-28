@@ -168,11 +168,12 @@ def test_main_cli_entrypoint(tmp_path, monkeypatch, capsys):
 
 
 def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
-    """Counterfactual for the release-deadline repair: coverage findings
-    already carry `::warning file=`, so main must not add a second prefix
-    (GitHub then parses one warning with no file property, so the finding
-    loses its file attribution), and the summary must name the classes it
-    counted rather than calling every warning a polarity finding."""
+    """Counterfactual for the release-deadline repair: every finding must reach
+    GitHub as a command whose `file=` is a property, not message text —
+    coverage findings carry `::warning file=` already, and element-scan
+    findings carry a bare `file=<path>::` that main has to promote into the
+    header. The summary must also name the classes it counted rather than
+    calling every warning a polarity finding."""
     mod = _load()
     warnings = [
         "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE 0.7.0",
@@ -186,7 +187,8 @@ def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "::warning::::warning" not in out
     assert "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE" in out
-    assert "::warning::file=src/tool.py::demo" in out
+    assert "::warning file=src/tool.py::demo" in out
+    assert "::warning::file=" not in out
     assert "(3 warnings: 1 polarity, 1 ripe-exemption, 1 other)" in out
 
 
@@ -584,6 +586,21 @@ def _live_data(mod):
     return json.loads(mod.DEFAULT_ELEMENTS.read_text(encoding="utf-8"))
 
 
+def _one_entry_due(due: str) -> dict:
+    """A fixed register for the deadline-boundary tests.
+
+    Those tests check the tiering rule, not the live register. Reading the
+    live data makes repaying an exemption — covering the tool or filing a
+    D-168 renewal — change what they assert, so the live dues would have to be
+    re-counted by hand on every repayment. One entry with a known due keeps the
+    boundary fixed while the register moves.
+    """
+    return {
+        "tools": {},
+        "coverage_exemptions": {"demo_tool": {"reason": "fixture entry", "due": due}},
+    }
+
+
 def _covers_err(mod, data, needle):
     errs, _warns = mod.check_coverage_and_derivation(mod.REPO, data)
     return [e for e in errs if needle in e]
@@ -836,10 +853,10 @@ def test_due_warns_but_does_not_bite_on_the_deadline_itself(monkeypatch):
     team sees it coming, but it stays a warning so the lint job is green
     through the release that lands ON the deadline."""
     mod = _load()
-    data = _live_data(mod)
+    data = _one_entry_due("0.7.0")
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 0))
     hits = _covers_warn(mod, data, "is DUE 0.7.0")
-    assert len(hits) == 12, hits
+    assert len(hits) == 1, hits
     assert "waiver renewal" in hits[0]
     assert _covers_err(mod, data, "EXPIRED") == [], "the deadline itself is not overdue"
 
@@ -849,10 +866,10 @@ def test_past_the_deadline_is_an_error_not_a_warning(monkeypatch):
     check - the exemption silently stays open-ended, which is exactly what
     D-195 4 exists to prevent."""
     mod = _load()
-    data = _live_data(mod)
+    data = _one_entry_due("0.7.0")
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 1))
     hits = _covers_err(mod, data, "EXPIRED at 0.7.0")
-    assert len(hits) == 12, hits
+    assert len(hits) == 1, hits
     assert _covers_warn(mod, data, "is DUE") == [], "expired is an error, not a warning"
     # The five renewal elements the EXPIRED message must name - not a generic
     # five-item checklist.
@@ -868,9 +885,10 @@ def test_past_the_deadline_is_an_error_not_a_warning(monkeypatch):
 
 def test_due_boundary_is_inclusive(monkeypatch):
     mod = _load()
-    data = _live_data(mod)
+    data = _one_entry_due("0.7.0")
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 6, 9))
     assert _covers_warn(mod, data, "is DUE") == [], "0.6.9 is still short of 0.7.0"
+    assert _covers_err(mod, data, "EXPIRED") == [], "0.6.9 is short of every deadline"
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 0))
     assert _covers_warn(mod, data, "is DUE"), "0.7.0 has reached the deadline"
     assert _covers_err(mod, data, "EXPIRED") == [], "0.7.0 is the deadline, not past it"

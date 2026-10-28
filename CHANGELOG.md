@@ -228,7 +228,9 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   release that lands ON the deadline stays green, and the next version bump
   turns them into errors. Paying the debt — covering the tools or filing a
   D-168 renewal — is therefore the first thing 0.7.1 owes.
-  Evidence: `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`.
+  Evidence: `.github/tdqs-elements.yaml::coverage_exemptions` (the 12 entries),
+  `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`
+  (the tiering itself).
 
 ### Removed
 
@@ -319,13 +321,17 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   summary line labelled the whole warning list "polarity warnings", so the
   first time the tree reached a release deadline it described 12 ripe
   exemptions as polarity findings; it now reports the total and each class it
-  can name. Coverage findings also printed as `::warning::::warning file=…`,
-  because those builders carry their own prefix and `main` added a second, so
-  none of the 12 carried file attribution. The two live controls that had
-  encoded the stricter reading were aligned with the tiering: the corpus
-  control no longer asserts an empty warning list — the deadline fills it —
-  and now checks the warning tally against the register, and the
-  overdue control still fails on an EXPIRED exemption.
+  can name. Coverage findings also printed as `::warning::::warning file=…`
+  because their builders carry the prefix `main` added again, and element-scan
+  findings as `::warning::file=…` where the path is message text; neither
+  class carried file attribution, and every finding now reaches GitHub with
+  `file=` in the command header. The two live controls that had encoded the
+  stricter reading were aligned with the tiering: the corpus control no longer
+  asserts an empty warning list — the deadline fills it — and now checks the
+  warning tally against the register, and the overdue control still fails on
+  an EXPIRED exemption. The three deadline-boundary tests now run against a
+  one-entry fixture instead of the live register, so covering or renewing an
+  exemption does not change what they assert.
   Broken version: 0.6.0 (latent — no exemption was ripe, so the mislabel never
   printed, and the gate script is in neither the wheel nor the sdist); fixed version: 0.7.0.
   Evidence: `tests/test_check_tdqs_disclosure.py::test_main_prefixes_once_and_names_every_warning_class`,
