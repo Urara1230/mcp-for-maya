@@ -324,8 +324,8 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   can name. Coverage findings also printed as `::warning::::warning file=…`
   because their builders carry the prefix `main` added again, and element-scan
   findings as `::warning::file=…` where the path is message text; neither
-  class carried file attribution, and every finding now reaches GitHub with
-  `file=` in the command header. The two live controls that had encoded the
+  class carried file attribution, and both now reach GitHub with `file=` in
+  the command header. The two live controls that had encoded the
   stricter reading were aligned with the tiering: the corpus control no longer
   asserts an empty warning list — the deadline fills it — and now checks the
   warning tally against the register, and the overdue control still fails on

@@ -180,6 +180,7 @@ def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
         "file=src/tool.py::demo element 'x' matched only inside negated statements "
         "(polarity_aware guard, observation period)",
         "::warning file=.github/tdqs-elements.yaml::cannot read the project version",
+        "a finding with no command header",
     ]
     monkeypatch.setattr(mod, "check", lambda root, path: (True, [], warnings, 3))
     monkeypatch.setattr("sys.argv", ["check_tdqs_disclosure.py"])
@@ -189,7 +190,8 @@ def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
     assert "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE" in out
     assert "::warning file=src/tool.py::demo" in out
     assert "::warning::file=" not in out
-    assert "(3 warnings: 1 polarity, 1 ripe-exemption, 1 other)" in out
+    assert "::warning::a finding with no command header" in out
+    assert "(4 warnings: 1 polarity, 1 ripe-exemption, 2 other)" in out
 
 
 def test_polarity_negated_only_match_warns_not_fails(tmp_path):
@@ -908,7 +910,7 @@ def test_unreadable_version_warns_instead_of_silently_passing(monkeypatch):
     data = _live_data(mod)
     monkeypatch.setattr(mod, "project_version", lambda root: None)
     hits = _covers_warn(mod, data, "was NOT checked")
-    assert len(hits) == 12, hits
+    assert len(hits) == len(data["coverage_exemptions"]), hits
 
 
 def test_project_version_reads_the_project_field():
