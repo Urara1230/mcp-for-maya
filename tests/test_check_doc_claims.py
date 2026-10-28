@@ -20,6 +20,7 @@ checker cannot tell "nothing is claimed yet" from "the heading was renamed".
 from __future__ import annotations
 
 import importlib.util
+import re
 from pathlib import Path
 
 
@@ -387,3 +388,60 @@ def test_a_parametrized_cited_test_declines_the_count(tmp_path):
 def test_the_real_repo_is_clean():
     """Live green control: the shipped tree passes every rule above."""
     assert M.check(REPO) == []
+
+
+def _error_codes_provenance_claims(text: str) -> list[str]:
+    """Paragraphs asserting machine provenance for error codes: either the
+    page is named and called derived or gated, or the pathless strict-policy
+    claim that undocumented error codes fail their gates. Provenance talk
+    reds in any polarity -- a truthful negation belongs in the page's own
+    header, not the rule files -- while a pointer that only sends a reader to
+    the page stays legal. Paragraphs, not physical lines: Markdown bullets
+    hard-wrap, and the page name and the provenance word can land on adjacent
+    lines."""
+    claims: list[str] = []
+    for paragraph in re.split(r"\n[ \t]*\n", text):
+        lowered = " ".join(paragraph.split()).lower()
+        named = "error-codes" in lowered and ("derived" in lowered or "gated" in lowered)
+        pathless = bool(
+            re.search(r"\bundocumented\s+error\s+codes?\b", lowered)
+            and re.search(r"\bfail(?:s|ed)?\b[^\n]*\bgates?\b", lowered)
+        )
+        if named or pathless:
+            claims.append(paragraph.strip())
+    return claims
+
+
+def test_rule_files_do_not_call_error_codes_derived():
+    """Live pin for the #122 ruling: the error-codes page is hand-maintained
+    prose and no generator exists, so no rule file may re-claim it as derived
+    or gated, or promise the pathless undocumented-error-codes gate. A mention
+    that only points a reader at the page stays legal in prose; a whole
+    Markdown table scans as one block, so a pointing row inside a table that
+    also carries the derived-surfaces wording reds too."""
+    for name in ("AGENTS.md", "CONTRIBUTING.md"):
+        claims = _error_codes_provenance_claims((REPO / name).read_text(encoding="utf-8"))
+        assert claims == [], f"{name} asserts error-code provenance or a dead gate: {claims!r}"
+
+
+def test_a_provenance_reclaim_is_non_empty_red():
+    """Counterfactual pair for the live pin: the scan fires on the exact claim
+    shapes the #122 ruling removed -- named, hard-wrapped, pathless, and the
+    negated form, which reds by the any-polarity ruling rather than by
+    accident -- and leaves a plain pointer alone, so a misspelled substring or
+    a broken condition cannot fail silently."""
+    claim = (
+        "- `docs/guide/error-codes.md` (from `security.py`) is derived and gated — never hand-edit."
+    )
+    assert _error_codes_provenance_claims(claim + "\n") == [claim]
+    wrapped = (
+        "- `docs/guide/error-codes.md`\n"
+        "  (from `security.py`) is derived\n"
+        "  and gated — never hand-edit."
+    )
+    assert _error_codes_provenance_claims(wrapped) == [wrapped]
+    pathless = "- One choke point; undocumented error codes fail their gates."
+    assert _error_codes_provenance_claims(pathless) == [pathless]
+    negated = "`docs/guide/error-codes.md` is not derived or gated."
+    assert _error_codes_provenance_claims(negated) == [negated]
+    assert _error_codes_provenance_claims("see `docs/guide/error-codes.md` for the table") == []

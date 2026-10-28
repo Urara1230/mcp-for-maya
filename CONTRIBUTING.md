@@ -44,10 +44,10 @@ stale companions cause integration failures and gate reds.
 | `scene_tools.py` (new tool) | `server.py` instructions, READMEs, `AGENTS.md` | Tool surface changes require documentation sync |
 | `scene_cache.py` | `scene_tools.py`, `session_manager.py` | Cache invalidation consistency |
 | `security.py` | `pipeline.py`, `tests/test_security.py`, `tests/test_pipeline.py` | Rules enforced by the middleware pipeline |
-| `pipeline.py` strict policy flags (`MAYA_MCP_DISABLE_*`) | `docs/threat-model.md` §2/§3, `docs/guide/error-codes.md`, `llms.txt`, `tests/test_pipeline.py::TestStrictPolicyMode` | One choke point; uncovered dangerous tools or undocumented error codes fail their gates |
+| `pipeline.py` strict policy flags (`MAYA_MCP_DISABLE_*`) | `docs/threat-model.md` §2/§3, `llms.txt`, `tests/test_pipeline.py::TestStrictPolicyMode` | One choke point; uncovered dangerous tools fail their gates |
 | `connection_guide.py` | `server.py` (maya_setup_guide params), `tests/test_connection_guide.py` | Marker-block semantics + flags |
 | `cos_formatter.py` | `scene_tools.py` | Formatter changes affect all tool COS outputs |
-| Derived surfaces | — | `llms.txt` (from TOOL_ANNOTATIONS), `docs/guide/error-codes.md` (from `security.py`), and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived and gated — never hand-edit; `docs/guide/session-lifecycle.md` is prose with AST-verified anchors, NOT derived |
+| Derived surfaces | — | `llms.txt` (from TOOL_ANNOTATIONS) and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived and gated — never hand-edit; `docs/guide/session-lifecycle.md` is prose with AST-verified anchors, NOT derived |
 | `.github/gate-registry.yaml` / `check_gate_registry.py` / `*-spec.yaml` | `tests/`, `ci.yml`, `AGENTS.md`, `CHANGELOG.md` | Gates register pins (human-authored, never generated); exemptions carry `expires\|issue`; governance constants live in per-domain spec files, not code; spec files must not mirror object state (second source of truth) |
 
 ### Injected-module admission criteria
