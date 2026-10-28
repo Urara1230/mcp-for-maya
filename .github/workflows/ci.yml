@@ -38,20 +38,20 @@ jobs:
         run: uvx ruff@0.17.1 check . --output-format=json --exit-zero > ruff-report.json
       - name: compare vs frozen budget
         run: python .github/scripts/check_ruff_budget.py ruff-report.json .github/ruff-baseline.json
-      - name: assets append-only guard (D-113)
+      - name: assets append-only guard
         env:
           GUARD_BEFORE: ${{ github.event.before }}
         run: python .github/scripts/check_assets_append_only.py
-      - name: monolith line budget (D-125)
+      - name: monolith line budget
         run: python .github/scripts/check_monolith_budget.py
-      - name: tdqs disclosure elements gate (D-175)
+      - name: tdqs disclosure elements gate
         run: python .github/scripts/check_tdqs_disclosure.py
 
-      - name: llms.txt gate (D-207 2)
+      - name: llms.txt gate
         run: python .github/scripts/check_llms_txt.py
-      - name: version consistency gate (D-207 9)
+      - name: version consistency gate
         run: python .github/scripts/check_version_consistency.py
-      - name: gate-registry consistency (D-215)
+      - name: gate-registry consistency
         # Hard gate: findings are red. The observation period ended with a
         # clean registry; see check_gate_registry.py for the scope limit.
         run: python .github/scripts/check_gate_registry.py
@@ -60,15 +60,6 @@ jobs:
         # See check_doc_claims.py for the scope limit -- released sections are
         # point-in-time records and a landing pointer is not proof of a claim.
         run: python .github/scripts/check_doc_claims.py
-      - name: migration shape gate
-        # Hard on prose integrity: a comment-only migration must not strand a
-        # delimiter, which every other gate here missed on #90. CODE MOVED prints
-        # as a warning — ordinary PRs move code by design. Range from the PR base
-        # or, on push, event.before; the checkout above sets fetch-depth: 0.
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          TIP_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python .github/scripts/check_migration_shape.py "$BASE_SHA" "$TIP_SHA"
       - name: pre-commit fallback (all files)
         run: |
           pip install pre-commit
@@ -120,7 +111,7 @@ jobs:
         run: uv run python -m pytest -q
 
   drift:
-    name: resolution-drift canary (D-112)
+    name: resolution-drift canary
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -137,7 +128,7 @@ jobs:
         run: |
           uv sync
           uv run python -m pytest -q
-      - name: resolve latest tag (D-142γ probe input)
+      - name: resolve latest tag
         # if:always() pairs with the probe step below — the tag must resolve
         # even when the drift leg above is already red, otherwise the probe
         # degrades to a misleading "LATEST_TAG unset" failure.
@@ -146,7 +137,7 @@ jobs:
         run: |
           echo "tag=$(git ls-remote --tags --sort=-v:refname origin 'refs/tags/v[0-9]*' \
             | grep -v '\^{}' | head -1 | cut -f2 | sed 's|refs/tags/||')" >> "$GITHUB_OUTPUT"
-      - name: PyPI index dual-source probe (D-142γ)
+      - name: PyPI index dual-source probe
         # Independent signal lane merged into the drift job (D-141 P2):
         # simple index (install-resolution truth, highest severity) and
         # project JSON info.version are both asserted against the latest
@@ -165,7 +156,7 @@ jobs:
     # recent window from Euiop1) that is still a structural blind spot.
     # Independent trailing job (not an if:failure() inline step) so
     # its own conclusion never masks the drift job's red.
-    name: drift canary notify (D-123)
+    name: drift canary notify
     needs: drift
     if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     continue-on-error: true

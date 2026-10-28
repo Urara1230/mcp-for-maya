@@ -3,11 +3,13 @@
 One page, four columns: how a session is lost, what triggers teardown, what is
 left behind, and how long it can stay behind.
 
-> **Semantics of this summary view are governed by the ADR.** This table is a
-> navigation aid over the exit paths. Where it appears to conflict with an ADR,
-> the ADR wins and this page is the bug — not the other way round. It is
-> derived from code, not maintained as a parallel specification: every cell
-> names the mechanism it describes.
+> This table is a navigation aid over the exit paths, derived from code and
+> not maintained as a parallel specification: every cell names the mechanism
+> it describes. Where it appears to conflict with the code, **the code wins
+> and this page is the bug** — not the other way round. The decisions behind
+> these semantics live in the comments at the code they constrain and in
+> [issue #97](https://github.com/Xxx91n/mcp-for-maya/issues/97); there is no
+> ADR directory, as `docs/agents/domain.md` states outright.
 
 Paths are grouped by _what dies_, because the teardown guarantee comes from the
 process that owned the resource, not from the code that created it.
@@ -43,16 +45,17 @@ LISTENing.
 - Three rows have no host-side teardown at all. That is a statement about the
   architecture - Maya owns the resource, and a `finally:` does not survive
   `SIGKILL` - not an omission in the table.
-- If you change a teardown path, this page and its ADR are both in scope — the
-  table is not allowed to be the only place that knows.
+- If you change a teardown path, this page is in scope — the table is not
+  allowed to be the only place that knows.
 
 ## Anchors
 
-All eight anchors resolve in the tree; the composition is machine-checked by
-`tests/test_check_d207_gates.py::TestErrorCodesChecker::test_session_lifecycle_anchor_composition_is_what_the_changelog_claims`
-rather than by reading this sentence.
-Nine references: **eight `path::symbol` anchors and one ADR file path** (a document
-rather than by reading this sentence.
+Eight `path::symbol` anchors follow, and all of them resolve in the tree; the
+remaining bullet is prose about the Qt channel, not a path, and is not counted
+as one. Nothing machine-checks this page's own composition — the behaviour the
+first rows describe is pinned where it lives, by
+`tests/test_session_manager.py::TestPruneDeadSessions` and
+`tests/test_session_manager.py::TestStartStop`.
 
 - Scan loop and backoff ceiling: `src/maya_mcp_server/session_manager.py::_background_scan`
 - Prune path: `src/maya_mcp_server/session_manager.py::_prune_dead_sessions`
