@@ -572,6 +572,17 @@ def test_live_corpus_has_no_polarity_warnings():
     live = ".".join(map(str, version))
     ripe = [t for t, e in data.get("coverage_exemptions", {}).items() if e.get("due") == live]
     assert len(warnings) == len(ripe), warnings
+    # #119 emptied the live register, so the tally above is a 0 == 0 fixpoint:
+    # it would keep holding even if the gate stopped counting ripe exemptions
+    # altogether. Give it a subject -- one synthetic row due at the live
+    # version must produce exactly one ripe-exemption notice. The register is
+    # REPLACED, not appended to: adding a row would let a future live
+    # exemption inflate this count, which is the same borrowing-of-live-state
+    # fragility the repair exists to remove.
+    with_subject = _live_data(mod)
+    with_subject["coverage_exemptions"] = {_SYNTHETIC_EXEMPT: {"reason": "fixture", "due": live}}
+    _errs, subject_warnings = mod.check_coverage_and_derivation(mod.REPO, with_subject)
+    assert len([w for w in subject_warnings if "is DUE" in w]) == 1, subject_warnings
     assert checked == sum(len(cfg.get("required_elements", [])) for cfg in data["tools"].values())
 
 
@@ -586,6 +597,16 @@ def test_live_corpus_has_no_polarity_warnings():
 
 def _live_data(mod):
     return json.loads(mod.DEFAULT_ELEMENTS.read_text(encoding="utf-8"))
+
+
+# A synthetic exemption subject for the per-row rules (reason, due, tiering).
+# #119 covered every tool that used to populate the live register, so these
+# fixtures can no longer borrow a live tool name: an exemption row for a tool
+# that is now covered ALSO trips "both covered and exempt", so the assertion
+# would pass on a finding belonging to a different rule than the one the test
+# is named for. A name that is in no tool set keeps the coverage half of the
+# gate quiet while the per-row half still fires on the row under test.
+_SYNTHETIC_EXEMPT = "demo_tool"
 
 
 def _one_entry_due(due: str) -> dict:
@@ -634,12 +655,31 @@ def test_live_no_stale_elements_entries():
 
 def test_live_every_exemption_has_reason_and_due():
     """D-195 1/4: an exemption without a reason is a silent skip; without a
-    due it is the new-code blind spot. Neither may pass."""
+    due it is the new-code blind spot. Neither may pass.
+
+    Retargeted by #119: the live register is now empty, so iterating it ran
+    zero times and proved nothing. The subject is a synthetic register whose
+    one row carries both fields; the gate must report no missing-field finding
+    for it, and the DUE notice is asserted alongside so the green cannot come
+    from the row being skipped. The firing direction lives in the two
+    counterfactuals below, which strip each field from a row of this shape.
+
+    The row's due tracks the live project version rather than a hard-coded
+    release: a fixed "0.7.0" turns EXPIRED the moment the version advances,
+    which would swap this test's subject from "the row is accepted" to "the
+    waiver is overdue" and block the suite on an unrelated bump.
+    """
     mod = _load()
+    version = mod.project_version(mod.REPO)
+    assert version is not None, "pyproject.toml must be readable for due checks"
+    live = ".".join(map(str, version))
     data = _live_data(mod)
-    for tool, entry in data["coverage_exemptions"].items():
-        assert entry.get("reason", "").strip(), tool
-        assert entry.get("due", "").strip(), tool
+    data["coverage_exemptions"] = {_SYNTHETIC_EXEMPT: {"reason": "fixture entry", "due": live}}
+    assert _covers_err(mod, data, "needs a non-empty 'reason'") == []
+    assert _covers_err(mod, data, "needs a 'due'") == []
+    assert _covers_warn(mod, data, f"is DUE {live}"), (
+        "the synthetic row must reach the per-exemption loop, not be skipped"
+    )
 
 
 def test_live_repo_root_is_not_skipped_by_the_synthetic_root_guard():
@@ -651,11 +691,23 @@ def test_live_repo_root_is_not_skipped_by_the_synthetic_root_guard():
 
 
 def test_coverage_fires_when_a_tool_is_neither_covered_nor_exempt():
+    """The gate fires on an annotated tool carrying neither elements nor an
+    exemption.
+
+    The subject used to be a live exemption row for camera_create and the
+    counterfactual was popping it. #119 covers camera_create, so that row no
+    longer exists and popping it would raise KeyError. The counterfactual now
+    runs from the other side -- drop the tool's 'tools' entry and it is once
+    again neither covered nor exempt. This is the one fixture that cannot move
+    to a synthetic name: the gate's subject set is TOOL_ANNOTATIONS read from
+    the real pipeline, so a name that is not annotated produces no finding.
+    """
     mod = _load()
     data = _live_data(mod)
-    data["coverage_exemptions"].pop("camera_create")
+    assert "camera_create" in data["tools"], "the counterfactual needs a covered tool"
+    data["tools"].pop("camera_create")
     hits = _covers_err(mod, data, "'camera_create' is in TOOL_ANNOTATIONS")
-    assert hits, "removing an exemption must make the coverage gate fire"
+    assert hits, "dropping a tool's elements must make the coverage gate fire"
 
 
 def test_coverage_fires_on_a_stale_entry():
@@ -679,14 +731,14 @@ def test_coverage_fires_when_a_tool_is_both_covered_and_exempt():
 def test_coverage_fires_on_an_exemption_without_a_reason():
     mod = _load()
     data = _live_data(mod)
-    data["coverage_exemptions"]["camera_create"] = {"due": "0.7.0"}
+    data["coverage_exemptions"][_SYNTHETIC_EXEMPT] = {"due": "0.7.0"}
     assert _covers_err(mod, data, "needs a non-empty 'reason'")
 
 
 def test_coverage_fires_on_an_exemption_without_a_due():
     mod = _load()
     data = _live_data(mod)
-    data["coverage_exemptions"]["camera_create"] = {"reason": "because"}
+    data["coverage_exemptions"][_SYNTHETIC_EXEMPT] = {"reason": "because"}
     assert _covers_err(mod, data, "needs a 'due'")
 
 
@@ -899,18 +951,29 @@ def test_due_boundary_is_inclusive(monkeypatch):
 def test_unparseable_due_is_an_error_not_a_silent_pass():
     mod = _load()
     data = _live_data(mod)
-    data["coverage_exemptions"]["camera_create"] = {"reason": "x", "due": "next release"}
+    data["coverage_exemptions"][_SYNTHETIC_EXEMPT] = {"reason": "x", "due": "next release"}
     assert _covers_err(mod, data, "not a dotted numeric version")
 
 
 def test_unreadable_version_warns_instead_of_silently_passing(monkeypatch):
     """If the version cannot be read, an overdue exemption would pass
-    unnoticed. That must be loud, not silent."""
+    unnoticed. That must be loud, not silent.
+
+    The count used to be taken against the live register. #119 emptied it, so
+    `len(hits) == len(register)` became a permanent 0 == 0 that would hold
+    even if the notice stopped being emitted per row. The subject is a fixed
+    two-row synthetic register instead: one notice per exemption is still the
+    contract, and it is now countable.
+    """
     mod = _load()
     data = _live_data(mod)
+    data["coverage_exemptions"] = {
+        _SYNTHETIC_EXEMPT: {"reason": "fixture", "due": "0.7.0"},
+        "second_synthetic_tool": {"reason": "fixture", "due": "0.7.0"},
+    }
     monkeypatch.setattr(mod, "project_version", lambda root: None)
     hits = _covers_warn(mod, data, "was NOT checked")
-    assert len(hits) == len(data["coverage_exemptions"]), hits
+    assert len(hits) == 2, hits
 
 
 def test_project_version_reads_the_project_field():

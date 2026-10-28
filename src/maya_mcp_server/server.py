@@ -197,6 +197,10 @@ async def list_sessions() -> list[SessionInfo]:
     """
     List all active Maya sessions.
 
+    Boundary: Disambiguated from add_session (register a host:port by hand)
+    and maya_setup_guide (diagnose an empty result) — list_sessions only
+    reports what is already connected.
+
     Returns a list of session information including:
     - session_key: Session key used to interact with tools and resources
     - host: Session host address
@@ -231,6 +235,10 @@ async def maya_setup_guide(
 ) -> dict[str, Any]:
     """
     Maya connection setup guide and diagnostics.
+
+    Boundary: Disambiguated from list_sessions (read the current session set)
+    and add_session (attach a host:port you already know) — maya_setup_guide
+    diagnoses and repairs the connection itself.
 
     Use this tool when list_sessions returns empty or when setting up
     Maya MCP for the first time. Provides platform-aware diagnostics,
@@ -419,6 +427,10 @@ async def execute_code(
 async def add_session(host: str = "127.0.0.1", port: int = 7001) -> SessionInfo:
     """
     Manually add a Maya session at a specific host and port.
+
+    Boundary: Disambiguated from list_sessions (report the sessions the
+    SessionManager already discovered) and maya_setup_guide (diagnose and
+    repair a connection) — add_session registers a host:port you already know.
 
     Use this when auto-discovery doesn't find your Maya session,
     or to connect to a Maya instance on a specific port.

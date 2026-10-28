@@ -582,6 +582,10 @@ result
     ) -> str:
         """Save a real scene snapshot (exportAll of in-memory state).
 
+        Boundary: Disambiguated from scene_checkpoint_list (enumerate the
+        checkpoints already written) and scene_rollback (open one and rebind
+        the scene to it) — scene_checkpoint is the write half.
+
         Writes a self-contained .ma into a checkpoints/ directory next to
         the scene file. On untitled (never-saved) scenes an explicit name
         is required and produces an ad-hoc snapshot under the Maya
@@ -620,6 +624,10 @@ result
         session_key: str | None = None,
     ) -> str:
         """Open a checkpoint and rebind the scene to its original path (S2).
+
+        Boundary: Disambiguated from scene_checkpoint (write a checkpoint from
+        the current state) and scene_checkpoint_list (enumerate the ones
+        already written) — scene_rollback is the restore half.
 
         Before opening, the current in-memory state is exported to an
         auto_before_rollback safety snapshot; if that fails, the rollback
@@ -664,6 +672,10 @@ result
     ) -> str:
         """List all saved checkpoints for the current scene state.
 
+        Boundary: Disambiguated from scene_checkpoint (write a new checkpoint)
+        and scene_rollback (open one and rebind the scene to it) —
+        scene_checkpoint_list only reads what is already on disk.
+
         Saved scenes list <scene_dir>/checkpoints; untitled scenes list
         the workspace ad-hoc snapshots (adhoc flag per entry).
 
@@ -697,6 +709,10 @@ result
         session_key: str | None = None,
     ) -> str:
         """Create a camera positioned for a specific shot type.
+
+        Boundary: Disambiguated from camera_orbit (animates a turntable around
+        a point over many frames) — camera_create frames one static shot and
+        adds no animation.
 
         Supports industry-standard shot types: extreme_wide, wide, medium,
         close, extreme_close, over_shoulder, bird_eye, low_angle.
