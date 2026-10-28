@@ -533,12 +533,18 @@ def test_live_corpus_has_no_polarity_warnings():
     ok, errors, warnings, checked = mod.check(mod.REPO, mod.DEFAULT_ELEMENTS)
     assert ok
     assert errors == []
-    # The guard's own wording scopes this to polarity findings: check() also
-    # returns coverage warnings from the same list, and the ripe-exemption
-    # warnings D-204 2 emits at a release deadline are an expected class, not
-    # a polarity false rejection.
+    # check() returns polarity findings and coverage warnings in one list. The
+    # live corpus produces no polarity finding (D-190 4); the only other class
+    # it may produce is one ripe-exemption note per register entry whose due is
+    # the live version (D-204 2). The tally is checked against that register —
+    # a fixpoint the success state satisfies — rather than against a list of
+    # known message texts, so a new warning class cannot pass unnoticed.
     assert [w for w in warnings if "polarity_aware guard" in w] == []
-    assert all("polarity_aware guard" in w or "is DUE" in w for w in warnings), warnings
+    version = mod.project_version(mod.REPO)
+    assert version is not None, "pyproject.toml must be readable for due checks"
+    live = ".".join(map(str, version))
+    ripe = [t for t, e in data.get("coverage_exemptions", {}).items() if e.get("due") == live]
+    assert len(warnings) == len(ripe), warnings
     assert checked == sum(len(cfg.get("required_elements", [])) for cfg in data["tools"].values())
 
 

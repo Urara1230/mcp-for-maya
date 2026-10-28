@@ -20,10 +20,11 @@ built-in 0-100 stays comparable; the tool set is unchanged.
 
 - **Version-consistency gate (D-207 ⑨)** —
   `check_version_consistency.py` asserts pyproject == `__init__.__version__` ==
-  CHANGELOG newest released section == the `llms.txt` version field, and
-  deliberately TOLERATES pyproject running ahead of the CHANGELOG while real
-  work sits under `[Unreleased]` — a gate that is always red during development
-  gets deleted, and a deleted gate is worse than none.
+  `server.json` (the mcp-publisher manifest) == the `llms.txt` version field,
+  and compares the CHANGELOG's newest released section against pyproject
+  directionally: it deliberately TOLERATES pyproject running ahead of the
+  CHANGELOG while real work sits under `[Unreleased]` — a gate that is always
+  red during development gets deleted, and a deleted gate is worse than none.
   Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency::test_all_four_surfaces_agree_today`
   (the class collects 11 tests).
 
@@ -226,16 +227,8 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   deadline. Per the D-204 2 tiering they emit warnings, not errors: the
   release that lands ON the deadline stays green, and the next version bump
   turns them into errors. Paying the debt — covering the tools or filing a
-  D-168 renewal — is therefore the first thing 0.7.1 owes. The gate's summary
-  line now counts polarity findings and ripe exemptions separately; it
-  labelled the whole warning list "polarity warnings", which described 12
-  deadlines as polarity findings the first time the tree reached one. The two
-  live-control pins were aligned with the tiering rather than with the older
-  stricter reading: they still fail on an EXPIRED exemption and on any
-  polarity warning, and no longer treat ripeness at the live version as either.
-  Evidence: `tests/test_check_tdqs_disclosure.py::test_live_no_exemption_is_overdue`,
-  `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`,
-  `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`.
+  D-168 renewal — is therefore the first thing 0.7.1 owes.
+  Evidence: `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`.
 
 ### Removed
 
@@ -321,6 +314,22 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   Evidence: `tests/test_check_tdqs_disclosure.py::test_past_the_deadline_is_an_error_not_a_warning`,
   `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`,
   `python .github/scripts/check_tdqs_disclosure.py` → exit 0.
+
+- **TDQS warnings were counted and annotated wrongly (D-204)** — the gate's
+  summary line labelled the whole warning list "polarity warnings", so the
+  first time the tree reached a release deadline it described 12 ripe
+  exemptions as polarity findings; it now reports the total and each class it
+  can name. Coverage findings also printed as `::warning::::warning file=…`,
+  because those builders carry their own prefix and `main` added a second, so
+  GitHub read none of the 12 as an annotation. The two live controls that had
+  encoded the stricter reading were aligned with the tiering: the corpus
+  control still fails on any polarity warning and now checks the warning tally
+  against the register instead of a list of known message texts, and the
+  overdue control still fails on an EXPIRED exemption.
+  Broken version: from D-204 (unreleased lane, never shipped); fixed version: 0.7.0.
+  Evidence: `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`,
+  `tests/test_check_tdqs_disclosure.py::test_live_no_exemption_is_overdue`,
+  `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`.
 
 ## [0.6.0] - 2026-10-05
 
