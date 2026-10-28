@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_session_manager.py::TestPruneDeadSessions::test_prune_removes_dead_sessions`
   and `tests/test_session_manager.py::TestStartStop::test_stop_disconnects_sessions`
   collect and pass against the tree the page now points at.
+- **The rule files no longer call `docs/guide/error-codes.md` derived or
+  gated** — the generator that produced the page was retired and the page
+  stays hand-maintained prose, so `AGENTS.md` and the CONTRIBUTING
+  change-impact table dropped it from the derived-surfaces lists, and the
+  strict-policy row no longer claims undocumented error codes fail a gate
+  that does not exist. Evidence:
+  `tests/test_check_doc_claims.py::test_the_real_repo_is_clean`.
 
 ## [0.7.0] - 2026-10-28
 

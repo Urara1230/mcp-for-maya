@@ -14,7 +14,7 @@ A "governance gate" is any check a job runs in `.github/workflows/ci.yml`; `.git
 
 ## Don't touch
 - `src/maya_mcp_server/maya_scene_module.py` is line-capped by `.github/monolith-budget.json`; new Maya-side capability goes in a separate file of the same injection unit.
-- `llms.txt`, `docs/guide/error-codes.md`, and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived; never hand-edit.
+- `llms.txt` and the version list (pyproject/`__init__`/server.json/CHANGELOG/llms.txt) are derived; never hand-edit.
 - Baseline files (ruff/monolith/mypy) are regenerated archives; CI never writes them.
 
 ## Known quirks
