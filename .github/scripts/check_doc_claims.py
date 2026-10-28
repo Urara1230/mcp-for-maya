@@ -47,6 +47,18 @@ SCOPE LIMITS, stated so nobody reads more into this than it does:
 * D1d declines a file that uses the ``parametrize`` MARKER, decided from the
   decorator rather than the word, because a docstring mention must not switch
   the rule off -- and this file's own test suite mentions it.
+* A bullet under ``[Unreleased]`` that sits outside the three ruled sections --
+  directly under the heading, or under some other sub-heading -- is never
+  read: every bullet is collected, but only ``Added``/``Changed``/``Fixed``
+  are ruled, so a claim placed elsewhere ships unchecked.
+* D1d's counter walks only the module and class bodies of the cited suite, so
+  for whole-file and class-level counts a test defined inside a conditional
+  is counted as zero; a direct ``::test_name`` citation is not affected. A
+  count claim beside an affected suite is judged against a number that is
+  not the suite's.
+* The existence check matches only the ruled directory prefixes, so a
+  root-level document cited in a bullet or in a rule file (``README.md``,
+  ``GLOSSARY.md``) is not existence-checked.
 
 Invocation: check_doc_claims.py [repo-root]
 """
