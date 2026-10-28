@@ -533,7 +533,12 @@ def test_live_corpus_has_no_polarity_warnings():
     ok, errors, warnings, checked = mod.check(mod.REPO, mod.DEFAULT_ELEMENTS)
     assert ok
     assert errors == []
-    assert warnings == []
+    # The guard's own wording scopes this to polarity findings: check() also
+    # returns coverage warnings from the same list, and the ripe-exemption
+    # warnings D-204 2 emits at a release deadline are an expected class, not
+    # a polarity false rejection.
+    assert [w for w in warnings if "polarity_aware guard" in w] == []
+    assert all("polarity_aware guard" in w or "is DUE" in w for w in warnings), warnings
     assert checked == sum(len(cfg.get("required_elements", [])) for cfg in data["tools"].values())
 
 
@@ -782,13 +787,16 @@ def test_probe_is_the_single_source_for_corpus_counts():
 
 
 def test_live_no_exemption_is_overdue():
+    """The live tree must not sit PAST an exemption deadline. Ripeness AT the
+    live version is permitted by design — D-204 2 keeps the release that lands
+    ON the deadline green — and that warning path is pinned by
+    test_due_warns_but_does_not_bite_on_the_deadline_itself, so asserting
+    "no ripe exemption" here would contradict the tiering rather than protect
+    it."""
     mod = _load()
     data = _live_data(mod)
     version = mod.project_version(mod.REPO)
     assert version is not None, "pyproject.toml must be readable for due checks"
-    assert _covers_warn(mod, data, "is DUE") == [], (
-        f"version {'.'.join(map(str, version))} has reached an exemption deadline"
-    )
     assert _covers_err(mod, data, "EXPIRED") == [], (
         f"version {'.'.join(map(str, version))} has passed an exemption deadline"
     )

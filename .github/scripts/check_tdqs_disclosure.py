@@ -259,7 +259,13 @@ def main() -> int:
         print("See .github/tdqs-elements.yaml for required element specifications and reasons.")
         return 1
 
-    suffix = f" ({len(warnings)} polarity warnings)" if warnings else ""
+    # `warnings` carries two classes: polarity findings from the element scan
+    # and ripe-exemption notes from the coverage check. Labelling the whole
+    # list "polarity warnings" reported 12 exemption deadlines as polarity
+    # findings the first time the tree reached a release deadline.
+    polarity = sum("polarity_aware guard" in w for w in warnings)
+    ripe = sum("is DUE" in w for w in warnings)
+    suffix = f" ({polarity} polarity, {ripe} ripe-exemption warnings)" if warnings else ""
     print(
         f"TDQS disclosure check OK: {total_checked} elements verified across "
         f"{len(tools_map(elements_path))} tools{suffix}."
