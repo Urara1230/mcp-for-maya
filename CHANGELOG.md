@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   registration guards as a raw exception** — every caller-defined hook the
   guards run (`strip()` on `name` in both calls, `strip()` on `family`, the
   truthiness test on a stripped `name`, the `__eq__` the severity membership
-  test asks for, `__float__` on `weight` raising outside the caught set) is
+  test asks for, `__float__` on `weight` raising an ordinary exception) is
   answered with the refused-argument envelope it already owns, and `message`
   is stored as plain `str` the same way as `name` and `family`. That last
   part is caller-visible: a `str` subclass handed in as `message` comes back
@@ -35,6 +35,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [Unreleased]. Evidence:
   `tests/test_validator_module.py::TestRegistration::test_a_strip_that_raises_is_answered_not_escaped`
   and `tests/test_validator_module.py::TestRegistration::test_the_echoed_message_is_plain_str`.
+- **`docs/guide/error-codes.md` no longer cites a checker that cannot run** —
+  the page's anchor section named the `test_check_d207_gates.py` checker
+  class that left with the governance layer as the mechanism resolving its
+  node IDs against the tree, so the page cited a check that collects zero
+  tests as its own proof. The section now states what is true: the page is
+  hand-maintained, no gate resolves its anchors, and it sits outside the
+  doc-claims gate's surfaces — the same ruling the rule files already carry.
+  Every anchor node the page names still collects and passes. Broken version:
+  0.7.0; fixed version: [Unreleased]. Evidence — the 11 nodes pinning the
+  page's 12 codes, each collectible and passing:
+  `tests/test_security.py::TestErrorCodeContract::test_base_pipeline_error_carries_pipeline_error`,
+  `tests/test_pipeline.py::TestPipelineValidation::test_bad_session_key_rejected`,
+  `tests/test_pipeline.py::TestPipelineRateLimit::test_write_bucket_smaller_than_read`,
+  `tests/test_pipeline.py::TestPipelinePatternScan::test_code_os_system_blocked`,
+  `tests/test_session_manager.py::TestCodedSessionErrors::test_no_sessions_raises_coded`,
+  `tests/test_security.py::TestErrorCodeContract::test_server_not_ready_before_lifespan_init`,
+  `tests/test_visual_tools.py::TestInjectionAndGates::test_headless_channel_short_circuits`,
+  `tests/test_visual_tools.py::TestPreviewContract::test_host_nonempty_gate`,
+  `tests/test_visual_tools.py::TestPreviewContract::test_bad_base64_raises_capture_invalid`,
+  `tests/test_pipeline.py::TestStrictPolicyMode::test_arbitrary_flag_denies_every_dangerous_tool`,
+  `tests/test_security.py::TestErrorCodeContract::test_every_error_class_renders_its_own_code_prefix`.
 - **`docs/guide/session-lifecycle.md` no longer presents the deleted
   `docs/adr/` directory as a governing authority** — the page derives its
   authority from code and issue #97 instead, cites pytest nodes that collect

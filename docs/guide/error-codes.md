@@ -54,12 +54,10 @@ else:  # domain layer
 
 ## Test anchors
 
-Each code is pinned by a test, so "documented" never means "believed". The node
-IDs below are resolved against the tree by
-`tests/test_check_d207_gates.py::TestErrorCodesChecker::test_every_cited_node_id_resolves_in_the_tree`
-(file exists + symbol defined). They are not verified by running pytest here —
-that would be a pytest inside a pytest — so the claim is deliberately scoped to
-"resolves", not "passes".
+Each code is pinned by a test, so "documented" never means "believed". This
+page is hand-maintained: no gate resolves the node IDs below against the tree,
+and the page sits outside the doc-claims gate's surfaces. A reader verifies an
+anchor by running it — nothing here claims a check that runs on its own.
 
 | Code                   | pytest node ID                                                                                   |
 | ---------------------- | ------------------------------------------------------------------------------------------------ |
