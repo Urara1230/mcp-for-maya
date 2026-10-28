@@ -114,6 +114,10 @@ def register_asset_tools(mcp: Any, audit: AuditLogger | None = None) -> None:
     ) -> str:
         """Search the Poly Haven CC0 asset index (host-side, no Maya needed).
 
+        Boundary: Disambiguated from asset_import (downloads the asset into a
+        live Maya scene and mutates it) — asset_search only resolves ids and
+        metadata, so it needs no session and changes nothing.
+
         Queries https://api.polyhaven.com/assets and returns matching
         asset metadata. Read-only and idempotent - pure lookup.
 
@@ -150,6 +154,10 @@ def register_asset_tools(mcp: Any, audit: AuditLogger | None = None) -> None:
         session_key: str | None = None,
     ) -> str:
         """Import a Poly Haven CC0 model into Maya (find ids via asset_search).
+
+        Boundary: Disambiguated from asset_search (host-side id and metadata
+        lookup that touches no Maya session) — asset_import is the mutating
+        half and needs a live session to import into.
 
         Pipeline: host downloads FBX + textures from the Poly Haven
         whitelist (https-only, size caps, per-file md5 verify) into the

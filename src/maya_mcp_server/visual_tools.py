@@ -165,6 +165,10 @@ def register_visual_tools(mcp: Any) -> None:
     ) -> Any:
         """Capture the active viewport as an image (WYSIWYG).
 
+        Boundary: Disambiguated from scene_render_preview (playblast a frame
+        from a chosen camera with the HUD suppressed) — scene_viewport_snapshot
+        captures the panel exactly as the artist sees it, HUD included.
+
         GUI sessions only - headless (mayapy/batch/native-channel)
         sessions get a structured gui_session_required error.
 
@@ -217,6 +221,10 @@ def register_visual_tools(mcp: Any) -> None:
         session_key: str | None = None,
     ) -> Any:
         """Single-frame playblast preview from a camera (clean, no HUD).
+
+        Boundary: Disambiguated from scene_viewport_snapshot (capture the
+        panel as the artist sees it, HUD and selection highlights included) —
+        scene_render_preview renders a chosen camera with the HUD suppressed.
 
         GUI sessions only - headless sessions get a structured
         gui_session_required error.

@@ -11,7 +11,7 @@
     "polarity_aware": "mutation-class existence assertions MUST be polarity-aware (D-180): a match whose preceding clause text carries a negation cue does not satisfy the element; negated-only matches are WARN-level during the observation period. Direction limit (D-190 3): the guard is mandatory only on mutation-class existence assertions whose pattern set is purely positive (current sole instance: camera_orbit/mutation_side_effects) — negation-form pattern elements stay unguarded and are protected by positive_exemptions instead, otherwise the two rules cancel each other out. Enforcement is by PINNING the guarded set (LEGISLATED_GUARDED in tests/test_check_tdqs_disclosure.py), not by a pattern-purity lint — mounting the guard on a negation-form element yields matched=True and zero warnings, so the assertion layer cannot detect it; see the polarity guard's known blind spot",
     "coverage_floor": "every tool in pipeline.TOOL_ANNOTATIONS must appear in 'tools' OR in 'coverage_exemptions' with a non-empty reason; absence is a CI error, never a silent skip (D-195 1). The reverse direction is asserted too, so a stale entry cannot rot unnoticed.",
     "derivable_minimum_set": "for a tool carrying a full 'tools' entry two elements are derivable from its signature: a session_key parameter implies session_prerequisite, and membership in a sibling family implies boundary_line + boundary_targets_named. Enforced immediately for new or modified tools. Legacy derivation debt is NOT held in coverage_exemptions: a tool missing a derivable element still carries a full 'tools' entry, so the coverage rule forbids exempting it (covered-and-exempt is itself an error). That debt lives in the DERIVATION_BASELINE constant in .github/scripts/check_tdqs_disclosure.py, which fails when the set grows and also when it shrinks (D-195 2). The sibling-family table lives in that same file as a code constant (D-195 3).",
-    "coverage_exemptions": "grandfather register for tools that predate the floor entirely, i.e. tools with no 'tools' entry at all. Each entry needs a reason and a due. The due is enforced mechanically rather than by prose: the checker parses it as a dotted version and tiers it against the version in pyproject.toml (D-204): equal to the due emits a WARNING naming the tool (ripe — the release landing ON the deadline stays green), strictly past the due emits an ERROR naming the tool and its five D-168\u00a74 elements (a gate_authority countersignature distinct from the debt_owner per D-176, an event-anchored rather than calendar expiry, the per-row renewal cap of 2, a re-validated reason, and the waiver lane closing after gate review), and an unreadable version stays a WARNING rather than a silent pass. So an exemption cannot quietly become open-ended (D-195 4). A due that is not a dotted numeric version is an error, because an unparseable deadline is no deadline. This register is a different ledger from the derivation baseline; see derivable_minimum_set.",
+    "coverage_exemptions": "grandfather register for tools that predate the floor entirely, i.e. tools with no 'tools' entry at all. Each entry needs a reason and a due. The due is enforced mechanically rather than by prose: the checker parses it as a dotted version and tiers it against the version in pyproject.toml (D-204): equal to the due emits a WARNING naming the tool (ripe — the release landing ON the deadline stays green), strictly past the due emits an ERROR naming the tool and its five D-168\u00a74 elements (a gate_authority countersignature distinct from the debt_owner per D-176, an event-anchored rather than calendar expiry, the per-row renewal cap of 2, a re-validated reason, and the waiver lane closing after gate review), and an unreadable version stays a WARNING rather than a silent pass. So an exemption cannot quietly become open-ended (D-195 4). A due that is not a dotted numeric version is an error, because an unparseable deadline is no deadline. This register is a different ledger from the derivation baseline; see derivable_minimum_set. It holds no entries today — every annotated tool carries a full 'tools' entry (#119) — and the key stays so the row shape remains visible.",
     "positive_exemptions": "element-level list of legitimate negation-form disclosure phrases; a cue inside the match clause that belongs to one of these phrases is forgiven (D-190 2). Without this list, widening the guard to a negation-form pattern element makes every correct negative disclosure self-reject — 'not idempotent' always carries the cue 'not'"
   },
   "tools": {
@@ -261,20 +261,109 @@
                   ]
         }
       ]
+    },
+    "add_session": {
+      "file": "src/maya_mcp_server/server.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tools — vs list_sessions (read the sessions already discovered) / maya_setup_guide (diagnose and repair a connection)", "all": ["list_sessions", "maya_setup_guide"]}
+      ]
+    },
+    "asset_import": {
+      "file": "src/maya_mcp_server/asset_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tool — vs asset_search (host-side id lookup that touches no Maya session)", "all": ["asset_search"]}
+      ]
+    },
+    "asset_search": {
+      "file": "src/maya_mcp_server/asset_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tool — vs asset_import (downloads the asset into and mutates a live Maya scene)", "all": ["asset_import"]}
+      ]
+    },
+    "camera_create": {
+      "file": "src/maya_mcp_server/scene_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tool — vs camera_orbit (animated turntable; camera_create frames one static shot)", "all": ["camera_orbit"]}
+      ]
+    },
+    "list_sessions": {
+      "file": "src/maya_mcp_server/server.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tools — vs add_session (register a host:port by hand) / maya_setup_guide (diagnose an empty session list)", "all": ["add_session", "maya_setup_guide"]}
+      ]
+    },
+    "maya_setup_guide": {
+      "file": "src/maya_mcp_server/server.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tools — vs list_sessions (read the current session set) / add_session (attach a host:port you already know)", "all": ["list_sessions", "add_session"]}
+      ]
+    },
+    "scene_checkpoint": {
+      "file": "src/maya_mcp_server/scene_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tools — vs scene_checkpoint_list (enumerate the checkpoints already written) / scene_rollback (open one and rebind the scene)", "all": ["scene_checkpoint_list", "scene_rollback"]}
+      ]
+    },
+    "scene_checkpoint_list": {
+      "file": "src/maya_mcp_server/scene_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tools — vs scene_checkpoint (write a new checkpoint) / scene_rollback (open one and rebind the scene)", "all": ["scene_checkpoint", "scene_rollback"]}
+      ]
+    },
+    "scene_rollback": {
+      "file": "src/maya_mcp_server/scene_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tools — vs scene_checkpoint (write a checkpoint) / scene_checkpoint_list (enumerate the ones already written)", "all": ["scene_checkpoint", "scene_checkpoint_list"]}
+      ]
+    },
+    "scene_export": {
+      "file": "src/maya_mcp_server/export_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use; scene_export sits in no sibling family, so no boundary element is derivable", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]}
+      ]
+    },
+    "scene_render_preview": {
+      "file": "src/maya_mcp_server/visual_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tool — vs scene_viewport_snapshot (capture the viewport exactly as the artist sees it, HUD and selection highlights included)", "all": ["scene_viewport_snapshot"]}
+      ]
+    },
+    "scene_viewport_snapshot": {
+      "file": "src/maya_mcp_server/visual_tools.py",
+      "tier": "P1",
+      "required_elements": [
+        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
+        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
+        {"id": "boundary_targets_named", "why": "names sibling tool — vs scene_render_preview (playblast a frame from a chosen camera with no HUD)", "all": ["scene_render_preview"]}
+      ]
     }
   },
-  "coverage_exemptions": {
-    "add_session": {"reason": "session-management surface; takes no session_key (T-R44-04 dry-run), so no session_prerequisite is derivable", "due": "0.7.0"},
-    "asset_import": {"reason": "session-scoped importer \u2014 it DOES take session_key, so the full floor applies; this is the first legacy gap scheduled to be filled", "due": "0.7.0"},
-    "asset_search": {"reason": "host-side index search with no Maya session involved; takes no session_key (T-R44-04 dry-run)", "due": "0.7.0"},
-    "camera_create": {"reason": "sibling of camera_orbit, which is covered; camera_create itself has no entry yet", "due": "0.7.0"},
-    "list_sessions": {"reason": "enumerates sessions and takes no session_key by design (T-R44-04 dry-run), so the session_prerequisite half of the floor does not apply; the boundary half is not written yet", "due": "0.7.0"},
-    "maya_setup_guide": {"reason": "connection-management surface; takes no session_key (T-R44-04 dry-run), so no session_prerequisite is derivable", "due": "0.7.0"},
-    "scene_checkpoint": {"reason": "mutation-class tool with no mutation_side_effects / non_idempotent assertions yet", "due": "0.7.0"},
-    "scene_checkpoint_list": {"reason": "session-scoped; the sibling floor against scene_checkpoint / scene_rollback is not written yet", "due": "0.7.0"},
-    "scene_export": {"reason": "currently a single-member surface, so the boundary half is not derivable yet; mutation and overwrite assertions are absent", "due": "0.7.0"},
-    "scene_render_preview": {"reason": "GUI-only tool; the sibling floor against scene_viewport_snapshot is not written yet", "due": "0.7.0"},
-    "scene_rollback": {"reason": "mutation-class tool with no mutation_side_effects / non_idempotent assertions yet", "due": "0.7.0"},
-    "scene_viewport_snapshot": {"reason": "GUI-only tool; the sibling floor against scene_render_preview is not written yet", "due": "0.7.0"}
-  }
+  "coverage_exemptions": {}
 }

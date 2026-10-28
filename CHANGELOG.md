@@ -39,6 +39,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that does not exist. Evidence:
   `tests/test_check_doc_claims.py::test_rule_files_do_not_call_error_codes_derived`
   and `tests/test_check_doc_claims.py::test_the_real_repo_is_clean`.
+- **The TDQS exemption register holds no entries** — all 12
+  `coverage_exemptions` rows carried `due: 0.7.0` while the project version is
+  0.7.0, so the gate emitted 12 ripe-exemption warnings and any version bump,
+  for any reason, would have turned all 12 into errors at once. Every annotated
+  tool now carries a full disclosure entry in
+  `.github/tdqs-elements.yaml::tools` instead of an exemption: the 11 of those
+  12 that sit in a sibling family also gained a one-way `Boundary:` line naming
+  only siblings from that family, and `scene_export` gained the single element
+  its signature derives and no new prose. `session_prerequisite` was not
+  asserted for the four tools that take no `session_key`.
+  Broken version: 0.7.0 (the release landing on the deadline — the register was
+  ripe, not yet expired, and the defect was the deadline itself); fixed
+  version: [Unreleased].
+  Evidence: `tests/test_check_tdqs_disclosure.py::test_live_coverage_floor_holds`,
+  `tests/test_check_tdqs_disclosure.py::test_derivation_baseline_is_the_observed_legacy_set`.
 
 ## [0.7.0] - 2026-10-28
 
