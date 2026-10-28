@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Migration-shape gate** — the prose-integrity gate script and its 32-test
+  file left together with the gate's registry entry, its CI step, and the
+  steering/domain-doc prose that described its two-revision semantics, so the
+  registry's set-difference check proves no orphan remains. The gate was
+  legislated for a ledger migration that needed a check nothing else covered;
+  that migration is finished and its ticket is closed, and the gate's own
+  legislation carried an expiry condition nobody acted on. CI step names no
+  longer carry ledger ids either — the registry checker identifies a gate by
+  the script path in its `run:` line, not by the step name.
+
+### Fixed
+
+- **`docs/guide/session-lifecycle.md` no longer presents the deleted
+  `docs/adr/` directory as a governing authority** — the page derives its
+  authority from code and issue #97 instead, cites pytest nodes that collect
+  and pass rather than the node deleted along with its class, and its anchor
+  paragraph is a complete sentence whose stated count (eight `path::symbol`
+  anchors) matches the bullets listed. Broken version: 0.7.0; fixed version:
+  [Unreleased]. Evidence:
+  `tests/test_session_manager.py::TestPruneDeadSessions::test_prune_removes_dead_sessions`
+  and `tests/test_session_manager.py::TestStartStop::test_stop_disconnects_sessions`
+  collect and pass against the tree the page now points at.
+
 ## [0.7.0] - 2026-10-28
 
 Truth-repair release plus one additive capability. The repository's own
