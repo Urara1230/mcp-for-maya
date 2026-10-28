@@ -201,7 +201,7 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   disclosure elements across the gated tool set against single-source
   specification `.github/tdqs-elements.yaml`.
   Evidence: `819e929:.github/workflows/ci.yml:51` — the step as wired when the
-  gate landed; `tests/test_check_tdqs_disclosure.py` (43 passed).
+  gate landed; `tests/test_check_tdqs_disclosure.py` (44 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in
@@ -323,11 +323,12 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   because those builders carry their own prefix and `main` added a second, so
   GitHub read none of the 12 as an annotation. The two live controls that had
   encoded the stricter reading were aligned with the tiering: the corpus
-  control still fails on any polarity warning and now checks the warning tally
-  against the register instead of a list of known message texts, and the
+  control no longer asserts an empty warning list — the deadline fills it —
+  and now checks the warning tally against the register, and the
   overdue control still fails on an EXPIRED exemption.
-  Broken version: from D-204 (unreleased lane, never shipped); fixed version: 0.7.0.
-  Evidence: `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`,
+  Broken version: from D-204 through 0.6.0 (unreleased lane, never shipped); fixed version: 0.7.0.
+  Evidence: `tests/test_check_tdqs_disclosure.py::test_main_prefixes_once_and_names_every_warning_class`,
+  `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`,
   `tests/test_check_tdqs_disclosure.py::test_live_no_exemption_is_overdue`,
   `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`.
 

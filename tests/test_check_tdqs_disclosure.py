@@ -167,6 +167,29 @@ def test_main_cli_entrypoint(tmp_path, monkeypatch, capsys):
     assert "TDQS disclosure check OK" in captured
 
 
+def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
+    """Counterfactual for the release-deadline repair: coverage findings
+    already carry `::warning file=`, so main must not add a second prefix
+    (GitHub reads `::warning::::warning file=` as no annotation at all), and
+    the summary must name the classes it counted rather than calling every
+    warning a polarity finding."""
+    mod = _load()
+    warnings = [
+        "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE 0.7.0",
+        "file=src/tool.py::demo element 'x' matched only inside negated statements "
+        "(polarity_aware guard, observation period)",
+        "::warning file=.github/tdqs-elements.yaml::cannot read the project version",
+    ]
+    monkeypatch.setattr(mod, "check", lambda root, path: (True, [], warnings, 3))
+    monkeypatch.setattr("sys.argv", ["check_tdqs_disclosure.py"])
+    assert mod.main() == 0
+    out = capsys.readouterr().out
+    assert "::warning::::warning" not in out
+    assert "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE" in out
+    assert "::warning::file=src/tool.py::demo" in out
+    assert "(3 warnings: 1 polarity, 1 ripe-exemption, 1 other)" in out
+
+
 def test_polarity_negated_only_match_warns_not_fails(tmp_path):
     """D-180: a mutation assertion satisfied only by a negated statement
     produces a warning during the observation period, never an error."""
