@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-for-maya"
-version = "0.6.0"
+version = "0.7.0"
 description = "MCP server giving AI agents spatial awareness of Autodesk Maya scenes"
 readme = "README.md"
 license = "MIT"

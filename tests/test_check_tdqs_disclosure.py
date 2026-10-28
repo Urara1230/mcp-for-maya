@@ -167,6 +167,33 @@ def test_main_cli_entrypoint(tmp_path, monkeypatch, capsys):
     assert "TDQS disclosure check OK" in captured
 
 
+def test_main_prefixes_once_and_names_every_warning_class(monkeypatch, capsys):
+    """Counterfactual for the release-deadline repair: every finding must reach
+    GitHub as a command whose `file=` is a property, not message text —
+    coverage findings carry `::warning file=` already, and element-scan
+    findings carry a bare `file=<path>::` that main has to promote into the
+    header. The summary must also name the classes it counted rather than
+    calling every warning a polarity finding."""
+    mod = _load()
+    warnings = [
+        "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE 0.7.0",
+        "file=src/tool.py::demo element 'x' matched only inside negated statements "
+        "(polarity_aware guard, observation period)",
+        "::warning file=.github/tdqs-elements.yaml::cannot read the project version",
+        "a finding with no command header",
+    ]
+    monkeypatch.setattr(mod, "check", lambda root, path: (True, [], warnings, 3))
+    monkeypatch.setattr("sys.argv", ["check_tdqs_disclosure.py"])
+    assert mod.main() == 0
+    out = capsys.readouterr().out
+    assert "::warning::::warning" not in out
+    assert "::warning file=.github/tdqs-elements.yaml::exemption for 'a' is DUE" in out
+    assert "::warning file=src/tool.py::demo" in out
+    assert "::warning::file=" not in out
+    assert "::warning::a finding with no command header" in out
+    assert "(4 warnings: 1 polarity, 1 ripe-exemption, 2 other)" in out
+
+
 def test_polarity_negated_only_match_warns_not_fails(tmp_path):
     """D-180: a mutation assertion satisfied only by a negated statement
     produces a warning during the observation period, never an error."""
@@ -533,7 +560,18 @@ def test_live_corpus_has_no_polarity_warnings():
     ok, errors, warnings, checked = mod.check(mod.REPO, mod.DEFAULT_ELEMENTS)
     assert ok
     assert errors == []
-    assert warnings == []
+    # check() returns polarity findings and coverage warnings in one list. The
+    # live corpus produces no polarity finding (D-190 4); the only other class
+    # it may produce is one ripe-exemption note per register entry whose due is
+    # the live version (D-204 2). The tally is checked against that register —
+    # a fixpoint the success state satisfies — rather than against a list of
+    # known message texts, so a new warning class cannot pass unnoticed.
+    assert [w for w in warnings if "polarity_aware guard" in w] == []
+    version = mod.project_version(mod.REPO)
+    assert version is not None, "pyproject.toml must be readable for due checks"
+    live = ".".join(map(str, version))
+    ripe = [t for t, e in data.get("coverage_exemptions", {}).items() if e.get("due") == live]
+    assert len(warnings) == len(ripe), warnings
     assert checked == sum(len(cfg.get("required_elements", [])) for cfg in data["tools"].values())
 
 
@@ -548,6 +586,21 @@ def test_live_corpus_has_no_polarity_warnings():
 
 def _live_data(mod):
     return json.loads(mod.DEFAULT_ELEMENTS.read_text(encoding="utf-8"))
+
+
+def _one_entry_due(due: str) -> dict:
+    """A fixed register for the deadline-boundary tests.
+
+    Those tests check the tiering rule, not the live register. Reading the
+    live data makes repaying an exemption — covering the tool or filing a
+    D-168 renewal — change what they assert, so the live dues would have to be
+    re-counted by hand on every repayment. One entry with a known due keeps the
+    boundary fixed while the register moves.
+    """
+    return {
+        "tools": {},
+        "coverage_exemptions": {"demo_tool": {"reason": "fixture entry", "due": due}},
+    }
 
 
 def _covers_err(mod, data, needle):
@@ -782,13 +835,16 @@ def test_probe_is_the_single_source_for_corpus_counts():
 
 
 def test_live_no_exemption_is_overdue():
+    """The live tree must not sit PAST an exemption deadline. Ripeness AT the
+    live version is permitted by design — D-204 2 keeps the release that lands
+    ON the deadline green — and that warning path is pinned by
+    test_due_warns_but_does_not_bite_on_the_deadline_itself, so asserting
+    "no ripe exemption" here would contradict the tiering rather than protect
+    it."""
     mod = _load()
     data = _live_data(mod)
     version = mod.project_version(mod.REPO)
     assert version is not None, "pyproject.toml must be readable for due checks"
-    assert _covers_warn(mod, data, "is DUE") == [], (
-        f"version {'.'.join(map(str, version))} has reached an exemption deadline"
-    )
     assert _covers_err(mod, data, "EXPIRED") == [], (
         f"version {'.'.join(map(str, version))} has passed an exemption deadline"
     )
@@ -799,10 +855,10 @@ def test_due_warns_but_does_not_bite_on_the_deadline_itself(monkeypatch):
     team sees it coming, but it stays a warning so the lint job is green
     through the release that lands ON the deadline."""
     mod = _load()
-    data = _live_data(mod)
+    data = _one_entry_due("0.7.0")
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 0))
     hits = _covers_warn(mod, data, "is DUE 0.7.0")
-    assert len(hits) == 12, hits
+    assert len(hits) == 1, hits
     assert "waiver renewal" in hits[0]
     assert _covers_err(mod, data, "EXPIRED") == [], "the deadline itself is not overdue"
 
@@ -812,10 +868,10 @@ def test_past_the_deadline_is_an_error_not_a_warning(monkeypatch):
     check - the exemption silently stays open-ended, which is exactly what
     D-195 4 exists to prevent."""
     mod = _load()
-    data = _live_data(mod)
+    data = _one_entry_due("0.7.0")
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 1))
     hits = _covers_err(mod, data, "EXPIRED at 0.7.0")
-    assert len(hits) == 12, hits
+    assert len(hits) == 1, hits
     assert _covers_warn(mod, data, "is DUE") == [], "expired is an error, not a warning"
     # The five renewal elements the EXPIRED message must name - not a generic
     # five-item checklist.
@@ -831,9 +887,10 @@ def test_past_the_deadline_is_an_error_not_a_warning(monkeypatch):
 
 def test_due_boundary_is_inclusive(monkeypatch):
     mod = _load()
-    data = _live_data(mod)
+    data = _one_entry_due("0.7.0")
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 6, 9))
     assert _covers_warn(mod, data, "is DUE") == [], "0.6.9 is still short of 0.7.0"
+    assert _covers_err(mod, data, "EXPIRED") == [], "0.6.9 is short of every deadline"
     monkeypatch.setattr(mod, "project_version", lambda root: (0, 7, 0))
     assert _covers_warn(mod, data, "is DUE"), "0.7.0 has reached the deadline"
     assert _covers_err(mod, data, "EXPIRED") == [], "0.7.0 is the deadline, not past it"
@@ -853,7 +910,7 @@ def test_unreadable_version_warns_instead_of_silently_passing(monkeypatch):
     data = _live_data(mod)
     monkeypatch.setattr(mod, "project_version", lambda root: None)
     hits = _covers_warn(mod, data, "was NOT checked")
-    assert len(hits) == 12, hits
+    assert len(hits) == len(data["coverage_exemptions"]), hits
 
 
 def test_project_version_reads_the_project_field():

@@ -7,14 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-28
+
+Truth-repair release plus one additive capability. The repository's own
+records now match what the tree holds: the governance teardown is recorded,
+retired paths are annotated rather than rewritten, and bare ledger ids no
+longer appear in `src/`, `.github/scripts/` or `AGENTS.md`. `scene_review`
+gains a session-scoped custom-validator API with a separate score, so the
+built-in 0-100 stays comparable; the tool set is unchanged.
+
 ### Added
 
 - **Version-consistency gate (D-207 ⑨)** —
   `check_version_consistency.py` asserts pyproject == `__init__.__version__` ==
-  CHANGELOG newest released section == the `llms.txt` version field, and
-  deliberately TOLERATES pyproject running ahead of the CHANGELOG while real
-  work sits under `[Unreleased]` — a gate that is always red during development
-  gets deleted, and a deleted gate is worse than none.
+  `server.json` (the mcp-publisher manifest) == the `llms.txt` version field,
+  and compares the CHANGELOG's newest released section against pyproject
+  directionally: it deliberately TOLERATES pyproject running ahead of the
+  CHANGELOG while real work sits under `[Unreleased]` — a gate that is always
+  red during development gets deleted, and a deleted gate is worse than none.
   Evidence: `tests/test_check_d207_gates.py::TestVersionConsistency::test_all_four_surfaces_agree_today`
   (the class collects 11 tests).
 
@@ -191,7 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   disclosure elements across the gated tool set against single-source
   specification `.github/tdqs-elements.yaml`.
   Evidence: `819e929:.github/workflows/ci.yml:51` — the step as wired when the
-  gate landed; `tests/test_check_tdqs_disclosure.py` (43 passed).
+  gate landed; `tests/test_check_tdqs_disclosure.py` (44 passed).
 
 - **TDQS polarity mechanism hardened to clause scope (D-190)** — the
   mutation-class existence guard in
@@ -211,6 +221,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`);
   `python .github/scripts/check_tdqs_disclosure.py` -> exit 0, 39 elements
   across 13 tools, artifact `.github/scripts/check_tdqs_disclosure.py`.
+
+- **TDQS exemptions ripen at the 0.7.0 deadline** — all 12 grandfathered
+  `coverage_exemptions` carry `due: 0.7.0`, so this release reaches their
+  deadline. Per the D-204 2 tiering they emit warnings, not errors: the
+  release that lands ON the deadline stays green, and the next version bump
+  turns them into errors. Paying the debt — covering the tools or filing a
+  D-168 renewal — is therefore the first thing 0.7.1 owes.
+  Evidence: `.github/tdqs-elements.yaml::coverage_exemptions` (the 12 entries),
+  `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`
+  (the tiering itself).
 
 ### Removed
 
@@ -235,7 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it. Renamed to the canon form and gave each an explicit counterfactual
   docstring; the live-green control keeps its descriptive name because it is a
   positive control, not a counterfactual.
-  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
+  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: 0.7.0.
   Evidence: `tests/test_check_gate_registry.py::test_a_helper_function_named_as_a_pin_fails_the_gate`,
   `tests/test_check_gate_registry.py::test_a_module_constant_named_as_a_pin_fails_the_gate`,
   `tests/test_check_gate_registry.py::test_a_non_test_class_method_named_as_a_pin_fails_the_gate`,
@@ -250,7 +270,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   edit. It also
   cited a line range that the same record's own derivation pin makes redundant.
   Now `path::symbol`.
-  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
+  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: 0.7.0.
   Evidence: the correction notice in
   `docs/evidence/polarity-corpus-s2-post-hoc-review-2026-10-03.md` now cites
   `.github/scripts/polarity_corpus_probe.py::adjudicate`.
@@ -260,7 +280,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   floor numerator came out multiplied by the number of guarded elements. With
   one guarded element the arithmetic coincides with the correct reading, which
   is exactly why the live-green test could not see it.
-  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
+  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: 0.7.0.
   Evidence: `tests/test_polarity_corpus_probe.py::TestD203FloorCaliber::test_per_element_counting_unit_is_the_sample_not_the_element_pair`;
   `python .github/scripts/polarity_corpus_probe.py` → `samples=14`,
   `adjudicable (true_negative + forgiven) = 12`, per D-203's arithmetic.
@@ -272,7 +292,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   have looked for an 11-dimension breakdown that does not exist. Both strings
   were agent-facing; the count-claims gate that had read docs rather than
   source was removed in the same teardown, so this entry records the fix.
-  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
+  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: 0.7.0.
   Evidence: the five keys assigned in
   `src/maya_mcp_server/maya_scene_module.py::_compute_full_aesthetic_score`;
   `python .github/scripts/check_tdqs_disclosure.py` → exit 0 over the
@@ -282,7 +302,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (D-221 ② / S3)** — hard admission to the TDQS gate needs the floor AND the
   primary track's zero-false-rejection verdict, but printing only the floor
   verdict let "floor met" read as the whole promotion decision.
-  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
+  Broken version: through 0.5.0 (unreleased lane, never shipped); fixed version: 0.7.0.
   Evidence: `tests/test_polarity_corpus_probe.py::TestD203FloorCaliber::test_s3_two_precondition_caveat_is_printed`.
 
 - **An overdue TDQS exemption could not fail CI (D-204)** — the `due` field was
@@ -292,10 +312,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release landing ON the deadline stays green) and `> due` errors, naming the
   five D-168 renewal elements. All 12 live exemptions are due 0.7.0 against
   version 0.5.0, so the 0.6.0 release stays green.
-  Broken version: from D-195 4 through 0.5.0 (unreleased lane, never shipped); fixed version: [Unreleased] (next release).
+  Broken version: from D-195 4 through 0.5.0 (unreleased lane, never shipped); fixed version: 0.7.0.
   Evidence: `tests/test_check_tdqs_disclosure.py::test_past_the_deadline_is_an_error_not_a_warning`,
   `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`,
   `python .github/scripts/check_tdqs_disclosure.py` → exit 0.
+
+- **TDQS warnings were counted and annotated wrongly (D-204)** — the gate's
+  summary line labelled the whole warning list "polarity warnings", so the
+  first time the tree reached a release deadline it described 12 ripe
+  exemptions as polarity findings; it now reports the total and each class it
+  can name. Coverage findings also printed as `::warning::::warning file=…`
+  because their builders carry the prefix `main` added again, and element-scan
+  findings as `::warning::file=…` where the path is message text; neither
+  class carried file attribution, and both now reach GitHub with `file=` in
+  the command header. The two live controls that had encoded the
+  stricter reading were aligned with the tiering: the corpus control no longer
+  asserts an empty warning list — the deadline fills it — and now checks the
+  warning tally against the register, and the overdue control still fails on
+  an EXPIRED exemption. The three deadline-boundary tests now run against a
+  one-entry fixture instead of the live register, so covering or renewing an
+  exemption does not change what they assert.
+  Broken version: 0.6.0 (latent — no exemption was ripe, so the mislabel never
+  printed, and the gate script is in neither the wheel nor the sdist); fixed version: 0.7.0.
+  Evidence: `tests/test_check_tdqs_disclosure.py::test_main_prefixes_once_and_names_every_warning_class`,
+  `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`,
+  `tests/test_check_tdqs_disclosure.py::test_live_no_exemption_is_overdue`,
+  `tests/test_check_tdqs_disclosure.py::test_due_warns_but_does_not_bite_on_the_deadline_itself`.
 
 ## [0.6.0] - 2026-10-05
 

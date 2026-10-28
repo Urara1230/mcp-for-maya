@@ -247,8 +247,18 @@ def check(root: Path, elements_path: Path) -> tuple[bool, list[str], list[str], 
 def main() -> int:
     elements_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_ELEMENTS
     ok, errors, warnings, total_checked = check(REPO, elements_path)
+    # Coverage findings already carry a `::warning file=` command header; the
+    # element-scan ones carry only `file=<path>::` as their own text. Printing
+    # the latter behind `::warning::` made the path message text instead of the
+    # file property, so GitHub lost the attribution — invisible until the first
+    # release deadline made those findings fire.
     for w in warnings:
-        print(f"::warning::{w}")
+        if w.startswith("::"):
+            print(w)
+        elif w.startswith("file="):
+            print(f"::warning {w}")
+        else:
+            print(f"::warning::{w}")
     for err in errors:
         print(err)
     if not ok:
@@ -259,7 +269,21 @@ def main() -> int:
         print("See .github/tdqs-elements.yaml for required element specifications and reasons.")
         return 1
 
-    suffix = f" ({len(warnings)} polarity warnings)" if warnings else ""
+    # `warnings` carries three classes: polarity findings from the element
+    # scan, ripe-exemption notes from the coverage check, and the coverage
+    # check's unreadable-version notice. Labelling the whole list "polarity
+    # warnings" reported 12 exemption deadlines as polarity findings the first
+    # time the tree reached a release deadline, so the tally names each class
+    # it can see and falls back to the total for anything it cannot.
+    if warnings:
+        polarity = sum("polarity_aware guard" in w for w in warnings)
+        ripe = sum("is DUE" in w for w in warnings)
+        named = f"{polarity} polarity, {ripe} ripe-exemption"
+        if polarity + ripe != len(warnings):
+            named += f", {len(warnings) - polarity - ripe} other"
+        suffix = f" ({len(warnings)} warnings: {named})"
+    else:
+        suffix = ""
     print(
         f"TDQS disclosure check OK: {total_checked} elements verified across "
         f"{len(tools_map(elements_path))} tools{suffix}."
