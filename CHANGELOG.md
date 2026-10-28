@@ -321,12 +321,13 @@ built-in 0-100 stays comparable; the tool set is unchanged.
   exemptions as polarity findings; it now reports the total and each class it
   can name. Coverage findings also printed as `::warning::::warning file=…`,
   because those builders carry their own prefix and `main` added a second, so
-  GitHub read none of the 12 as an annotation. The two live controls that had
+  none of the 12 carried file attribution. The two live controls that had
   encoded the stricter reading were aligned with the tiering: the corpus
   control no longer asserts an empty warning list — the deadline fills it —
   and now checks the warning tally against the register, and the
   overdue control still fails on an EXPIRED exemption.
-  Broken version: from D-204 through 0.6.0 (unreleased lane, never shipped); fixed version: 0.7.0.
+  Broken version: 0.6.0 (latent — no exemption was ripe, so the mislabel never
+  printed, and the gate script is in neither the wheel nor the sdist); fixed version: 0.7.0.
   Evidence: `tests/test_check_tdqs_disclosure.py::test_main_prefixes_once_and_names_every_warning_class`,
   `tests/test_check_tdqs_disclosure.py::test_live_corpus_has_no_polarity_warnings`,
   `tests/test_check_tdqs_disclosure.py::test_live_no_exemption_is_overdue`,
