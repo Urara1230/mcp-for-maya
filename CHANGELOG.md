@@ -25,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   change-impact table dropped it from the derived-surfaces lists, and the
   strict-policy row no longer claims undocumented error codes fail a gate
   that does not exist. Evidence:
-  `tests/test_check_doc_claims.py::test_the_real_repo_is_clean`.
+  `tests/test_check_doc_claims.py::test_rule_files_do_not_call_error_codes_derived`
+  and `tests/test_check_doc_claims.py::test_the_real_repo_is_clean`.
 
 ## [0.7.0] - 2026-10-28
 
