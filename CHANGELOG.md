@@ -21,6 +21,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A hostile `str` subclass can no longer escape the custom-validator
+  registration guards as a raw exception** — every caller-defined hook the
+  guards run (`strip()` on `name` in both calls, `strip()` on `family`, the
+  truthiness test on a stripped `name`, the `__eq__` the severity membership
+  test asks for, `__float__` on `weight` raising outside the caught set) is
+  answered with the refused-argument envelope it already owns, and `message`
+  is stored as plain `str` the same way as `name` and `family`. That last
+  part is caller-visible: a `str` subclass handed in as `message` comes back
+  from `list_validators()` and the `custom` rows as plain `str`, not the
+  caller's subclass. A `BaseException` from a hook still propagates, the same
+  stance as the predicate isolation. Broken version: 0.7.0; fixed version:
+  [Unreleased]. Evidence:
+  `tests/test_validator_module.py::TestRegistration::test_a_strip_that_raises_is_answered_not_escaped`
+  and `tests/test_validator_module.py::TestRegistration::test_the_echoed_message_is_plain_str`.
 - **`docs/guide/session-lifecycle.md` no longer presents the deleted
   `docs/adr/` directory as a governing authority** — the page derives its
   authority from code and issue #97 instead, cites pytest nodes that collect
