@@ -10,7 +10,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
-- **Point a duplicate child ticket back at the original**: when a parent spec splits a defect into a **new** child ticket instead of reusing the existing defect ticket, the child body must carry `Also closes #<original>`. A pull request closes only the issues it names, so the original defect record stays open as unfinished work once the child's PR merges.
+- **Point a duplicate child ticket back at the original**: when a parent spec splits a defect into a **new** child ticket instead of reusing the existing defect ticket, the child body must carry `Also closes #<original>`, and the pull request that lands the child repeats it as a closing keyword in its own description. GitHub reads a closing keyword only from a pull request's own description, which counts only when the PR targets the default branch, or from a commit merged into that branch — one keyword per issue — so a pointer that lives only in the ticket body closes nothing, and naming the original in the description without the keyword closes nothing either: PR #129 opened with `Closes #121 (defect record: #97)`, its merge (`b1e626b`) closed #121, and #97 waited four hours for a hand-written closeout.
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
