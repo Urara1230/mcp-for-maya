@@ -320,7 +320,6 @@ SIBLING_FAMILIES: tuple[frozenset[str], ...] = (
     frozenset({"scene_viewport_snapshot", "scene_render_preview"}),
     frozenset({"scene_checkpoint", "scene_checkpoint_list", "scene_rollback"}),
     frozenset({"camera_create", "camera_orbit"}),
-    frozenset({"asset_search", "asset_import"}),
     frozenset({"list_sessions", "add_session", "maya_setup_guide"}),
 )
 # Frozen legacy derivation violations. This is the ONLY record for

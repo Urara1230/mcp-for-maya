@@ -40,10 +40,6 @@ Domain vocabulary. Each entry is a term and a definition of at most two sentence
 
 **temp-file 注入**: 大模块落盘临时文件再由 Maya 读取；GUI 会话已由分帧协议取代，仅 headless 回退保留。
 
-**薄集成 (thin integration)**: 只接低成本外部源（首片 Poly Haven，CC0 API），不做自建资产库或爬虫。
-
-**asset_descriptor**: 宿主下载与 Maya 导入之间的受验证交接对象（本地路径+源 URL+license+依赖清单）；URL 不直接递给 Maya 侧。
-
 **注入模块准入判据**: 新建 Maya 侧注入模块须同时满足独立注入时机、独立 API 面、独立失败域；否则进既有模块，目标为巨石时用同注入单元独立文件。
 
 **同注入单元独立文件**: 能力归既有注入域，但源码驻独立宿主侧文件经装配进入该单元；不得借此绕开准入判据。

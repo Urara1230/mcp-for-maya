@@ -58,7 +58,7 @@ class TestLlmsTxtChecker:
     def test_every_annotated_tool_is_listed_with_a_correct_class(self):
         mod = _load("check_llms_txt")
         matrix = mod.annotation_matrix(REPO)
-        assert len(matrix) == 25, f"expected the 25-tool registry, got {len(matrix)}"
+        assert len(matrix) == 23, f"expected the 23-tool registry, got {len(matrix)}"
         text = (REPO / "llms.txt").read_text(encoding="utf-8")
         for name, hints in matrix.items():
             assert f"[{name}]" in text, f"{name} missing from llms.txt"
@@ -74,7 +74,6 @@ class TestLlmsTxtChecker:
         assert mod._class_label(matrix["scene_snapshot"]) == "read-only"
         assert mod._class_label(matrix["execute_code"]) == "destructive"
         assert mod._class_label(matrix["scene_export"]) == "mutation"
-        assert matrix["asset_search"].get("open_world_hint") is True
 
     def test_no_tool_is_left_without_a_summary(self):
         text = (REPO / "llms.txt").read_text(encoding="utf-8")

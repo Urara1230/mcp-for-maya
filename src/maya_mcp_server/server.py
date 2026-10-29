@@ -9,7 +9,6 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from maya_mcp_server.asset_tools import register_asset_tools
 from maya_mcp_server.client import raise_for_error
 from maya_mcp_server.connection_guide import (
     get_agent_connection_instructions,
@@ -125,11 +124,6 @@ mcp = FastMCP(
         "## Scene Planning\n"
         "- scene_plan: Holistic scene planning with organization validation,\n"
         "  layout optimization, conflict prevention\n\n"
-        "## Asset Tools (Poly Haven CC0)\n"
-        "- asset_search: Search the Poly Haven index (host-side; no session)\n"
-        "- asset_import: Download (https whitelist + md5 + cache) and\n"
-        "  import FBX into Maya with texture auto-wiring; idempotent via\n"
-        "  GRP_asset_<id> dedup\n\n"
         "## Scene Export\n"
         "- scene_export: Export the scene (or named objects) to FBX/OBJ/USD\n"
         "  (path normalized, parents auto-created, overwrite opt-in,\n"
@@ -167,7 +161,6 @@ _audit_logger = (
     if _security_config.audit_enabled
     else None
 )
-register_asset_tools(mcp, audit=_audit_logger)
 register_export_tools(mcp)
 register_introspect_tools(mcp)
 

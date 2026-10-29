@@ -61,11 +61,10 @@ problem.
 | Error contract | host failures raise coded exceptions (isError); Maya-domain failures return `{error:{code,message,suggestion?}}` | pipeline.py, maya_scene_module.py |
 | Checkpoint/rollback | exportAll memory snapshots, auto safety snapshot before rollback, S2 rebind | maya_scene_module.py |
 | userSetup.py merge | marker-block upsert, confirm-gated, .bak backup, symmetric uninstall | connection_guide.py |
-| Tool annotations | readOnlyHint/destructiveHint/idempotentHint/openWorldHint on all 25 tools | pipeline.py |
+| Tool annotations | readOnlyHint/destructiveHint/idempotentHint/openWorldHint on all 23 tools | pipeline.py |
 | Strict policy mode | `MAYA_MCP_DISABLE_*{EXECUTE,WRITE_MODULE,ARBITRARY}` remove the named tools from `tools/list` and deny the call with `[policy_disabled]`, audited as `rejected`; one choke point in the pipeline, none in the tool bodies | pipeline.py (POLICY_ENV_FLAGS, on_list_tools, on_call_tool) |
-| Asset egress whitelist | asset_search/asset_import reach https only on api.polyhaven.com + dl.polyhaven.org/.com, mandatory User-Agent, size+timeout caps, per-file md5 verify, platformdirs cache | polyhaven.py |
 
-All 25 tools pass through one FastMCP middleware pipeline:
+All 23 tools pass through one FastMCP middleware pipeline:
 validate → rate-limit → pattern-scan → dispatch → audit.
 
 ## 4. Port and network exposure
@@ -84,35 +83,9 @@ validate → rate-limit → pattern-scan → dispatch → audit.
 - The two `maya://sessions/*/info|output` MCP **resources** are read-only
   lookups served from the session registry; they do not pass through the
   tool pipeline (no rate limit, no audit row). They execute no Maya code.
-- `asset_search`/`asset_import` (D-075) make OUTBOUND https requests
-  from the MCP host to api.polyhaven.com + dl.polyhaven.org/.com only
-  (scheme + host whitelist enforced in polyhaven.py; mandatory UA;
-  per-file md5 + size caps). Maya itself stays zero-network: it only
-  ever sees host-local file paths. The whitelist is a safety net for
-  accidents/confused deputies, not a boundary.
-- The attack class these controls exist against is documented in the
-  wild, not hypothetical: a peer download-and-import MCP tool shipped a
-  CWE-22 path traversal where API-supplied `include` keys were joined
-  straight into filesystem paths — MITM / prompt injection could supply
-  `../../.bashrc` — yielding arbitrary file write (CVSS 6.0):
-  [CVE-2026-66004](https://www.cve.org/CVERecord?id=CVE-2026-66004),
-  [VulnCheck advisory](https://www.vulncheck.com/advisories/blendermcp-path-traversal-via-download-polyhaven-asset-api),
-  upstream report [mcp-for-blender#257](https://github.com/ahujasid/mcp-for-blender/issues/257).
-  The citation anchors on the attack class existing in this tool
-  category — it is not a claim about that project's overall posture.
-  On this project's asset path the same disease has no injection
-  surface: API response keys are never used as paths — file names
-  derive from the whitelisted URL's last segment via
-  `_sanitize_filename` (charset `[A-Za-z0-9_.-]`, dot-prefixed names
-  replaced), `asset_id`/`resolution` are whitelist-validated, and the
-  destination directory is code-fixed under the platformdirs cache
-  (applicability review: docs/evidence/release-surface-review-2026-09-28.md).
-
-  > _Citation etiquette (maintenance note, D-132): the above cites a
-  > *published* peer CVE strictly as attack-class evidence. If a future
-  > revision cites a peer tool's vulnerability that is not yet public,
-  > notify the affected project before publishing — coordinated-
-  > disclosure etiquette._
+- The server makes no outbound network requests: this fork removed the
+  upstream Poly Haven asset tools (`asset_search`/`asset_import`), which
+  were its only egress path.
 
 ## 5. Tool annotations (MCP hints)
 
@@ -127,8 +100,6 @@ authoritative and this table must match it row for row:
 | readOnly=T, destructive=F, idempotent=T | `list_sessions`, `scene_snapshot`, `scene_inspect`, `scene_measure`, `scene_assert`, `scene_validate`, `scene_checkpoint_list`, `scene_aesthetics`, `scene_review`, `scene_describe`, `scene_nodes`, `scene_viewport_snapshot`, `scene_render_preview` |
 | readOnly=F, destructive=F, idempotent=F | `scene_checkpoint`, `scene_rollback`, `scene_plan`, `camera_create`, `camera_orbit`, `add_session`, `scene_export` |
 | readOnly=F, destructive=T, idempotent=F | `execute_code`, `write_module`, `maya_setup_guide` |
-| readOnly=T, destructive=F, idempotent=T, openWorld=T | `asset_search` |
-| readOnly=F, destructive=F, idempotent=T, openWorld=T | `asset_import` |
 
 - scene_review keeps readOnly=T: reading the scene is what it does, and a
   custom validator (#79) inherits no privilege it did not already have —
@@ -138,14 +109,7 @@ authoritative and this table must match it row for row:
   that unregisters itself, or a re-registration between two calls, moves
   the section while the scene stays untouched. The hints describe the tool's
   own effect on the scene, not the determinism of user-registered code.
-- openWorldHint=false everywhere EXCEPT the two asset tools (D-075):
-  asset_search (host-side Poly Haven index query) and asset_import
-  (host downloads -> Maya imports local paths). Both are restricted
-  to the PH whitelist in polyhaven.py; openWorldHint is a hint, not
-  the enforcement - the whitelist is. CVE-2026-66004 (§4) is the
-  wild-documented attack class this chain exists against.
-- asset_import is idempotent because GRP_asset_<id> dedup is real
-  (repeat calls report the existing group; force=True opts out).
+- openWorldHint=false on every tool: none reaches the network.
 - scene_export performs a **local file write** to an arbitrary
   host-absolute path via Maya (D-092). That is informed acceptance,
   not a boundary: under the execute_code ceiling any client can already
