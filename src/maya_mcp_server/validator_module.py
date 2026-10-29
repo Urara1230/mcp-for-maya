@@ -11,6 +11,14 @@
 # returning the built-in audit alone, so the built-in 0-100 score is
 # unchanged by construction.
 #
+# Guard stance: the registration surface runs caller-defined hooks - strip()
+# on name and family, the truthiness test on a stripped name, the __eq__ the
+# severity membership test asks for, __float__ on weight - and any of them
+# raising an ordinary Exception is answered with the refused-argument envelope
+# the call already owns. What still propagates is BaseException, on purpose:
+# a human stopping Maya is not a rule misbehaving, the same stance as the
+# predicate isolation in _run_validator.
+#
 # Runtime floor: Maya >=2023 (Python 3.9). This file carries NO
 # __future__ import of its own (it would sit mid-file in the concatenated
 # payload = SyntaxError) - the unquoted PEP-604 annotations below are
@@ -126,14 +134,20 @@ def register_validator(
         envelope. Nothing runs at registration time - a bad predicate is only
         discovered when the review runs, and is then isolated as check_error.
     """
-    if not isinstance(name, str) or not name.strip():
+    if not isinstance(name, str):
         return _val_err("invalid_validator_name", "name must be a non-empty string")
     # Stored stripped and plain: the name is the overwrite key, so " x " and
     # "x" must land on one registration rather than two that both run, and a
     # str subclass free to return something else from strip() is refused here
-    # rather than raising TypeError out of the dict key later.
-    stripped = name.strip()
-    if not isinstance(stripped, str) or not stripped:
+    # rather than raising TypeError out of the dict key later. strip() and the
+    # truthiness test both run caller code, so either raising an ordinary
+    # exception is answered with this envelope, not escaped.
+    try:
+        stripped = name.strip()
+        usable = isinstance(stripped, str) and bool(stripped)
+    except Exception:
+        return _val_err("invalid_validator_name", "name must be a non-empty string")
+    if not usable:
         return _val_err("invalid_validator_name", "name must be a non-empty string")
     name = str.__str__(stripped)
     if not callable(predicate):
@@ -145,22 +159,38 @@ def register_validator(
     # isinstance first, then the literal is stored: membership alone asks
     # __eq__'s permission, so an object claiming to be "error" - or a str
     # subclass whose equality is a lie - would otherwise smuggle its own value
-    # into a report the host then cannot serialise.
-    if not isinstance(severity, str) or severity not in _VALIDATOR_SEVERITIES:
+    # into a report the host then cannot serialise. Both asks (the membership
+    # test and the index that finds the literal) run caller code, so either
+    # raising an ordinary exception is answered with this envelope.
+    if not isinstance(severity, str):
         return _val_err(
             "invalid_severity",
             f"severity {_safe_text(severity)} not in {list(_VALIDATOR_SEVERITIES)}",
         )
-    severity = _VALIDATOR_SEVERITIES[_VALIDATOR_SEVERITIES.index(severity)]
+    try:
+        known = severity in _VALIDATOR_SEVERITIES
+        index = _VALIDATOR_SEVERITIES.index(severity)
+    except Exception:
+        return _val_err(
+            "invalid_severity",
+            f"severity {_safe_text(severity)} not in {list(_VALIDATOR_SEVERITIES)}",
+        )
+    if not known:
+        return _val_err(
+            "invalid_severity",
+            f"severity {_safe_text(severity)} not in {list(_VALIDATOR_SEVERITIES)}",
+        )
+    severity = _VALIDATOR_SEVERITIES[index]
     if isinstance(weight, bool) or not isinstance(weight, (int, float)):
         return _val_err("invalid_weight", f"weight must be a number > 0 (got {_safe_text(weight)})")
     try:
         new_weight = float(weight)
-    except (TypeError, ValueError, OverflowError):
-        # An int past the float range raises OverflowError; a float or int
-        # subclass is free to make __float__ raise or return something else
-        # entirely. All of them are the caller's mistake, and all of them get
-        # the envelope rather than escaping as a raw exception.
+    except Exception:
+        # float() runs the caller's __float__, and whatever ordinary exception
+        # it raises is the caller's mistake, answered with the envelope. It
+        # catches Exception, not BaseException: a KeyboardInterrupt is a human
+        # stopping Maya, not a rule misbehaving, and keeps propagating - the
+        # same stance as the review-time predicate isolation.
         return _val_err(
             "invalid_weight", f"weight is not a usable number (got {_safe_text(weight)})"
         )
@@ -184,12 +214,20 @@ def register_validator(
             f"registering {_safe_text(weight)} would overflow the registry weight total",
             "use weights in the same order of magnitude (1-100 is the design range)",
         )
-    if not isinstance(family, str) or not family.strip():
+    if not isinstance(family, str):
         return _val_err(
             "invalid_family", f"family must be a non-empty string (got {_safe_text(family)})"
         )
-    stripped_family = family.strip()
-    if not isinstance(stripped_family, str):
+    # strip() and the truthiness test are caller code here too, answered with
+    # the same envelope as the name guard.
+    try:
+        stripped_family = family.strip()
+        usable_family = isinstance(stripped_family, str) and bool(stripped_family)
+    except Exception:
+        return _val_err(
+            "invalid_family", f"family must be a non-empty string (got {_safe_text(family)})"
+        )
+    if not usable_family:
         return _val_err(
             "invalid_family", f"family must be a non-empty string (got {_safe_text(family)})"
         )
@@ -197,6 +235,10 @@ def register_validator(
     family = str.__str__(stripped_family)
     if message is not None and not isinstance(message, str):
         return _val_err("invalid_message", "message must be a string or None")
+    if message is not None:
+        # Plain str like the name and the family, so list_validators and the
+        # custom rows echo the server's type, not the caller's subclass.
+        message = str.__str__(message)
 
     overwritten = name in _VALIDATORS
     _VALIDATORS[name] = {
@@ -215,13 +257,17 @@ def register_validator(
 
 def unregister_validator(name: str) -> dict[str, Any]:
     """Remove one validator. Unknown names are an error, not a silent no-op."""
-    # Same name contract as register_validator, including the recheck after
-    # strip(): a non-string must return the envelope rather than raise
-    # TypeError out of a dict lookup.
-    if not isinstance(name, str) or not name.strip():
+    # Same name contract as register_validator, including every hook the check
+    # runs: a non-string must return the envelope rather than raise TypeError
+    # out of a dict lookup, and so must a strip() or truthiness that raises.
+    if not isinstance(name, str):
         return _val_err("invalid_validator_name", "name must be a non-empty string")
-    stripped = name.strip()
-    if not isinstance(stripped, str) or not stripped:
+    try:
+        stripped = name.strip()
+        usable = isinstance(stripped, str) and bool(stripped)
+    except Exception:
+        return _val_err("invalid_validator_name", "name must be a non-empty string")
+    if not usable:
         return _val_err("invalid_validator_name", "name must be a non-empty string")
     name = str.__str__(stripped)
     if name not in _VALIDATORS:

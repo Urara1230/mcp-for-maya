@@ -192,6 +192,85 @@ class TestRegistration:
         assert res["error"]["code"] == "invalid_validator_name"
         assert env.module.list_validators()["count"] == 0
 
+    def test_a_strip_that_raises_is_answered_not_escaped(self, env):
+        """Both calls run strip() on the caller's object, so a hook that
+        raises costs a refusal envelope, not a RuntimeError."""
+
+        class LoudStrip(str):
+            def strip(self, *_args):
+                raise RuntimeError("loud strip")
+
+        registered = env.module.register_validator(LoudStrip("x"), lambda: True)
+        assert registered["error"]["code"] == "invalid_validator_name"
+        unregistered = env.module.unregister_validator(LoudStrip("x"))
+        assert unregistered["error"]["code"] == "invalid_validator_name"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_a_family_strip_that_raises_is_answered_not_escaped(self, env):
+        class LoudFamily(str):
+            def strip(self, *_args):
+                raise RuntimeError("loud family")
+
+        res = env.module.register_validator("x", lambda: True, family=LoudFamily("studio"))
+        assert res["error"]["code"] == "invalid_family"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_truthiness_of_a_stripped_name_is_answered_not_escaped(self, env):
+        """strip() returning the subclass means `not stripped` asks the
+        caller's __bool__; the answer is still the bad-name envelope."""
+
+        class BoolLoud(str):
+            def strip(self, *_args):
+                return self
+
+            def __bool__(self):
+                raise RuntimeError("loud bool")
+
+        registered = env.module.register_validator(BoolLoud("x"), lambda: True)
+        assert registered["error"]["code"] == "invalid_validator_name"
+        unregistered = env.module.unregister_validator(BoolLoud("x"))
+        assert unregistered["error"]["code"] == "invalid_validator_name"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_a_severity_whose_equality_raises_is_answered_not_escaped(self, env):
+        """`in` asks the subclass's __eq__ before str.__eq__, so a str
+        subclass whose equality raises reaches the envelope, not the caller."""
+
+        class EqLoud(str):
+            def __eq__(self, other):
+                raise RuntimeError("loud eq")
+
+            def __hash__(self):
+                return 1
+
+        res = env.module.register_validator("x", lambda: True, severity=EqLoud("error"))
+        assert res["error"]["code"] == "invalid_severity"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_a_weight_whose_float_raises_an_ordinary_exception_is_answered(self, env):
+        """__float__ raising outside TypeError/ValueError/OverflowError is
+        still the caller's mistake; only a BaseException keeps propagating."""
+
+        class LoudFloat(float):
+            def __float__(self):
+                raise RuntimeError("loud float")
+
+        res = env.module.register_validator("x", lambda: True, weight=LoudFloat(1.0))
+        assert res["error"]["code"] == "invalid_weight"
+        assert env.module.list_validators()["count"] == 0
+
+    def test_the_echoed_message_is_plain_str(self, env):
+        """message keeps its isinstance admission test, but what the registry
+        echoes is the server's str, not the caller's subclass."""
+
+        class Sub(str):
+            pass
+
+        env.module.register_validator("m", lambda: True, message=Sub("studio rule broke"))
+        echoed = env.module.list_validators()["validators"][0]["message"]
+        assert type(echoed) is str
+        assert echoed == "studio rule broke"
+
     @pytest.mark.parametrize(
         "order",
         [
