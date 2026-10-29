@@ -375,6 +375,16 @@ python -m maya_mcp_server -vv    # DEBUG 日志运行（-v=INFO, -vv=DEBUG）
 
 贡献流程见 [CONTRIBUTING.md](https://github.com/Xxx91n/mcp-for-maya/blob/main/CONTRIBUTING.md)；变更记录见 [CHANGELOG.md](https://github.com/Xxx91n/mcp-for-maya/blob/main/CHANGELOG.md)。
 
+## 许可与商用
+
+本项目以 [MIT 许可证](LICENSE) 发布，**允许商业使用**，包括在公司内部使用、修改、集成到商业产品中以及再分发，无需支付费用，也无需另行取得授权。唯一的条件是：在分发本软件或其衍生作品时，保留 `LICENSE` 中的版权声明和许可文本。
+
+本仓库基于 [Xxx91n/mcp-for-maya](https://github.com/Xxx91n/mcp-for-maya)（上游为 [chadrik/maya-mcp-server](https://github.com/chadrik/maya-mcp-server)）。原作者的版权声明已完整保留；本仓库与原作者无隶属或背书关系。
+
+- 本软件按"原样"提供，不附带任何担保（见 LICENSE）。
+- 使用本软件需要合法授权的 Autodesk Maya；Maya 本身能否商用由 Autodesk 的许可条款决定（教育版/学生版不可商用）。
+- 通过 `asset_import` 获取的 Poly Haven 素材为 CC0，可自由商用。
+
 ## 致谢
 
 Fork 自 [chadrik/maya-mcp-server](https://github.com/chadrik/maya-mcp-server)——保留其 MIT 版权声明（见 LICENSE），在其连接层之上扩展场景智能层。

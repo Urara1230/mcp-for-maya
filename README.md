@@ -351,6 +351,16 @@ python -m maya_mcp_server -vv    # run with DEBUG logs (-v=INFO, -vv=DEBUG)
 
 See [CONTRIBUTING.md](https://github.com/Xxx91n/mcp-for-maya/blob/main/CONTRIBUTING.md) for the PR flow and [CHANGELOG.md](https://github.com/Xxx91n/mcp-for-maya/blob/main/CHANGELOG.md) for the change log.
 
+## License & Commercial Use
+
+This project is released under the [MIT License](LICENSE). **Commercial use is permitted** — including internal company use, modification, integration into commercial products, and redistribution — free of charge and without separate permission. The only condition is that the copyright notice and license text in `LICENSE` are retained in all copies or substantial portions of the software.
+
+This repository is based on [Xxx91n/mcp-for-maya](https://github.com/Xxx91n/mcp-for-maya) (upstream: [chadrik/maya-mcp-server](https://github.com/chadrik/maya-mcp-server)). Original copyright notices are retained; this repository is not affiliated with or endorsed by the original authors.
+
+- The software is provided "as is", without warranty of any kind (see LICENSE).
+- A properly licensed copy of Autodesk Maya is required; commercial use of Maya itself is governed by Autodesk's terms (educational/student licenses do not permit commercial use).
+- Poly Haven assets fetched via `asset_import` are CC0 and free for commercial use.
+
 ## Credits
 
 Forked from [chadrik/maya-mcp-server](https://github.com/chadrik/maya-mcp-server) — upstream MIT copyright retained (see LICENSE); this project adds the scene-intelligence layer on top of its connection stack.
