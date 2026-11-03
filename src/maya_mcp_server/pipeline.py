@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Tool annotations \u2014 the single matrix. All 25 tools, all four hints.
+# Tool annotations \u2014 the single matrix. All 23 tools, all four hints.
 # read_only_hint also drives the read/write rate-limit bucket.
 # ---------------------------------------------------------------------------
 
@@ -67,19 +67,6 @@ _WRITE_DESTRUCTIVE = mt.ToolAnnotations(
     destructive_hint=True,
     idempotent_hint=False,
     open_world_hint=False,
-)
-
-_READ_NET = mt.ToolAnnotations(
-    read_only_hint=True,
-    destructive_hint=False,
-    idempotent_hint=True,
-    open_world_hint=True,
-)
-_WRITE_NET_IDEMPOTENT = mt.ToolAnnotations(
-    read_only_hint=False,
-    destructive_hint=False,
-    idempotent_hint=True,
-    open_world_hint=True,
 )
 
 TOOL_ANNOTATIONS: dict[str, mt.ToolAnnotations] = {
@@ -109,11 +96,6 @@ TOOL_ANNOTATIONS: dict[str, mt.ToolAnnotations] = {
     # writes a host-local file via Maya; overwrite=False default, the
     # docstring discloses overwrite irreversibility
     "scene_export": _WRITE_SAFE,
-    # Poly Haven asset pipeline: openWorld - first tools reaching the
-    # network; https + host whitelist + md5 + size caps host-side
-    "asset_search": _READ_NET,
-    # idempotent via same-name GRP_asset_<id> dedup (force=True opts out)
-    "asset_import": _WRITE_NET_IDEMPOTENT,
     # dangerous tools: arbitrary code execution / startup-file writes (3)
     "execute_code": _WRITE_DESTRUCTIVE,
     "write_module": _WRITE_DESTRUCTIVE,

@@ -2,7 +2,7 @@
 
 ExecClient runs the generated code against the stub-bound _mcp_export
 module through the REAL result-capture transform - same harness pattern
-as test_asset_tools.py / test_scene_tools_json.py. Covers host-side
+as test_scene_tools_json.py. Covers host-side
 validation, domain-error passthrough, the injection lifecycle on both
 channels (framed write_module + native mkstemp fallback), and the
 TOOL_ANNOTATIONS contract.

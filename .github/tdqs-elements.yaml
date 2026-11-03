@@ -270,23 +270,6 @@
         {"id": "boundary_targets_named", "why": "names sibling tools — vs list_sessions (read the sessions already discovered) / maya_setup_guide (diagnose and repair a connection)", "all": ["list_sessions", "maya_setup_guide"]}
       ]
     },
-    "asset_import": {
-      "file": "src/maya_mcp_server/asset_tools.py",
-      "tier": "P1",
-      "required_elements": [
-        {"id": "session_prerequisite", "why": "requires a live/connected session before use", "any": ["(?i)(active|connected|open|live|established)\\s+(Maya\\s+)?session", "(?i)session_key", "(?i)requires\\s+a\\s+session"]},
-        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
-        {"id": "boundary_targets_named", "why": "names sibling tool — vs asset_search (host-side id lookup that touches no Maya session)", "all": ["asset_search"]}
-      ]
-    },
-    "asset_search": {
-      "file": "src/maya_mcp_server/asset_tools.py",
-      "tier": "P1",
-      "required_elements": [
-        {"id": "boundary_line", "why": "one-way disambiguation marker", "any": ["Boundary:"]},
-        {"id": "boundary_targets_named", "why": "names sibling tool — vs asset_import (downloads the asset into and mutates a live Maya scene)", "all": ["asset_import"]}
-      ]
-    },
     "camera_create": {
       "file": "src/maya_mcp_server/scene_tools.py",
       "tier": "P1",

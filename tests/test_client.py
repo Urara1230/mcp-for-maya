@@ -1187,8 +1187,8 @@ class TestModuleCall:
         }
 
     def test_module_name_varies_per_domain(self) -> None:
-        assert "import json, _mcp_asset" in module_call("_mcp_asset", "import_asset")
-        assert "_mcp_asset.import_asset" in module_call("_mcp_asset", "import_asset")
+        assert "import json, _mcp_visual" in module_call("_mcp_visual", "capture")
+        assert "_mcp_visual.capture" in module_call("_mcp_visual", "capture")
         assert "_mcp_export.export_scene" in module_call("_mcp_export", "export_scene")
 
     def test_none_and_bool_survive_json_roundtrip(self) -> None:

@@ -1,7 +1,7 @@
 # Maya MCP Server
 
 > MCP server for Autodesk Maya: spatial awareness, scene audit, camera
-> planning, checkpoint/rollback, and asset import. Every scene change
+> planning, checkpoint/rollback, and scene export. Every scene change
 > follows INSPECT -> COMPUTE -> EXECUTE -> VERIFY. This file is
 > generated from the tool registry (v0.7.0); do not hand-edit it.
 
@@ -53,11 +53,6 @@
 ## Export
 
 - [scene_export](#scene_export): mutation - Export the Maya scene (or named objects) to a local file.
-
-## Assets (Poly Haven, CC0)
-
-- [asset_import](#asset_import): mutation, open-world - Import a Poly Haven CC0 model into Maya (find ids via asset_search).
-- [asset_search](#asset_search): read-only, open-world - Search the Poly Haven CC0 asset index (host-side, no Maya needed).
 
 ## Visual loop (GUI sessions only)
 
