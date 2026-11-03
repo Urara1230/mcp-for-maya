@@ -10,7 +10,7 @@
 
 > MCP server giving AI agents spatial awareness of Autodesk Maya scenes
 
-[![CI](https://github.com/Xxx91n/mcp-for-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/Xxx91n/mcp-for-maya/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/mcp-for-maya?cacheSeconds=300)](https://pypi.org/project/mcp-for-maya/) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Xxx91n/mcp-for-maya/blob/main/LICENSE) [![Python](https://img.shields.io/pypi/pyversions/mcp-for-maya)](https://pypi.org/project/mcp-for-maya/)
+[![CI](https://github.com/Xxx91n/mcp-for-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/Xxx91n/mcp-for-maya/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/mcp-for-maya?cacheSeconds=300)](https://pypi.org/project/mcp-for-maya/) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/urara1230/mcp-for-maya/blob/main/LICENSE) [![Python](https://img.shields.io/pypi/pyversions/mcp-for-maya)](https://pypi.org/project/mcp-for-maya/)
 
 ## What Is This
 
@@ -335,7 +335,7 @@ See [CONTRIBUTING.md](https://github.com/Xxx91n/mcp-for-maya/blob/main/CONTRIBUT
 
 ## License & Commercial Use
 
-This project is released under the [MIT License](LICENSE). **Commercial use is permitted** — including internal company use, modification, integration into commercial products, and redistribution — free of charge and without separate permission. The only condition is that the copyright notice and license text in `LICENSE` are retained in all copies or substantial portions of the software.
+This project is released under the [MIT License](https://github.com/urara1230/mcp-for-maya/blob/main/LICENSE). **Commercial use is permitted** — including internal company use, modification, integration into commercial products, and redistribution — free of charge and without separate permission. The only condition is that the copyright notice and license text in `LICENSE` are retained in all copies or substantial portions of the software.
 
 This repository is based on [Xxx91n/mcp-for-maya](https://github.com/Xxx91n/mcp-for-maya) (upstream: [chadrik/maya-mcp-server](https://github.com/chadrik/maya-mcp-server)). Original copyright notices are retained; this repository is not affiliated with or endorsed by the original authors.
 
